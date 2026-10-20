@@ -25,7 +25,7 @@ dependencies {
     implementation(libs.activity.compose)
     implementation(libs.koin.android)
     implementation(libs.ktor.client.okhttp)
-    androidTestImplementation("androidx.test.ext:junit:1.3.0")
-    androidTestImplementation("androidx.test:runner:1.7.0")
-    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
+    androidTestImplementation(libs.test.junit)
+    androidTestImplementation(libs.test.runner)
+    androidTestImplementation(libs.test.uiautomator)
 }

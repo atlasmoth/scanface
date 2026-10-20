@@ -45,7 +45,7 @@ kotlin {
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation(libs.coroutines.test)
-            implementation("io.ktor:ktor-client-mock:3.6.0")
+            implementation(libs.ktor.client.mock)
         }
         androidMain.dependencies {
             implementation(libs.activity.compose)
