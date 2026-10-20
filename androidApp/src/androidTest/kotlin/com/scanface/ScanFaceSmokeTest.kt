@@ -105,9 +105,22 @@ class ScanFaceSmokeTest {
         visible(By.text("Screen flash"))
         captureEvidence("android-camera")
         visible(By.text("Capture photo")).click()
-        visible(By.text("Ready for the next step"), 30_000)
-        assertFalse("A real image must not produce a fabricated age", snapshot().contains("\"status\":\"COMPLETE\""))
-        assertTrue(snapshot().contains("AWAITING_MODEL"))
+        val deadline = SystemClock.uptimeMillis() + 60_000
+        fun pendingResult() = snapshot().takeIf(String::isNotBlank)?.let(::JSONObject)?.optJSONObject("pending")
+        var pending = pendingResult()
+        while (pending?.optString("status") !in listOf("COMPLETE", "FAILED") && SystemClock.uptimeMillis() < deadline) {
+            SystemClock.sleep(100)
+            pending = pendingResult()
+        }
+        val analyzed = requireNotNull(pending)
+        assertTrue("Bundled inference settles without waiting for a model download",
+            analyzed.getString("status") in listOf("COMPLETE", "FAILED"))
+        if (analyzed.getString("status") == "COMPLETE") {
+            assertTrue(analyzed.getDouble("age").isFinite() && analyzed.getDouble("age") in 0.0..130.0)
+            assertEquals("fahr-faceage-1fbb84e-litert-native-v1", analyzed.getString("modelId"))
+        } else {
+            assertTrue("Rejected images must not have an age", analyzed.isNull("age"))
+        }
 
         val photos = File(context.filesDir, "captures").listFiles().orEmpty()
         assertEquals(1, photos.size)
