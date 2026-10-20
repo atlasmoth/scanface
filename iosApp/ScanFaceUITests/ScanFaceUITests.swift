@@ -39,6 +39,7 @@ final class ScanFaceUITests: XCTestCase {
 
     func testCameraCanOpenPickerAndReturnToOverview() {
         let app = XCUIApplication()
+        app.resetAuthorizationStatus(for: .camera)
         app.launchArguments = ["--uitesting-reset"]
         app.launch()
         addUIInterruptionMonitor(withDescription: "Camera permission") { alert in
@@ -50,6 +51,8 @@ final class ScanFaceUITests: XCTestCase {
         let choose = app.buttons["camera.import"]
         XCTAssertTrue(choose.waitForExistence(timeout: 10))
         app.tap()
+        XCTAssertTrue(app.staticTexts["Camera access is off"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Open Settings"].exists)
         let preview = app.descendants(matching: .any).matching(identifier: "camera.preview").firstMatch
         let shutter = app.buttons["camera.capture"]
         XCTAssertTrue(preview.waitForExistence(timeout: 5))

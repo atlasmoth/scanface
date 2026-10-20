@@ -95,9 +95,15 @@ final class CaptureSessionModel: NSObject, ObservableObject {
         notifications.append(center.addObserver(
             forName: AVCaptureSession.runtimeErrorNotification, object: session, queue: .main
         ) { [weak self] _ in
-            self?.availability = .failed("The camera stopped. Try opening it again.")
-            self?.isCapturing = false
-            self?.endScreenFlash()
+            guard let self, self.active else { return }
+            switch AVCaptureDevice.authorizationStatus(for: .video) {
+            case .denied, .restricted:
+                self.availability = .denied
+            default:
+                self.availability = .failed("The camera stopped. Try opening it again.")
+            }
+            self.isCapturing = false
+            self.endScreenFlash()
         })
         notifications.append(center.addObserver(
             forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main
@@ -623,11 +629,15 @@ private struct CaptureScreen: View {
 
             if model.availability == .ready {
                 GeometryReader { geometry in
-                    let height = min(geometry.size.height * 0.48, geometry.size.width * 0.72)
-                    Ellipse()
-                        .stroke(.white.opacity(0.36), style: StrokeStyle(lineWidth: 1, dash: [4, 8]))
-                        .frame(width: height * 0.74, height: height)
-                        .position(x: geometry.size.width / 2, y: geometry.size.height * 0.40)
+                    let guideTop: CGFloat = 72
+                    let guideSpace = max(0, geometry.size.height - guideTop - 180)
+                    let height = min(guideSpace, geometry.size.height * 0.48, geometry.size.width * 0.72)
+                    if height >= 120 {
+                        Ellipse()
+                            .stroke(.white.opacity(0.36), style: StrokeStyle(lineWidth: 1, dash: [4, 8]))
+                            .frame(width: height * 0.74, height: height)
+                            .position(x: geometry.size.width / 2, y: guideTop + guideSpace / 2)
+                    }
                 }
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
