@@ -12,6 +12,9 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Run the benchmark explicitly with adb and scanfaceBenchmark=true.
+        // Excluding it avoids reporting its opt-in assumption as a CI failure.
+        testInstrumentationRunnerArguments["notClass"] = "com.scanface.ml.FahrQuantizationBenchmark"
         // LiteRT ships these ABIs; exclude ML Kit's extra x86 slice so Android
         // cannot install a build whose selected ABI lacks the inference runtime.
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
