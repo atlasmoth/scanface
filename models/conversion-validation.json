@@ -1,0 +1,146 @@
+{
+  "checkpoint_sha256": "980ad2f134c5d82e9aca39a738f88a5b10aaf15ca9a5462bf95599be023cdbba",
+  "reference_years": {
+    "gradient": 5.346164703369141,
+    "gray": 62.322818756103516,
+    "author-00": 77.83505249023438,
+    "author-01": 81.22257995605469,
+    "author-02": 84.05179595947266,
+    "author-03": 23.25370216369629,
+    "author-04": 17.19807243347168,
+    "author-05": 23.800628662109375,
+    "author-06": 23.69601058959961,
+    "author-07": 86.94414520263672,
+    "author-08": 77.53466033935547,
+    "author-09": 27.171951293945312,
+    "author-10": 18.793006896972656,
+    "author-11": 36.24942398071289,
+    "author-12": 23.028486251831055,
+    "author-13": 82.4460678100586,
+    "author-14": 13.665477752685547,
+    "author-15": 19.399290084838867,
+    "author-16": 21.75579833984375,
+    "author-17": 16.275503158569336,
+    "author-18": 77.29086303710938,
+    "author-19": 39.624786376953125,
+    "author-20": 16.773401260375977,
+    "author-21": 90.6021499633789
+  },
+  "runtimes": {
+    "coreml": {
+      "max_error_years": 4.57763671875e-05,
+      "errors": {
+        "gradient": 9.5367431640625e-07,
+        "gray": 4.57763671875e-05,
+        "author-00": 0.0,
+        "author-01": 3.0517578125e-05,
+        "author-02": 2.288818359375e-05,
+        "author-03": 7.62939453125e-06,
+        "author-04": 3.814697265625e-06,
+        "author-05": 1.52587890625e-05,
+        "author-06": 3.814697265625e-06,
+        "author-07": 3.0517578125e-05,
+        "author-08": 7.62939453125e-06,
+        "author-09": 3.814697265625e-06,
+        "author-10": 5.7220458984375e-06,
+        "author-11": 7.62939453125e-06,
+        "author-12": 1.9073486328125e-06,
+        "author-13": 7.62939453125e-06,
+        "author-14": 2.86102294921875e-06,
+        "author-15": 3.814697265625e-06,
+        "author-16": 7.62939453125e-06,
+        "author-17": 1.9073486328125e-06,
+        "author-18": 3.0517578125e-05,
+        "author-19": 7.62939453125e-06,
+        "author-20": 3.814697265625e-06,
+        "author-21": 1.52587890625e-05
+      },
+      "coremltools": "9.0",
+      "minimum_target": "iOS17",
+      "precision": "float32",
+      "files": {
+        "Manifest.json": {
+          "sha256": "e4a4d5cfedc139c80dcebdae65dcc23ce65044ca424731b2e4bd6f6a02b4abc8",
+          "bytes": 617
+        },
+        "Data/com.apple.CoreML/model.mlmodel": {
+          "sha256": "fa09458ab940c15a7daa7697efc769d0c0e893c76951695c0911a204dca06abe",
+          "bytes": 116058
+        },
+        "Data/com.apple.CoreML/weights/weight.bin": {
+          "sha256": "d56f345a2e16ea01ef8d7cb8dc0894f41c19a1d79739aa8202eab3ca137d8f79",
+          "bytes": 342758912
+        }
+      }
+    },
+    "litert": {
+      "max_error_years": 6.866455078125e-05,
+      "errors": {
+        "gradient": 2.384185791015625e-06,
+        "gray": 4.1961669921875e-05,
+        "author-00": 0.0,
+        "author-01": 2.288818359375e-05,
+        "author-02": 2.288818359375e-05,
+        "author-03": 2.86102294921875e-05,
+        "author-04": 1.9073486328125e-06,
+        "author-05": 4.1961669921875e-05,
+        "author-06": 0.0,
+        "author-07": 2.288818359375e-05,
+        "author-08": 6.866455078125e-05,
+        "author-09": 5.7220458984375e-06,
+        "author-10": 1.1444091796875e-05,
+        "author-11": 0.0,
+        "author-12": 1.33514404296875e-05,
+        "author-13": 4.57763671875e-05,
+        "author-14": 9.5367431640625e-07,
+        "author-15": 9.5367431640625e-06,
+        "author-16": 1.52587890625e-05,
+        "author-17": 1.9073486328125e-06,
+        "author-18": 5.340576171875e-05,
+        "author-19": 1.52587890625e-05,
+        "author-20": 1.9073486328125e-06,
+        "author-21": 2.288818359375e-05
+      },
+      "sha256": "e82f0e08ba65676758f97cbf656063907dd9dac7720fb3b507a8ed2ff96585bc",
+      "bytes": 342922444,
+      "signatures": {
+        "serving_default": {
+          "inputs": [
+            "args_0"
+          ],
+          "outputs": [
+            "output_0"
+          ]
+        }
+      },
+      "litert_torch": "0.10.0",
+      "litert": "2.3.0"
+    }
+  },
+  "license": "CC-BY-NC-SA-4.0",
+  "modifications": "Inference-only graph; optimizer removed; RGB NHWC normalization wrapper; float32",
+  "input": {
+    "shape": [
+      1,
+      112,
+      112,
+      3
+    ],
+    "dtype": "float32",
+    "range": [
+      0,
+      255
+    ]
+  },
+  "versions": {
+    "torch": "2.13.0",
+    "transformers": "5.14.1",
+    "numpy": "2.5.1",
+    "pillow": "12.3.0"
+  },
+  "validation_scope": "Numerical conversion parity only; native face detection accuracy and clinical validity are not established.",
+  "legacy_transformers_reference": {
+    "version": "4.57.6",
+    "comparison": "Exact same predictions on all 24 inputs, loading original checkpoint keys without renaming."
+  }
+}

@@ -1,13 +1,39 @@
 # ScanFace for iOS
 
-Open `ScanFace.xcodeproj` in Xcode 27.1 or newer and select the **ScanFace** scheme.
-The minimum deployment target is iOS 17.0. The build phase invokes the repository's
-Gradle wrapper to build and embed `ScanFaceKit`; Java 17 must be installed.
-Choose your signing team before installing on a physical device.
+ScanFace uses Apple Vision landmarks and a bundled Core ML FAHR-FaceAge model to
+analyze a fresh capture or imported photo entirely on the device. The minimum
+deployment target is iOS 17.0. Xcode 27.1, XcodeGen and Java 17 are required; the
+build phase invokes the repository's Gradle wrapper to embed `ScanFaceKit`.
 
-The checked-in project is generated from `project.yml`. After changing project
-configuration, run `xcodegen generate` in this directory. Privacy strings,
-supported orientations, and launch configuration are defined in that file.
+Prepare the model from the repository root before generating the Xcode project:
+
+```sh
+bash scripts/models/install_tools.sh
+conda run -n dl python scripts/models/prepare_models.py --runtime both --install --test-portraits
+cd iosApp
+xcodegen generate
+open ScanFace.xcodeproj
+```
+
+Select the **ScanFace** scheme and an iPhone or iPad simulator. Choose your signing
+team before installing on a physical device. For only the iOS model, replace
+`--runtime both` with `--runtime coreml`. The full conversion/parity workflow
+requires macOS and runs all Python commands in the existing `conda dl`
+environment. Converter-only packages are isolated in
+`artifacts/models/converter-python`, keeping their older xDSL dependency separate
+from the shared environment.
+
+The pinned author checkpoint is approximately 981 MiB. The generated float32
+`ScanFace/Models/FAHRFaceAge.mlpackage` is approximately 327 MiB and is ignored by
+Git. Xcode compiles it to `FAHRFaceAge.mlmodelc`. `project.yml` bundles the full
+`models/licenses` folder and `ScanFace/Models/conversion.json` with the app.
+Regenerate the project after model preparation so its resources are present.
+Author synthetic portraits are downloaded only for local tests and never shipped
+with the app.
+
+The checked-in project is generated from `project.yml`. Privacy strings,
+supported orientations, model resources and launch configuration are defined
+there; run `xcodegen generate` after changing that configuration.
 
 ```sh
 # From the repository root:
@@ -35,8 +61,43 @@ Images are normalized upright, resized to a maximum edge of 2048 pixels, and
 stored as JPEGs under Application Support/ScanFace/Captures with complete file
 protection and backup exclusion. Originals in Photos are never modified.
 The shared model boundary receives the private path, image dimensions, lens
-description, mirroring state, and capture time.
+description, mirroring state, and capture time. A serial worker performs Vision
+and Core ML work; cancellation stops Vision where possible and suppresses late
+results. The app does not upload photos or download models at runtime.
 
-Simulator runs exercise navigation, appearance, adaptation, import, and photo
-normalization. Camera preview, hardware flash, camera switching, focus, and
-physical rotation require a real iPhone or iPad for final verification.
+## Model contract and research scope
+
+`CoreMLFaceAnalyzer` uses Vision landmark request revision 3, requires exactly one
+face and visible eyes, and rejects small, clipped or strongly turned faces. It
+aligns the eye line and samples the original-size face rectangle using the
+author-style rotation and Pillow-compatible resizing. Vision is a substitute for
+the authors' RetinaFace detector; equivalent clinical performance has not been
+established.
+
+The Core ML input `pixels` is float32 `[1, 112, 112, 3]`, RGB NHWC in `0..255`.
+The graph performs `/255` and ImageNet normalization itself. Output `age` is a
+single float32 value with shape `[1]`, in years. The runtime validates both tensor
+contracts and rejects nonfinite or out-of-range estimates. Its identifier is
+`fahr-faceage-1fbb84e-coreml-native-v1`. Missing model resources produce an
+actionable error, never a substitute estimate.
+
+The conversion command checks 24 numerical cases when `--test-portraits` is
+supplied: two mathematical patterns and 22 hash-pinned synthetic portraits. The
+0.02-year tolerance compares converted outputs with the PyTorch reference; it is
+not a statement of accuracy on people. Models are for academic research and do
+not diagnose conditions, measure individual health, or predict lifespan.
+FAHR-FaceSurvival weights are not released and no survival score is produced.
+
+The author code is Apache 2.0; the original and converted model weights retain
+**CC BY-NC-SA 4.0**. They require attribution, noncommercial use and share-alike
+terms for distributed adaptations. Commercial use requires additional permission.
+See [provenance, preprocessing and licenses](../docs/models.md) and
+[the bundled attribution notice](../models/licenses/NOTICE.md).
+
+Simulator tests cover navigation, appearance, adaptation, import, photo
+normalization, preprocessing fixtures, model tensor checks and cancellation.
+Provisioning `--test-portraits` also supplies the local synthetic portrait for
+end-to-end Vision/Core ML tests; regenerate the project afterward. Camera preview,
+hardware flash, camera switching, focus, and physical rotation require a real
+iPhone or iPad for final verification. Current recorded test results are in
+[verification.md](../docs/verification.md).

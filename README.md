@@ -4,17 +4,45 @@ A Kotlin Multiplatform app for private facial-age exploration. Android and iOS s
 the Compose interface, scan lifecycle, local history and appearance preferences.
 Camera capture stays native: CameraX on Android and AVFoundation on iOS.
 
-The app is functional before model integration: take or import a photo, review it,
-save it, revisit history, export a metadata summary and delete local captures.
-Real captures display **Awaiting model**. Optional, clearly labelled sample results
-demonstrate the estimate and history views. No model weights or inference results
-are bundled.
+Capture or import a photo and get a real **FAHR-FaceAge** research estimate on the
+device: LiteRT on Android, Core ML on iOS. Review and save the result, revisit
+history, export a metadata summary, or delete the local capture. Missing models
+and unusable photos produce an explanation, never an invented estimate. Optional
+sample results remain clearly labelled as fictional.
+
+The model weights are **CC BY-NC-SA 4.0: noncommercial use only**. The author's
+code is Apache 2.0. Commercial use of the weights requires additional permission;
+the app's code license cannot replace the weight license. See
+[model provenance, licenses and limitations](docs/models.md).
 
 ## Run
 
-Requirements: JDK 17, Android SDK 37, and (for iOS) macOS with Xcode 27.1 and
-XcodeGen. The Gradle wrapper and dependency versions are checked in. Android
+Requirements: JDK 17, Android SDK 37, and (for iOS and Core ML conversion) macOS
+with Xcode 27.1 and XcodeGen. Model preparation uses the existing Conda environment
+named `dl`. The Gradle wrapper and dependency versions are checked in. Android
 supports API 26 and newer; iOS supports 17.0 and newer.
+
+Prepare the model assets before building either app. From the repository root:
+
+```sh
+bash scripts/models/install_tools.sh
+conda run -n dl python scripts/models/prepare_models.py --runtime both --install --test-portraits
+```
+
+This downloads and verifies the pinned approximately 981 MiB author checkpoint,
+converts it to float32 mobile models, checks numerical agreement, and installs
+the assets plus conversion metadata. Each inference model is approximately
+327 MiB and is ignored by Git; a fresh clone must run this preparation step.
+Allow several gigabytes for the checkpoint, converters, outputs and build caches.
+The full `both` command runs on macOS; Android-only conversion can use
+`--runtime litert`.
+
+All model Python commands run in `conda dl`. The bootstrap isolates converter-only
+packages under `artifacts/models/converter-python`; do not downgrade shared
+environment packages to satisfy the converter. `--test-portraits` provisions
+22 hash-pinned author synthetic portraits for local numerical and device tests.
+These images are not checked into Git or included in the shipping apps. See
+[the model setup details](docs/models.md#prepare-the-mobile-artifacts).
 
 ```sh
 ./gradlew :androidApp:assembleDebug
@@ -62,9 +90,11 @@ simulator or dedicated test device.
 | `shared/src/commonMain` | Compose screens, semantic themes, navigation, durable app state, model contracts |
 | `shared/src/androidMain` | CameraX, Android photo picker, EXIF normalization, private storage and native sharing |
 | `shared/src/iosMain` | UIKit bridge, native image rendering, preferences and sharing |
-| `androidApp` | Android application, Koin dependency graph, configured Ktor/OkHttp client |
-| `iosApp` | SwiftUI host, AVFoundation camera, Photos picker, Xcode project and native tests |
+| `androidApp` | Koin, Ktor/OkHttp, bundled ML Kit face detection and LiteRT inference |
+| `iosApp` | SwiftUI host, AVFoundation camera, Photos picker, Vision landmarks, Core ML inference and native tests |
 | `shared/src/commonTest` | Persistence, cancellation, image ownership, malformed results and model-manifest tests |
+| `scripts/models` | Conda tool bootstrap, pinned checkpoint conversion and numerical fixtures |
+| `models` | Source/hash manifests, attribution, licenses and non-personal pixel fixtures |
 | `design/concept-v1` | Approved visual direction and palette |
 
 ## Interface and cameras
@@ -100,29 +130,35 @@ app's data container during an update or reinstall does not break previews or
 cleanup. Existing absolute references resolve against the current container on
 load and become relative on the next successful save; no data reset is needed.
 
-## Model integration is the next boundary
+## On-device model workflow
 
-Implement `FaceAnalyzer.analyze(CapturedPhoto)` and replace
-`PendingModelAnalyzer` in the platform dependency graph. The input is an upright
-private image plus capture metadata. Return an `AnalysisResult` with a valid
-finite age and an explicit model identifier. The store rejects malformed
-completed results and never converts a missing model into an estimate.
+`AndroidFaceAnalyzer` and `CoreMLFaceAnalyzer` implement the shared `FaceAnalyzer`
+boundary. Detection, eye alignment and inference run off the UI thread. Each
+requires one sufficiently large, front-facing face with both eyes visible. Failed
+detection never falls back to estimating age from the full frame. Native work
+handles cancellation without publishing a discarded capture's result.
 
-1. Confirm the research model's redistribution and intended-use license before
-   packaging weights. The linked paper is a research starting point, not an
-   endorsement of this app.
-2. Reproduce the model's face detection, landmark alignment, crop, color order and
-   normalization contract. Add quality feedback from measured outputs.
-3. Add LiteRT on Android and Core ML on iOS behind `FaceAnalyzer`; run inference
-   off the UI thread and make cancellation release native resources.
-4. Validate both implementations against the same held-out fixtures, including
-   preprocessing tensors and numerical tolerance.
-5. If downloading weights, configure `ModelManifestService` with an explicit
-   metadata endpoint. It validates a bounded HTTPS manifest and artifact
-   metadata; download, SHA-256 verification and model installation remain to be
-   implemented. No endpoint is contacted by the current app.
+The mobile graphs accept one aligned `112 × 112` RGB crop as float32 NHWC values
+in `0..255`; channel transposition, `/255`, and ImageNet normalization are inside
+the exported graph. Android uses the LiteRT `serving_default` signature with
+`args_0` → `output_0`; iOS uses `pixels` → `age`. Both return one age in years.
+Do not normalize the input twice. Model identifiers are
+`fahr-faceage-1fbb84e-litert-native-v1` and
+`fahr-faceage-1fbb84e-coreml-native-v1`.
 
-The UI deliberately avoids treating facial age as a diagnosis or lifespan
-prediction. Sample records remain marked as fictional in both UI and exports.
+Android uses bundled ML Kit 16.1.7 and iOS uses Vision landmark revision 3 instead
+of the paper's RetinaFace detector. The crop geometry and sampling follow the
+author pipeline, but these native detector substitutions have not been validated
+as clinically equivalent. The conversion checks use 24 inputs: two mathematical
+patterns and 22 author synthetic crops. Numerical agreement is a conversion
+check, **not a clinical accuracy study**. The current app has no survival model;
+FAHR-FaceSurvival weights are not publicly released.
 
-Research context: [The Lancet Digital Health paper](https://www.thelancet.com/journals/landig/article/PIIS2589-7500%2826%2900079-8/fulltext).
+Models are installed at build time; the app does not download weights or contact
+a model endpoint. `ModelManifestService` remains an unused, tested network
+boundary. The entered age is only a comparison value and never a model input.
+Completed scans disclose the model identifier and preprocessing variation.
+
+Facial age is a research estimate, not a diagnosis, health score or prediction of
+an individual's lifespan. Settings links the author source, study and weight
+license. See [the complete input contract and research limitations](docs/models.md).

@@ -2,7 +2,44 @@
 
 ScanFace's age-model source is **FAHR-FaceAge**, from Haugg, Lee, and colleagues, *Foundation artificial intelligence models for health recognition by use of face photographs (FAHR-Face): a model development and validation study*, The Lancet Digital Health (2026), [DOI 10.1016/j.landig.2026.101056](https://doi.org/10.1016/j.landig.2026.101056). [Elsevier's article metadata](https://api.elsevier.com/content/article/PII:S2589750026000798?httpAccept=text/xml) identifies the user's article PII, `S2589-7500(26)00079-8`, with that DOI. This is the ViT-based FAHR model, not the earlier 2025 Inception-ResNet FaceAge model.
 
-The machine-readable source lock is [source-manifest.json](../models/source-manifest.json). It describes the original checkpoint and author preprocessing, not a claim that every mobile backend reproduces the study pipeline.
+The machine-readable source lock is [source-manifest.json](../models/source-manifest.json). Android runs the converted weights through LiteRT; iOS runs them through Core ML. Both detect and align a face locally before inference. The source lock describes the original checkpoint and author preprocessing; the native detector substitutions are documented below.
+
+## Prepare the mobile artifacts
+
+Run from the repository root on macOS with the existing Conda environment named `dl`:
+
+```sh
+bash scripts/models/install_tools.sh
+conda run -n dl python scripts/models/prepare_models.py --runtime both --install --test-portraits
+```
+
+The bootstrap provisions conversion dependencies. Converter-only packages live in the ignored `artifacts/models/converter-python` overlay so their dependencies do not require downgrading the shared `dl` environment. The conversion script adds this overlay when loading the LiteRT converter; all Python execution still uses `conda dl`. Core ML conversion and prediction checks require macOS. Use `--runtime litert` for Android-only preparation or `--runtime coreml` for iOS only.
+
+The script verifies the approximately 981 MiB checkpoint against its pinned SHA-256 before restricted deserialization, strictly loads the author model, wraps its normalization, exports float32 inference graphs, and compares outputs before installing each artifact. Neither graph contains optimizer state. The generated LiteRT file and Core ML package are each approximately 327 MiB and are excluded from Git. A fresh clone must prepare them before building functional mobile apps; budget several gigabytes for conversion and build caches.
+
+| Generated material | Location |
+| --- | --- |
+| Downloaded checkpoint, conversion work and reports | `artifacts/models/` |
+| Android inference asset | `androidApp/src/main/assets/models/fahr_faceage.tflite` |
+| Android conversion report and license copies | `androidApp/src/main/assets/models/conversion.json`, `androidApp/src/main/assets/models/licenses/` |
+| iOS inference package | `iosApp/ScanFace/Models/FAHRFaceAge.mlpackage` |
+| iOS conversion report | `iosApp/ScanFace/Models/conversion.json` |
+| iOS bundled notices | Repository `models/licenses/`, included as a resource folder by `iosApp/project.yml` |
+
+After preparation, regenerate the iOS project with `xcodegen generate` inside `iosApp`. Xcode compiles the package into `FAHRFaceAge.mlmodelc`; the generated project includes that model, its conversion report and the attribution/licenses. Android assets are packaged by Gradle. Model weights are not downloaded by the running app, and no capture is sent to the model tooling or a remote inference service.
+
+`--test-portraits` downloads 22 author-supplied synthetic face crops, checked against [author-test-images.json](../models/author-test-images.json), for local tests only. Together with two mathematical patterns these form 24 numerical conversion cases. The portraits and provisioned device-test images are ignored by Git and excluded from shipping resources. The included [pixel fixtures](../models/fixtures) contain mathematical patterns, not personal photographs. The command also writes `reference.json` and `conversion-both.json` in `artifacts/models/`, including dependency versions, output values, per-case errors and artifact hashes. Conversion rejects nonfinite outputs or a maximum absolute discrepancy above 0.02 years. These checks validate numerical conversion, not clinical accuracy or face-detector equivalence.
+
+## Mobile runtime contract
+
+The [conversion wrapper](../scripts/models/prepare_models.py) accepts **unnormalized RGB values**. Native code performs face detection, alignment and resizing; the exported graph transposes channels, divides by 255 and applies the author normalization. Do not apply that normalization again in the native adapter.
+
+| Runtime | Input | Output | Model identifier |
+| --- | --- | --- | --- |
+| Android LiteRT 2.3.0 | `serving_default` signature, `args_0`: float32 `[1, 112, 112, 3]`, RGB NHWC, `0..255` | `output_0`: float32 `[1]`, years | `fahr-faceage-1fbb84e-litert-native-v1` |
+| iOS Core ML, minimum iOS 17 | `pixels`: float32 `[1, 112, 112, 3]`, RGB NHWC, `0..255` | `age`: float32 `[1]`, years | `fahr-faceage-1fbb84e-coreml-native-v1` |
+
+Android serializes detection and LiteRT CPU inference on a worker; iOS serializes Vision and Core ML inference on a worker, uses CPU on the simulator, and permits available compute units on devices. Both validate the tensor contract and accept only finite age results within `0..130`. A missing or incompatible model produces an unavailable/failed result, never a sample value. Cancellation suppresses results from discarded captures. The UI shows the model ID and native-preprocessing disclosure with completed real scans; sample results remain separately labelled.
 
 ## Pinned sources
 
@@ -26,6 +63,7 @@ The [author's licensing statement](https://github.com/AIM-Harvard/FAHR-Face/blob
 | FAHR model weights | CC-BY-NC-SA-4.0 | [CC-BY-NC-SA-4.0.txt](../models/licenses/CC-BY-NC-SA-4.0.txt) |
 | Journal article | CC-BY-NC-ND-4.0 | [Publisher license declaration](https://api.elsevier.com/content/article/PII:S2589750026000798?httpAccept=text/xml) |
 | RetinaFace reference preprocessing code | MIT | [RetinaFace-MIT.txt](../models/licenses/RetinaFace-MIT.txt) |
+| Pillow reference resampling implementation | MIT-CMU | [Pillow-MIT-CMU.txt](../models/licenses/Pillow-MIT-CMU.txt) |
 
 The pinned FAHR repository has no standalone LICENSE or NOTICE file; its README is the declaration. The complete Apache and CC texts here are copied from the canonical licensors' URLs referenced by that declaration. [NOTICE.md](../models/licenses/NOTICE.md) records their origins and author credit. No journal article, clinical dataset, or training photos are bundled by these documents.
 
@@ -43,7 +81,7 @@ The [author inference example](https://huggingface.co/fridolin22/FAHR-Face/blob/
 2. Resize the aligned face to `112 × 112` with PIL bilinear resampling. Preserve the author's rectangular crop, then resize; do not add a square padding/canonical-face warp.
 3. Convert channel values to float32 and divide by `255`.
 4. Normalize each RGB channel using mean `[0.485, 0.456, 0.406]` and standard deviation `[0.229, 0.224, 0.225]`.
-5. Supply a `1 × 3 × 112 × 112` NCHW tensor to the original PyTorch model. A converted artifact may use NHWC only if the conversion wrapper explicitly transposes it equivalently; document its actual tensor interface with that artifact.
+5. Supply a `1 × 3 × 112 × 112` NCHW tensor to the original PyTorch model. The mobile graphs instead accept raw NHWC pixels and perform these tensor transformations internally, as specified in the runtime table above.
 
 The captured full frame is not valid input merely because it can be resized to 112 pixels. The entered chronological age must not be supplied as a model input or used to adjust the predicted value.
 
@@ -80,7 +118,9 @@ The reference calls `PIL.Image.rotate` with its defaults: image-center rotation,
 
 ## Native detector substitution and validation
 
-A feasible mobile adapter can use [bundled Android ML Kit face detection](https://developers.google.com/ml-kit/vision/face-detection/android) with accurate mode and eye landmarks, and [iOS Vision face landmarks](https://developer.apple.com/documentation/vision/vndetectfacelandmarksrequest). Require exactly one face and both eyes, then apply the geometry above to the upright source image. Prefer a bundled Android detector so first use works offline. Do not silently fall back to a centered full-image crop if detection fails.
+ScanFace uses [bundled Android ML Kit face detection](https://developers.google.com/ml-kit/vision/face-detection/android), package version 16.1.7, with accurate mode and eye landmarks, and [iOS Vision face landmarks](https://developer.apple.com/documentation/vision/vndetectfacelandmarksrequest), request revision 3. Both require exactly one face and both eyes, then apply the geometry above to the upright source image. The Android detector is bundled, so first use works offline. There is no fallback to estimating age from a centered full-image crop.
+
+The adapters reject faces smaller than 112 pixels or 8% of the corresponding image dimension, boxes reaching the outer 1% image boundary, missing eyes, inter-eye distance below 20 pixels, yaw/pitch above 25 degrees, or eye-line roll above 30 degrees. These are ScanFace capture-quality rules, not validated confidence scores from FAHR. They are implemented in [Android preprocessing](../androidApp/src/main/kotlin/com/scanface/ml/FacePreprocessing.kt) and [iOS preprocessing](../iosApp/ScanFace/FaceImagePreprocessor.swift).
 
 For Vision, convert the normalized bottom-left-origin face bbox to top-left image pixels before using this geometry. For a bbox `(bx, by, bw, bh)` and a landmark `(u, v)` normalized within that bbox:
 
@@ -91,7 +131,7 @@ image_y = (1 - by - v * bh) * H
 
 Eye-region centroids or pupil landmarks are estimates of eye centers; detector names referring to the subject's left/right must not be mistaken for image-left/right. Android landmarks must likewise use the same upright image coordinate space as the sampled pixels.
 
-These native detectors do not reproduce RetinaFace detections, bounding boxes, or confidence calibration. Record the selected detector, revision, alignment algorithm, and rejection rules with inference results/artifacts. This is a **documented preprocessing substitution**, not validated reproduction of the study. Evaluate two separate sources of difference: exported model outputs on identical normalized tensors, and end-to-end estimates from native versus author face crops. Use fixed licensed or synthetic fixtures spanning rotation, edge crops, mirroring, and zero/multiple faces. Numeric conversion agreement does not establish clinical accuracy or detector parity.
+These native detectors do not reproduce RetinaFace detections, bounding boxes, or confidence calibration. The `native-v1` model IDs identify the platform-specific pipeline documented here. This is a **documented preprocessing substitution**, not validated reproduction of the study. There are two separate sources of difference: exported model outputs on identical input tensors, and end-to-end estimates from native versus author face crops. Pixel fixtures exercise the alignment and resampling independently of a detector; native tests exercise face rejection, inference and cancellation. Numeric conversion agreement on 24 cases does not establish clinical accuracy or detector parity.
 
 ## What the output supports
 
@@ -101,4 +141,4 @@ The paper studies the association between facial-age deviation and outcomes in r
 
 ## Derived artifact record
 
-Each distributed LiteRT or Core ML model must identify this checkpoint and record the conversion tool versions, precision/quantization, input/output tensor contract, resulting file/package hashes, and measured comparison against the reference. Retain the weight license and [attribution notice](../models/licenses/NOTICE.md) with those assets. A converted model is not an official author release. Describe native preprocessing differences separately from model conversion changes.
+The generated `conversion.json` identifies this checkpoint, conversion tool versions, float32 precision, input tensor contract, resulting file/package hashes and measured output comparisons. Both app bundles include the weight license and [attribution notice](../models/licenses/NOTICE.md). The models are inference-only float32 conversions with a raw-RGB NHWC normalization wrapper; no quantization is applied. A converted model is not an official author release. Native preprocessing differences remain separate from the numerical model conversion results.
