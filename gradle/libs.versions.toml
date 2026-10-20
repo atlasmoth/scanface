@@ -21,6 +21,7 @@ ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "kto
 koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
 koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
 activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
+lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version = "2.11.0" }
 androidx-core = { module = "androidx.core:core-ktx", version = "1.18.0" }
 androidx-exif = { module = "androidx.exifinterface:exifinterface", version = "1.4.2" }
 camera-core = { module = "androidx.camera:camera-core", version.ref = "camera" }

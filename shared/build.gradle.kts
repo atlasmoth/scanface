@@ -45,9 +45,11 @@ kotlin {
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation(libs.coroutines.test)
+            implementation("io.ktor:ktor-client-mock:3.6.0")
         }
         androidMain.dependencies {
             implementation(libs.activity.compose)
+            implementation(libs.lifecycle.runtime.compose)
             implementation(libs.androidx.core)
             implementation(libs.androidx.exif)
             implementation(libs.camera.core)
