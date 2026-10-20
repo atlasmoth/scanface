@@ -7,11 +7,12 @@ actionable feedback. Saved results come from captures or imported photos.
 
 | Check | Result |
 | --- | --- |
-| Shared JVM suite | 46 passed: 29 state/storage, 9 Ktor manifest and 8 photo-reference tests |
-| Android connected suite | 3 UI flows passed after interface polish; all 10 UI/native tests passed with selected int8 weights during quantization, on the Pixel 10 Pro Fold AVD, API 37 |
+| Shared JVM suite | 54 passed: 29 state/storage, 9 Ktor manifest, 8 photo-reference and 8 asynchronous camera-zoom tests |
+| Android connected suite | 4 UI flows passed across the camera-refinement run and targeted rerun, including real two-finger zoom and resume; all 10 earlier UI/native tests passed with selected int8 weights during quantization, on the Pixel 10 Pro Fold AVD, API 37 |
 | Android debug build and lint | Build passed; lint reported no issues |
 | iOS native simulator suite | 23 passed with selected int8 weights, including actual Core ML inference, metadata rejection, preprocessing and storage regressions |
-| iOS UI suite | 3 flows passed after interface polish, including preview/control geometry and theme persistence |
+| iOS camera zoom tests | 4 passed: cumulative pinch scale, hardware/product bounds, lens reset and invalid gesture input |
+| iOS UI suite | 3 Duo flows and the iPad camera flow passed after camera refinement, including full-height preview/control geometry, theme persistence and permission/picker recovery |
 | iOS simulator and unsigned device builds | Both passed with Xcode 27.1 |
 | iOS deployment target | Compiled app binaries report minimum iOS 17.0 |
 | Model conversion | 24 pinned inputs agree with PyTorch; maximum error 0.0000687 years (LiteRT), 0.0000458 years (Core ML) |
@@ -26,13 +27,18 @@ rows; scan details preserve the complete photo and reveal metadata through an
 accessible disclosure. Settings uses plain appearance, age and saved-scan
 sections. Light/dark colors remain consistent across shared and native views.
 
-Both camera screens use one centered preview, with a circular shutter at its
-bottom center, flash/zoom/camera-switch controls inside it, and photo import
-centered below. Android retains the existing CameraX lens/flash/zoom recovery
-logic. iOS adds capability-bounded zoom choices while retaining its physical
-lens selection and rotation coordinator. The camera tests assert control
-containment and horizontal centering. Regular navigation rails can scroll in
-short landscape windows; Duo's system-provided right-side region is preserved.
+Both camera screens fill the available preview height above a compact photo-import
+footer. The separate header, fixed aspect ratios and width/height caps are gone;
+close sits inside the preview. A single bottom row places camera switch on the
+left, the circular shutter in the center and flash on the right. Pinch replaces
+zoom buttons, with a continuous range up to the lower of 4× and the active
+camera's limit. Accessible adjustments remain available without visible chips.
+The zoom readout appears while zooming and briefly afterward. Coalesced zoom
+requests preserve the final gesture target; capture uses the applied zoom and
+lens changes invalidate pending updates before establishing a fresh baseline.
+CameraX and AVFoundation retain their physical lens, flash and rotation behavior.
+Regular navigation rails can scroll in short landscape windows; Duo's
+system-provided right-side region is preserved.
 
 Native feedback covers navigation, selections, camera controls, capture/import,
 successful persistence and errors. Android uses View haptic feedback, iOS uses
@@ -40,18 +46,26 @@ UIKit generators, and desktop hosts use a no-op adapter. Tap and asynchronous
 outcome feedback are separate; restored state does not trigger a launch buzz.
 Physical haptic feel and actual iOS camera hardware still require device checks.
 
-All 46 shared tests passed, as did three Android UI flows and all 23 native plus
-three UI tests on iOS. The three UI flows also passed on iPad. Android build/lint,
-iOS simulator and unsigned device builds passed; the device minimum remains
-iOS 17.0. Camera denial recovery was checked again after fixing a late runtime
-error that could obscure the Open Settings action.
+The camera refinement passed all 54 shared tests, four Android UI flows, four
+iOS zoom tests, three Duo UI flows and the iPad camera flow. Android's native
+pinch checks cover zoom in/out, the 1× floor and 4× cap, lens reset, and
+background/resume. Android build/lint and iOS simulator/unsigned device builds
+passed; the device minimum
+remains iOS 17.0. The earlier interface pass also ran all 23 iOS model/storage
+tests and the three UI flows on iPad.
 
 Visual review covered folded/expanded Android, short landscape, folded Duo with
 right-side navigation, and iPad in light/dark modes. A real Android photo-picker
 import produced a 21.5-year estimate and was saved into the new history/detail
 layout. Returning from the picker now restores system-bar contrast for the app's
 explicit theme. Snackbar and elevated-surface colors use the same app palette.
-Actual screenshots are stored locally in `artifacts/screenshots/polish/`.
+Those screenshots are stored locally in `artifacts/screenshots/polish/`.
+The full-height camera was reviewed separately in light/dark modes on Android,
+Duo and iPad, including short Duo landscape. Its actual screenshots are in
+`artifacts/screenshots/camera-refinement/`; iOS simulator images show the native
+unavailable/denied state because no real camera hardware is present.
+Android now reapplies system-bar contrast after configuration and bounds changes;
+folding and unfolding in dark mode keeps the status icons legible.
 
 ## Removal of sample results
 

@@ -5,8 +5,9 @@ the Compose interface, scan lifecycle, local history and appearance preferences.
 Camera capture stays native: CameraX on Android and AVFoundation on iOS.
 
 The interface uses open layouts, centered empty states, and full light/dark
-appearance. Phone and tablet camera views keep the shutter, flash, zoom and
-camera switch inside a centered viewfinder, with photo import below. Native
+appearance. Phone and tablet cameras fill the available viewfinder height,
+with camera switch, shutter and flash along the bottom and photo import below.
+Pinch to zoom continuously up to 4×, within the active camera's limits. Native
 haptics accompany navigation, selections, capture and completed save/delete
 actions, respecting the platform's feedback settings.
 
