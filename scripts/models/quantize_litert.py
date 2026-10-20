@@ -113,10 +113,15 @@ def evaluate(path, cases, reference):
 
 
 def environment():
+    def hardware(key, fallback):
+        if platform.system() != "Darwin":
+            return fallback
+        return subprocess.check_output(["sysctl", "-n", key], text=True).strip()
+
     return {
         "platform": platform.platform(),
-        "hardware": subprocess.check_output(["sysctl", "-n", "hw.model"], text=True).strip(),
-        "chip": subprocess.check_output(["sysctl", "-n", "machdep.cpu.brand_string"], text=True).strip(),
+        "hardware": hardware("hw.model", platform.machine()),
+        "chip": hardware("machdep.cpu.brand_string", platform.processor() or platform.machine()),
         "python": platform.python_version(),
         "versions": {p: importlib.metadata.version(p) for p in ("ai-edge-quantizer", "ai-edge-litert", "numpy")},
         "runtime": "Python LiteRT Interpreter with default XNNPACK delegate; CPU, 2 threads",
