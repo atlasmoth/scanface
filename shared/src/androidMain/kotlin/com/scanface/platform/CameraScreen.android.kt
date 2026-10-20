@@ -277,13 +277,13 @@ private fun CameraPreview(
     onFlash: () -> Unit,
     onZoom: (Float) -> Unit,
 ) {
-    Box(modifier.clip(RoundedCornerShape(24.dp)).background(Color(0xFF101414))) {
+    BoxWithConstraints(modifier.clip(RoundedCornerShape(24.dp)).background(Color(0xFF101414))) {
         AndroidView(factory = { preview }, modifier = Modifier.fillMaxSize())
         Box(Modifier.fillMaxWidth().height(100.dp).align(Alignment.TopCenter)
             .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .48f), Color.Transparent))))
         Box(Modifier.fillMaxWidth().height(190.dp).align(Alignment.BottomCenter)
             .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .72f)))))
-        if (state.ready) {
+        if (state.ready && maxHeight >= 360.dp) {
             Canvas(Modifier.fillMaxSize().padding(top = 68.dp, bottom = 154.dp)) {
                 val ovalWidth = minOf(size.width * .58f, size.height * .75f)
                 val ovalHeight = minOf(size.height * .86f, ovalWidth * 1.38f)
@@ -291,9 +291,9 @@ private fun CameraPreview(
                     Offset((size.width - ovalWidth) / 2, (size.height - ovalHeight) / 2),
                     Size(ovalWidth, ovalHeight), style = Stroke(1.dp.toPx()))
             }
-        } else if (state.error == null) {
+        } else if (!state.ready && state.error == null) {
             CircularProgressIndicator(Modifier.align(Alignment.Center), color = Color.White)
-        } else {
+        } else if (!state.ready) {
             Text("Camera unavailable", Modifier.align(Alignment.Center).padding(24.dp),
                 color = Color.White, textAlign = TextAlign.Center)
         }
