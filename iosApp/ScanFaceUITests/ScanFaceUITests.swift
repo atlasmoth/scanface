@@ -28,7 +28,7 @@ final class ScanFaceUITests: XCTestCase {
         XCTAssertTrue(element("Light", in: app).isSelected)
         tap("Back", in: app)
         tap("History", in: app)
-        XCTAssertTrue(app.staticTexts["A fresh start"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["No scans yet"].waitForExistence(timeout: 5))
         XCTAssertTrue(element("New face scan", in: app).exists)
         XCTAssertFalse(app.buttons["Export scan history"].exists)
         tap("Overview", in: app)
@@ -50,6 +50,16 @@ final class ScanFaceUITests: XCTestCase {
         let choose = app.buttons["camera.import"]
         XCTAssertTrue(choose.waitForExistence(timeout: 10))
         app.tap()
+        let preview = app.descendants(matching: .any).matching(identifier: "camera.preview").firstMatch
+        let shutter = app.buttons["camera.capture"]
+        XCTAssertTrue(preview.waitForExistence(timeout: 5))
+        XCTAssertTrue(shutter.exists)
+        XCTAssertEqual(shutter.frame.midX, preview.frame.midX, accuracy: 2, "Shutter stays centered in the viewfinder.")
+        XCTAssertTrue(preview.frame.contains(shutter.frame), "Shutter belongs inside the preview.")
+        XCTAssertTrue(preview.frame.contains(app.buttons["camera.flash"].frame))
+        XCTAssertTrue(preview.frame.contains(app.buttons["camera.flip"].frame))
+        XCTAssertEqual(choose.frame.midX, preview.frame.midX, accuracy: 2, "Photo import is centered below the viewfinder.")
+        XCTAssertGreaterThanOrEqual(choose.frame.minY, preview.frame.maxY)
         choose.tap()
         let closePicker = app.navigationBars.buttons["Cancel"]
         XCTAssertTrue(closePicker.waitForExistence(timeout: 10))
@@ -59,7 +69,7 @@ final class ScanFaceUITests: XCTestCase {
         expectation(for: NSPredicate(format: "isHittable == true"), evaluatedWith: closeCamera)
         waitForExpectations(timeout: 5)
         closeCamera.tap()
-        XCTAssertTrue(app.staticTexts["Your face. Your perspective."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Start with a face scan"].waitForExistence(timeout: 5))
     }
 
     private func element(_ label: String, in app: XCUIApplication) -> XCUIElement {

@@ -53,6 +53,9 @@ final class CaptureSessionModel: NSObject, ObservableObject {
     @Published private(set) var availableFlashModes: [CaptureFlash] = [.off]
     @Published private(set) var lenses: [CameraLens] = []
     @Published private(set) var selectedLensID = ""
+    @Published private(set) var zoomFactors: [CGFloat] = [1]
+    @Published private(set) var zoomFactor: CGFloat = 1
+    @Published private(set) var isAdjustingZoom = false
     @Published private(set) var illuminating = false
     @Published var flash: CaptureFlash = .off
     @Published var errorMessage: String?
@@ -162,17 +165,44 @@ final class CaptureSessionModel: NSObject, ObservableObject {
     }
 
     func flipCamera() {
-        guard !isCapturing, canFlip else { return }
+        guard availability == .ready, !isCapturing, !isAdjustingZoom, canFlip else { return }
         availability = .preparing
         flash = .off
         configure(position: frontFacing ? .back : .front)
     }
 
     func selectLens(_ id: String) {
-        guard !isCapturing, id != selectedLensID else { return }
+        guard availability == .ready, !isCapturing, !isAdjustingZoom, id != selectedLensID else { return }
         availability = .preparing
         flash = .off
         configure(position: frontFacing ? .front : .back, preferredID: id)
+    }
+
+    func selectZoom(_ factor: CGFloat) {
+        guard availability == .ready, !isCapturing, !isAdjustingZoom,
+              zoomFactors.contains(factor), factor != zoomFactor else { return }
+        isAdjustingZoom = true
+        queue.async { [weak self] in
+            guard let self, let device = self.input?.device else {
+                DispatchQueue.main.async { self?.isAdjustingZoom = false }
+                return
+            }
+            do {
+                try device.lockForConfiguration()
+                device.videoZoomFactor = min(device.maxAvailableVideoZoomFactor, max(device.minAvailableVideoZoomFactor, factor))
+                device.unlockForConfiguration()
+                let applied = device.videoZoomFactor
+                DispatchQueue.main.async {
+                    self.zoomFactor = applied
+                    self.isAdjustingZoom = false
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.isAdjustingZoom = false
+                    self.errorMessage = "This zoom is unavailable. Try another setting."
+                }
+            }
+        }
     }
 
     private func discover(position: AVCaptureDevice.Position) -> [AVCaptureDevice] {
@@ -256,6 +286,12 @@ final class CaptureSessionModel: NSObject, ObservableObject {
                     self.selectedLensID = device.uniqueID
                     self.supportsFlash = flashModes.count > 1
                     self.availableFlashModes = flashModes
+                    self.zoomFactor = device.videoZoomFactor
+                    self.zoomFactors = [1, 1.5, 2].filter {
+                        $0 >= device.minAvailableVideoZoomFactor && $0 <= device.maxAvailableVideoZoomFactor
+                    }
+                    if self.zoomFactors.isEmpty { self.zoomFactors = [device.videoZoomFactor] }
+                    self.isAdjustingZoom = false
                     self.updateRotation(for: device)
                     self.availability = .ready
                 }
@@ -292,7 +328,7 @@ final class CaptureSessionModel: NSObject, ObservableObject {
     }
 
     func capture() {
-        guard availability == .ready, !isCapturing else { return }
+        guard availability == .ready, !isCapturing, !isAdjustingZoom else { return }
         isCapturing = true
         let angle = rotationCoordinator?.videoRotationAngleForHorizonLevelCapture ?? 90
         let requestedFlash = supportsFlash ? flash.avMode : .off
@@ -346,7 +382,7 @@ final class CaptureSessionModel: NSObject, ObservableObject {
 
     private func endScreenFlash() {
         flashRestorationID = UUID()
-        illuminating = false
+        if illuminating { illuminating = false }
         if let brightnessBeforeFlash { captureScreen?.brightness = brightnessBeforeFlash }
         brightnessBeforeFlash = nil
     }
@@ -376,6 +412,7 @@ final class CaptureSessionModel: NSObject, ObservableObject {
                         try? FileManager.default.removeItem(at: stored.url)
                         return
                     }
+                    CameraFeedback.success()
                     self.onCaptured(photo)
                 }
             } catch {
@@ -461,37 +498,45 @@ private struct CaptureScreen: View {
     @State var dark: Bool
     let close: () -> Void
     @State private var pickingPhoto = false
-    @Environment(\.dynamicTypeSize) private var typeSize
 
     private var canvas: Color { Color(hex: dark ? 0x101A16 : 0xF6F7F2) }
     private var ink: Color { Color(hex: dark ? 0xF0F4EE : 0x16251F) }
-    private var secondary: Color { Color(hex: dark ? 0xB5C5B9 : 0x59695F) }
-    private var surface: Color { Color(hex: dark ? 0x23382D : 0xE5EDE6) }
     private var action: Color { Color(hex: dark ? 0xAED7BA : 0x245C45) }
-    private var onAction: Color { Color(hex: dark ? 0x12261A : 0xFFFFFF) }
+    private var ready: Bool { model.availability == .ready && !model.isCapturing && !model.isAdjustingZoom }
 
     var body: some View {
         GeometryReader { geometry in
-            let useColumns = geometry.size.width >= 700 && geometry.size.height >= 440 && !typeSize.isAccessibilitySize
-            VStack(spacing: 16) {
+            let landscape = geometry.size.width > geometry.size.height * 1.2
+            let aspect: CGFloat = landscape ? 4.0 / 3.0 : 3.0 / 4.0
+            let maximumWidth: CGFloat = landscape ? 720 : 540
+            let heightBudget = max(300, min(680, geometry.size.height - 142))
+            let previewWidth = min(maximumWidth, max(200, geometry.size.width - 40), heightBudget * aspect)
+            VStack(spacing: 12) {
                 header
-                if useColumns {
-                    HStack(spacing: 24) {
-                        preview.frame(maxWidth: .infinity, maxHeight: .infinity)
-                        ScrollView { guidanceAndControls }
-                            .frame(width: min(320, geometry.size.width * 0.36))
-                    }
-                } else {
-                    ScrollView {
-                        VStack(spacing: 16) {
-                            Text("Look straight ahead").font(.title2.weight(.semibold)).foregroundStyle(ink)
-                            preview.frame(height: max(220, min(460, geometry.size.height * 0.48)))
-                            controls
+                ScrollView {
+                    VStack(spacing: 16) {
+                        preview
+                            .frame(width: previewWidth, height: previewWidth / aspect)
+                        Button {
+                            CameraFeedback.light()
+                            pickingPhoto = true
+                        } label: {
+                            Label("Choose an existing photo", systemImage: "photo.on.rectangle")
+                                .font(.subheadline.weight(.medium))
+                                .frame(minHeight: 48)
+                                .contentShape(Rectangle())
                         }
+                        .foregroundStyle(action)
+                        .disabled(model.isCapturing)
+                        .accessibilityIdentifier("camera.import")
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, 20)
                 }
+                .scrollIndicators(.hidden)
             }
-            .padding(24)
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
             .background(canvas)
         }
         .background(canvas.ignoresSafeArea())
@@ -504,6 +549,9 @@ private struct CaptureScreen: View {
         }
         .onAppear { model.start() }
         .onDisappear { model.stop() }
+        .onChange(of: model.errorMessage) { _, message in
+            if message != nil { CameraFeedback.error() }
+        }
         .sheet(isPresented: $pickingPhoto) {
             PhotoPicker(completion: { image in
                 pickingPhoto = false
@@ -518,159 +566,266 @@ private struct CaptureScreen: View {
             get: { model.errorMessage != nil },
             set: { if !$0 { model.errorMessage = nil } }
         )) {
-            Button("OK", role: .cancel) { model.errorMessage = nil }
+            Button("OK", role: .cancel) {
+                CameraFeedback.light()
+                model.errorMessage = nil
+            }
         } message: { Text(model.errorMessage ?? "") }
     }
 
     private var header: some View {
-        HStack {
-            Button(action: close) { Image(systemName: "xmark").frame(width: 44, height: 44) }
+        ZStack {
+            Text("New scan")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(ink)
+            HStack {
+                Button {
+                    CameraFeedback.light()
+                    close()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 17, weight: .medium))
+                        .frame(width: 48, height: 48)
+                        .contentShape(Rectangle())
+                }
+                .foregroundStyle(ink)
                 .accessibilityLabel("Close camera")
                 .accessibilityIdentifier("camera.close")
-            Spacer()
-            Text("New scan").font(.headline)
-            Spacer()
+                Spacer()
+            }
+        }
+        .frame(maxWidth: 760)
+        .frame(maxWidth: .infinity)
+        .frame(height: 48)
+    }
+
+    private var preview: some View {
+        ZStack {
+            Color(hex: 0x121614)
+            if model.availability == .ready || model.availability == .preparing {
+                CameraPreview(model: model)
+                    .overlay {
+                        if model.availability == .preparing {
+                            ProgressView().tint(.white)
+                                .accessibilityLabel("Opening camera")
+                        }
+                    }
+            }
+
+            VStack {
+                LinearGradient(colors: [.black.opacity(0.48), .clear], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 100)
+                Spacer(minLength: 0)
+                LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 180)
+            }
+            .allowsHitTesting(false)
+
+            if model.availability == .ready {
+                GeometryReader { geometry in
+                    let height = min(geometry.size.height * 0.48, geometry.size.width * 0.72)
+                    Ellipse()
+                        .stroke(.white.opacity(0.36), style: StrokeStyle(lineWidth: 1, dash: [4, 8]))
+                        .frame(width: height * 0.74, height: height)
+                        .position(x: geometry.size.width / 2, y: geometry.size.height * 0.40)
+                }
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+            } else if model.availability != .preparing {
+                unavailableContent
+                    .padding(.horizontal, 24)
+                    .padding(.top, 56)
+                    .padding(.bottom, 148)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+
+            VStack(spacing: 0) {
+                topControls
+                Spacer(minLength: 8)
+                zoomControl
+                    .padding(.bottom, 12)
+                shutterControls
+            }
+            .padding(16)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Camera preview")
+        .accessibilityIdentifier("camera.preview")
+    }
+
+    private var topControls: some View {
+        HStack {
             Menu {
                 ForEach(model.availableFlashModes, id: \.self) { mode in
                     Button {
+                        CameraFeedback.selection()
                         model.flash = mode
                     } label: {
                         Label(mode.rawValue, systemImage: model.flash == mode ? "checkmark" : mode.symbol)
                     }
                 }
             } label: {
-                Image(systemName: model.flash.symbol).frame(width: 44, height: 44)
+                Image(systemName: model.flash.symbol)
+                    .font(.system(size: 19, weight: .medium))
+                    .foregroundStyle(model.flash == .off ? .white : .yellow)
+                    .frame(width: 48, height: 48)
+                    .background(.black.opacity(0.28), in: Circle())
             }
-            .disabled(!model.supportsFlash || model.isCapturing)
+            .disabled(!model.supportsFlash || !ready)
+            .opacity(model.supportsFlash ? 1 : 0.4)
             .accessibilityLabel(model.supportsFlash ? "Flash \(model.flash.rawValue)" : "Flash unavailable on this camera")
             .accessibilityIdentifier("camera.flash")
-        }
-        .foregroundStyle(ink)
-    }
-
-    @ViewBuilder private var preview: some View {
-        ZStack {
-            Color(hex: dark ? 0x192820 : 0xE5EDE6)
-            if model.availability == .ready || model.availability == .preparing {
-                CameraPreview(model: model)
-                if model.availability == .ready {
-                    GeometryReader { geometry in
-                        let guideHeight = min(geometry.size.height * 0.82, geometry.size.width)
-                        Ellipse()
-                            .stroke(.white.opacity(0.9), style: StrokeStyle(lineWidth: 2, dash: [18, 6]))
-                            .frame(width: guideHeight * 0.72, height: guideHeight)
-                            .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
-                    }.allowsHitTesting(false)
-                } else {
-                    ProgressView("Opening camera…").tint(ink).foregroundStyle(ink)
+            Spacer()
+            if model.lenses.count > 1 {
+                Menu {
+                    ForEach(model.lenses) { lens in
+                        Button {
+                            CameraFeedback.selection()
+                            model.selectLens(lens.id)
+                        } label: {
+                            if lens.id == model.selectedLensID {
+                                Label(lens.title, systemImage: "checkmark")
+                            } else { Text(lens.title) }
+                        }
+                    }
+                } label: {
+                    Image(systemName: "camera.aperture")
+                        .font(.system(size: 19, weight: .medium))
+                        .frame(width: 48, height: 48)
+                        .background(.black.opacity(0.28), in: Circle())
                 }
-            } else {
-                unavailableContent.padding(24)
+                .foregroundStyle(.white)
+                .disabled(!ready)
+                .accessibilityLabel("Choose camera lens")
+                .accessibilityValue(model.lenses.first { $0.id == model.selectedLensID }?.title ?? "")
+                .accessibilityIdentifier("camera.lens")
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 24))
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Camera preview")
+    }
+
+    private var zoomControl: some View {
+        HStack(spacing: 2) {
+            ForEach(model.zoomFactors, id: \.self) { factor in
+                let selected = abs(model.zoomFactor - factor) < 0.01
+                Button {
+                    CameraFeedback.selection()
+                    model.selectZoom(factor)
+                } label: {
+                    Text(zoomLabel(factor))
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundStyle(selected ? Color.black : Color.white)
+                        .frame(width: 44, height: 44)
+                        .background(selected ? Color.white : Color.clear, in: Circle())
+                        .frame(width: 48, height: 48)
+                        .contentShape(Circle())
+                }
+                .disabled(!ready)
+                .accessibilityLabel("\(zoomLabel(factor)) zoom")
+                .accessibilityAddTraits(selected ? .isSelected : [])
+            }
+        }
+        .padding(3)
+        .background(.black.opacity(0.40), in: Capsule())
+        .opacity(model.availability == .ready ? 1 : 0.4)
+        .accessibilityIdentifier("camera.zoom")
+    }
+
+    private var shutterControls: some View {
+        ZStack {
+            Button {
+                CameraFeedback.shutter()
+                model.capture()
+            } label: {
+                ZStack {
+                    Circle().stroke(.white, lineWidth: 3)
+                    Circle().fill(.white).padding(7)
+                    if model.isCapturing {
+                        ProgressView().tint(.black)
+                    }
+                }
+                .frame(width: 76, height: 76)
+                .contentShape(Circle())
+            }
+            .buttonStyle(CameraShutterStyle())
+            .disabled(!ready)
+            .opacity(model.availability == .ready ? 1 : 0.35)
+            .accessibilityLabel(model.isCapturing ? "Saving photo" : "Take photo")
+            .accessibilityIdentifier("camera.capture")
+
+            HStack {
+                Spacer()
+                Button {
+                    CameraFeedback.selection()
+                    model.flipCamera()
+                } label: {
+                    Image(systemName: "arrow.triangle.2.circlepath.camera")
+                        .font(.system(size: 21, weight: .medium))
+                        .foregroundStyle(.white)
+                        .frame(width: 48, height: 48)
+                        .background(.black.opacity(0.32), in: Circle())
+                }
+                .disabled(!model.canFlip || !ready)
+                .opacity(model.canFlip ? 1 : 0.35)
+                .accessibilityLabel("Switch to \(model.frontFacing ? "back" : "front") camera")
+                .accessibilityIdentifier("camera.flip")
+            }
+        }
+        .frame(height: 80)
     }
 
     @ViewBuilder private var unavailableContent: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 10) {
             Image(systemName: model.availability == .denied ? "camera.badge.ellipsis" : "camera")
-                .font(.system(size: 42)).foregroundStyle(secondary)
+                .font(.system(size: 30, weight: .light))
+                .foregroundStyle(.white.opacity(0.5))
             switch model.availability {
             case .denied:
-                Text("Camera access is off").font(.title3.weight(.semibold))
-                Text("Allow camera access in Settings, or choose a photo from your library.")
+                Text("Camera access is off").font(.headline)
                 Button("Open Settings") {
+                    CameraFeedback.light()
                     if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
-                }.buttonStyle(.bordered)
+                }
+                .font(.subheadline.weight(.medium))
+                .frame(minHeight: 48)
             case .interrupted:
-                Text("Camera paused").font(.title3.weight(.semibold))
-                Text("Close other camera apps or return ScanFace to the foreground.")
-                Button("Try again") { model.start() }.buttonStyle(.bordered)
+                Text("Camera paused").font(.headline)
+                Button("Try again") { CameraFeedback.light(); model.start() }
+                    .frame(minHeight: 48)
             case .failed(let message):
-                Text("Camera unavailable").font(.title3.weight(.semibold))
-                Text(message)
-                Button("Try again") { model.start() }.buttonStyle(.bordered)
+                Text("Camera unavailable").font(.headline)
+                Text(message).font(.caption)
+                Button("Try again") { CameraFeedback.light(); model.start() }
+                    .frame(minHeight: 48)
             default:
-                Text("No camera available").font(.title3.weight(.semibold))
-                Text("Choose a photo to continue. A real camera is available when using a supported device.")
+                Text("Camera unavailable").font(.headline)
+                Text("Choose a photo below to continue.").font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.65))
             }
-        }.foregroundStyle(ink).multilineTextAlignment(.center)
-    }
-
-    private var guidanceAndControls: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Look straight ahead").font(.largeTitle.weight(.semibold)).foregroundStyle(ink)
-            Text("Use even lighting and keep your full face inside the oval. Hold the camera at eye level.")
-                .foregroundStyle(secondary)
-            controls
         }
+        .foregroundStyle(.white)
+        .multilineTextAlignment(.center)
     }
 
-    private var controls: some View {
-        VStack(spacing: 16) {
-            HStack(spacing: 12) {
-                Label("Even lighting", systemImage: "sun.max")
-                Label("Neutral expression", systemImage: "face.smiling")
-            }
-            .font(.caption)
-            .foregroundStyle(secondary)
-            .padding(12).frame(maxWidth: .infinity)
-            .background(surface, in: RoundedRectangle(cornerRadius: 14))
-
-            if model.availability == .ready {
-                HStack(spacing: 12) {
-                    if model.lenses.count > 1 {
-                        Menu {
-                            ForEach(model.lenses) { lens in
-                                Button(lens.title) { model.selectLens(lens.id) }
-                            }
-                        } label: {
-                            Label(model.lenses.first { $0.id == model.selectedLensID }?.title ?? "Wide", systemImage: "camera.aperture")
-                                .frame(minHeight: 44)
-                        }.disabled(model.isCapturing)
-                    } else {
-                        Text(model.frontFacing ? "Front camera" : "Wide · 1×").font(.subheadline)
-                    }
-                    Spacer()
-                    Button { model.flipCamera() } label: {
-                        Label("Flip", systemImage: "arrow.triangle.2.circlepath.camera")
-                            .frame(minHeight: 44)
-                    }
-                    .disabled(!model.canFlip || model.isCapturing)
-                    .accessibilityLabel("Switch to \(model.frontFacing ? "back" : "front") camera")
-                    .accessibilityIdentifier("camera.flip")
-                }.foregroundStyle(ink)
-                if !model.supportsFlash {
-                    Text("Flash isn't available on this camera. Use even ambient light.")
-                        .font(.caption).foregroundStyle(secondary)
-                }
-            }
-            Label("Photos stay on your device", systemImage: "lock")
-                .font(.caption).foregroundStyle(secondary)
-            Button { model.capture() } label: {
-                HStack {
-                    if model.isCapturing { ProgressView().tint(onAction) }
-                    else { Image(systemName: "camera") }
-                    Text(model.isCapturing ? "Saving photo…" : "Take photo").fontWeight(.semibold)
-                }
-                .frame(maxWidth: .infinity, minHeight: 56)
-                .foregroundStyle(onAction)
-                .background(action, in: RoundedRectangle(cornerRadius: 14))
-            }
-            .disabled(model.availability != .ready || model.isCapturing)
-            .opacity(model.availability == .ready && !model.isCapturing ? 1 : 0.45)
-            .accessibilityIdentifier("camera.capture")
-            Button { pickingPhoto = true } label: {
-                Label("Choose a photo", systemImage: "photo")
-                    .frame(maxWidth: .infinity, minHeight: 44)
-            }
-            .foregroundStyle(action)
-            .disabled(model.isCapturing)
-            .accessibilityIdentifier("camera.import")
-        }
+    private func zoomLabel(_ factor: CGFloat) -> String {
+        factor == factor.rounded() ? "\(Int(factor))×" : "\(factor)×"
     }
+}
+
+private struct CameraShutterStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.93 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+private enum CameraFeedback {
+    static func selection() { UISelectionFeedbackGenerator().selectionChanged() }
+    static func light() { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+    static func shutter() { UIImpactFeedbackGenerator(style: .medium).impactOccurred() }
+    static func success() { UINotificationFeedbackGenerator().notificationOccurred(.success) }
+    static func error() { UINotificationFeedbackGenerator().notificationOccurred(.error) }
 }
 
 private final class PreviewView: UIView {
@@ -679,7 +834,13 @@ private final class PreviewView: UIView {
     var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
     override func didMoveToWindow() {
         super.didMoveToWindow()
-        screenChanged?(window?.windowScene?.screen)
+        let screen = window?.windowScene?.screen
+        // Screen attachment happens during SwiftUI updates. Defer the model's
+        // flash-state publication until that view update has completed.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.window?.windowScene?.screen === screen else { return }
+            self.screenChanged?(screen)
+        }
     }
 }
 
