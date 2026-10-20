@@ -6,6 +6,8 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.hardware.camera2.CameraCharacteristics
+import android.os.Handler
+import android.os.Looper
 import android.util.Size
 import android.view.MotionEvent
 import android.view.OrientationEventListener
@@ -67,6 +69,7 @@ internal class CameraController(
     private val mutableState = MutableStateFlow(CameraUiState())
     val state = mutableState.asStateFlow()
     private val main = ContextCompat.getMainExecutor(context)
+    private val mainHandler = Handler(Looper.getMainLooper())
     private val imageExecutor = Executors.newSingleThreadExecutor()
     private var provider: ProcessCameraProvider? = null
     private var camera: Camera? = null
@@ -78,6 +81,8 @@ internal class CameraController(
     private var oldBrightness: Float? = null
     private var closed = false
     private var captureInFlight = false
+    private var zoomGeneration = 0
+    private var zoomTimeout: Runnable? = null
     private val orientationListener = object : OrientationEventListener(context) {
         override fun onOrientationChanged(orientation: Int) {
             if (orientation == ORIENTATION_UNKNOWN) return
@@ -183,12 +188,36 @@ internal class CameraController(
 
     fun setZoom(value: Float) {
         val current = mutableState.value
-        if (!current.ready || current.busy || current.zoomChanging || value !in current.zoomChoices) return
+        if (!current.ready || current.busy || current.zoomChanging || value == current.zoom || value !in current.zoomChoices) return
         val activeCamera = camera ?: return
+        cancelZoomTimeout()
+        val token = ++zoomGeneration
         mutableState.value = current.copy(zoomChanging = true, error = null)
-        val future = activeCamera.cameraControl.setZoomRatio(value)
+        val future = runCatching { activeCamera.cameraControl.setZoomRatio(value) }.getOrElse {
+            mutableState.value = current.copy(error = "This zoom is unavailable.")
+            return
+        }
+        zoomTimeout = Runnable {
+            if (closed || camera !== activeCamera || token != zoomGeneration) return@Runnable
+            // Some camera drivers accept a ratio but never acknowledge its capture
+            // request. Rebinding restores an unambiguous 1x baseline for photo metadata.
+            runCatching { bindCamera() }
+                .onSuccess {
+                    mutableState.value = mutableState.value.copy(
+                        zoomChoices = mutableState.value.zoomChoices.filter {
+                            it != value || it == mutableState.value.zoom
+                        },
+                        error = "Zoom did not respond. The camera has been reset to ${formatZoom(mutableState.value.zoom)}.",
+                    )
+                }
+                .onFailure {
+                    mutableState.value = mutableState.value.copy(ready = false)
+                    fail("The camera could not reset after zooming. Try the camera again.")
+                }
+        }.also { mainHandler.postDelayed(it, 4_000) }
         future.addListener({
-            if (closed || camera !== activeCamera) return@addListener
+            if (closed || camera !== activeCamera || token != zoomGeneration) return@addListener
+            cancelZoomTimeout()
             runCatching { future.get() }
                 .onSuccess { mutableState.value = mutableState.value.copy(zoom = value, zoomChanging = false) }
                 .onFailure {
@@ -200,6 +229,8 @@ internal class CameraController(
     }
 
     private fun bindCamera() {
+        cancelZoomTimeout()
+        zoomGeneration++
         val cameraProvider = provider ?: return
         val lifecycleOwner = owner ?: return
         val frontAvailable = cameraProvider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)
@@ -353,6 +384,8 @@ internal class CameraController(
     fun close() {
         closed = true
         generation++
+        zoomGeneration++
+        cancelZoomTimeout()
         owner?.lifecycle?.removeObserver(lifecycleObserver)
         owner = null
         orientationListener.disable()
@@ -369,7 +402,12 @@ internal class CameraController(
     }
 
     private fun fail(message: String) {
-        mutableState.value = mutableState.value.copy(busy = false, error = message)
+        mutableState.value = mutableState.value.copy(busy = false, zoomChanging = false, error = message)
+    }
+
+    private fun cancelZoomTimeout() {
+        zoomTimeout?.let(mainHandler::removeCallbacks)
+        zoomTimeout = null
     }
 }
 
