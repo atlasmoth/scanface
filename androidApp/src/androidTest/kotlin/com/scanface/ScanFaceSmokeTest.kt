@@ -66,7 +66,7 @@ class ScanFaceSmokeTest {
         captureEvidence("android-dark-empty-history")
         device.executeShellCommand("pm grant ${context.packageName} android.permission.CAMERA")
         visible(By.text("Scan")).click()
-        visible(By.text("Front camera"), 20_000)
+        visible(By.descContains("Front camera."), 20_000)
         assertCameraControlsOverlayPreview()
         captureEvidence("android-dark-camera")
         visible(By.desc("Close camera")).click()
@@ -80,36 +80,19 @@ class ScanFaceSmokeTest {
     fun cameraCanFlipUseScreenFlashCaptureAndPersistPrivateUprightPhoto() {
         device.executeShellCommand("pm grant ${context.packageName} android.permission.CAMERA")
         visible(By.text("Scan")).click()
-        visible(By.text("Front camera"), 20_000)
-        val zoomSelector = By.desc("1.5x zoom")
-        device.findObject(zoomSelector)?.let {
-            assertTrue("Zoom choice is enabled", it.isEnabled)
-            it.click()
-            var zoomSettled = false
-            val deadline = SystemClock.uptimeMillis() + 8_000
-            while (SystemClock.uptimeMillis() < deadline) {
-                val chip = device.findObject(zoomSelector)
-                // Compose exposes the custom label as a child of the selectable chip.
-                val selected = generateSequence(chip) { it.parent }.take(3)
-                    .any { it.isChecked || it.isSelected }
-                zoomSettled = selected ||
-                    device.hasObject(By.textStartsWith("Zoom did not respond. The camera has been reset")) ||
-                    device.hasObject(By.text("This zoom is unavailable."))
-                if (zoomSettled) break
-                SystemClock.sleep(100)
-            }
-            assertTrue("Zoom completes or safely resets before switching lenses", zoomSettled)
-            assertTrue(visible(By.desc("Switch to rear camera")).isEnabled)
-            visible(By.desc("Capture photo"))
-        }
+        visible(By.descContains("Front camera."), 20_000)
+        waitForCameraReady()
         visible(By.desc("Switch to rear camera")).click()
-        visible(By.text("Main rear camera"), 15_000)
+        visible(By.descContains("Main rear camera."), 15_000)
+        waitForCameraReady()
         visible(By.desc("Switch to front camera")).click()
-        visible(By.text("Front camera"), 15_000)
+        visible(By.descContains("Front camera."), 15_000)
+        waitForCameraReady()
         visible(By.desc("Flash off. Change flash mode.")).click()
-        visible(By.text("Screen flash"))
+        visible(By.desc("Screen flash. Change flash mode."))
         assertCameraControlsOverlayPreview()
         captureEvidence("android-camera")
+        val capturedZoom = cameraZoom()
         visible(By.desc("Capture photo")).click()
         val deadline = SystemClock.uptimeMillis() + 60_000
         fun pendingResult() = snapshot().takeIf(String::isNotBlank)?.let(::JSONObject)?.optJSONObject("pending")
@@ -119,6 +102,8 @@ class ScanFaceSmokeTest {
             pending = pendingResult()
         }
         val analyzed = requireNotNull(pending)
+        assertTrue("Capture metadata uses the acknowledged zoom",
+            analyzed.getString("lens").endsWith("· ${zoomLabel(capturedZoom)}"))
         assertTrue("Bundled inference settles without waiting for a model download",
             analyzed.getString("status") in listOf("COMPLETE", "FAILED"))
         if (analyzed.getString("status") == "COMPLETE") {
@@ -143,6 +128,56 @@ class ScanFaceSmokeTest {
         visible(By.text("History")).click()
         visible(By.text(Pattern.compile("1 saved scans?")))
         assertTrue("Saved photo survives recreation", photos.single().exists())
+    }
+
+    @Test
+    fun pinchZoomCapsAtFourAndResetsWhenSwitchingLenses() {
+        device.executeShellCommand("pm grant ${context.packageName} android.permission.CAMERA")
+        visible(By.text("Scan")).click()
+        waitForCameraReady()
+        val preview = visible(By.descStartsWith("Camera preview."))
+        val density = context.resources.displayMetrics.density
+        // Start both fingers inside the unobscured image, clear of rounded
+        // corners and overlaid close/capture controls.
+        preview.setGestureMargins((48 * density).toInt(), (100 * density).toInt(),
+            (48 * density).toInt(), (140 * density).toInt())
+        val maximum = cameraMaximumZoom()
+        assertTrue("Product zoom cap is at most 4x", maximum in 1f..4f)
+        assertEquals(1f, cameraZoom(), .05f)
+        if (maximum > 1f) {
+            // Several updates arrive while the prior CameraX request is pending.
+            // The gesture should settle on its final target, including at the cap.
+            preview.pinchOpen(.9f, 1_500)
+            waitForCameraReady()
+            assertTrue("Pinch changes the acknowledged camera zoom", cameraZoom() > 1f)
+            preview.pinchOpen(.9f, 1_500)
+            waitForCameraReady()
+            assertEquals("Repeated pinch is capped by hardware and 4x", maximum, cameraZoom(), .1f)
+            preview.pinchClose(.9f, 1_500)
+            waitForCameraReady()
+            assertTrue("Reverse pinch reduces zoom", cameraZoom() < maximum)
+            repeat(2) { preview.pinchClose(.9f, 1_500); waitForCameraReady() }
+            assertEquals("Pinch cannot zoom below 1x", 1f, cameraZoom(), .05f)
+            preview.pinchOpen(.75f, 1_500)
+            waitForCameraReady()
+            assertTrue(cameraZoom() > 1f)
+            preview.pinchClose(.6f, 1_500)
+            device.pressHome()
+            device.waitForIdle()
+            // A launcher-style intent resumes the existing task. A bare
+            // component launch creates another MainActivity and starts home.
+            context.startActivity(requireNotNull(context.packageManager.getLaunchIntentForPackage(context.packageName)))
+            waitForCameraReady()
+        }
+        visible(By.desc("Switch to rear camera")).click()
+        visible(By.descContains("Main rear camera."), 15_000)
+        waitForCameraReady()
+        assertEquals("New lens starts at the confirmed baseline", 1f, cameraZoom(), .05f)
+        visible(By.desc("Switch to front camera")).click()
+        visible(By.descContains("Front camera."), 15_000)
+        waitForCameraReady()
+        assertEquals(1f, cameraZoom(), .05f)
+        assertCameraControlsOverlayPreview()
     }
 
     @Test
@@ -173,7 +208,7 @@ class ScanFaceSmokeTest {
             captureEvidence("android-unfolded-home")
             device.executeShellCommand("pm grant ${context.packageName} android.permission.CAMERA")
             visible(By.text("Scan")).click()
-            visible(By.text("Front camera"), 20_000)
+            visible(By.descContains("Front camera."), 20_000)
             assertCameraControlsOverlayPreview()
             captureEvidence("android-unfolded-camera")
             visible(By.desc("Close camera")).click()
@@ -191,18 +226,47 @@ class ScanFaceSmokeTest {
     }
 
     private fun assertCameraControlsOverlayPreview() {
-        val preview = visible(By.desc("Camera preview. Tap to focus.")).visibleBounds
+        waitForCameraReady()
+        val preview = visible(By.descStartsWith("Camera preview.")).visibleBounds
         val shutter = visible(By.desc("Capture photo")).visibleBounds
         val flip = visible(By.desc("Switch to rear camera")).visibleBounds
+        val flash = visible(By.descContains("Change flash mode.")).visibleBounds
         val library = visible(By.text("Choose an existing photo")).visibleBounds
         val tolerance = (context.resources.displayMetrics.density * 2).toInt()
         assertTrue("Shutter stays inside the camera preview", preview.contains(shutter))
         assertTrue("Lens switching stays inside the camera preview", preview.contains(flip))
+        assertTrue("Flash stays inside the camera preview", preview.contains(flash))
+        assertTrue("Flip is left of the shutter", flip.centerX() < shutter.centerX())
+        assertTrue("Flash is right of the shutter", flash.centerX() > shutter.centerX())
+        assertTrue("Controls share the bottom baseline", abs(flip.centerY() - shutter.centerY()) <= tolerance &&
+            abs(flash.centerY() - shutter.centerY()) <= tolerance)
+        assertTrue("Preview begins near the top safe area", preview.top < context.resources.displayMetrics.density * 96)
+        assertTrue("Preview uses available height above its footer",
+            device.displayHeight - preview.bottom < context.resources.displayMetrics.density * 110)
+        assertTrue("Camera has no separate header", !device.hasObject(By.text("New scan")))
+        assertTrue("Zoom presets are removed", !device.hasObject(By.desc("1.5x zoom")))
         assertTrue("Shutter is centered horizontally", abs(preview.centerX() - shutter.centerX()) <= tolerance)
         assertTrue("Shutter is anchored to the lower preview", shutter.centerY() > preview.centerY())
         assertTrue("Photo library is below the camera preview", library.top >= preview.bottom)
         assertTrue("Photo library is centered horizontally", abs(preview.centerX() - library.centerX()) <= tolerance)
     }
+
+    private fun waitForCameraReady() {
+        val deadline = SystemClock.uptimeMillis() + 12_000
+        while (SystemClock.uptimeMillis() < deadline) {
+            if (device.findObject(By.desc("Capture photo"))?.isEnabled == true) return
+            SystemClock.sleep(100)
+        }
+        error("Camera did not settle: ${device.findObject(By.descStartsWith("Camera preview."))?.contentDescription}")
+    }
+
+    private fun cameraZoom(): Float = Regex("Zoom ([0-9.]+)x")
+        .find(visible(By.descStartsWith("Camera preview.")).contentDescription)!!.groupValues[1].toFloat()
+
+    private fun cameraMaximumZoom(): Float = Regex("Maximum ([0-9.]+)x")
+        .find(visible(By.descStartsWith("Camera preview.")).contentDescription)!!.groupValues[1].toFloat()
+
+    private fun zoomLabel(value: Float): String = if (value == value.toInt().toFloat()) "${value.toInt()}x" else "${value}x"
 
     private fun launch() {
         context.startActivity(
