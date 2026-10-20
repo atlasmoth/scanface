@@ -144,18 +144,18 @@ def prepare_test_portraits():
     padded.save(ios, quality=95)
 
 
-def install_notices(directory: Path, report: dict, copy_licenses=True):
-    if copy_licenses:
-        shutil.copytree(ROOT / "models/licenses", directory / "licenses", dirs_exist_ok=True)
-    (directory / "conversion.json").write_text(json.dumps(report, indent=2) + "\n")
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--runtime", choices=["coreml", "litert", "both", "reference"], default="both")
-    parser.add_argument("--install", action="store_true", help="Copy validated derivatives into app bundles")
+    parser.add_argument("--install", action="store_true", help="Retired: use install_quantized_models.py after quantization")
     parser.add_argument("--test-portraits", action="store_true", help="Download author synthetic portraits for local validation (not redistributed)")
     args = parser.parse_args()
+    if args.install:
+        parser.error(
+            "Float32 baseline installation is retired to avoid replacing the selected compressed model. "
+            "Prepare baselines without --install, run quantize_litert.py / quantize_coreml.py, "
+            "then run scripts/models/install_quantized_models.py. See docs/models.md."
+        )
     torch.set_num_threads(4)
     if args.test_portraits:
         prepare_test_portraits()
@@ -203,11 +203,6 @@ def main():
             "coremltools": ct.__version__, "minimum_target": "iOS17", "precision": "float32",
             "files": {str(p.relative_to(path)): {"sha256": sha256(p), "bytes": p.stat().st_size} for p in path.rglob("*") if p.is_file()},
         }
-        if args.install:
-            destination = ROOT / "iosApp/ScanFace/Models/FAHRFaceAge.mlpackage"
-            shutil.copytree(path, destination, dirs_exist_ok=True)
-            # Xcode references models/licenses directly as a bundled folder.
-            install_notices(destination.parent, report, copy_licenses=False)
         print("Core ML parity:", report["runtimes"]["coreml"], flush=True)
 
     if args.runtime in ("litert", "both"):
@@ -244,11 +239,6 @@ def main():
             "litert_torch": importlib.metadata.version("litert-torch"),
             "litert": importlib.metadata.version("ai-edge-litert"),
         }
-        if args.install:
-            destination = ROOT / "androidApp/src/main/assets/models/fahr_faceage.tflite"
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(path, destination)
-            install_notices(destination.parent, report)
         print("LiteRT parity:", report["runtimes"]["litert"], flush=True)
     (WORK / f"conversion-{args.runtime}.json").write_text(json.dumps(report, indent=2) + "\n")
 
