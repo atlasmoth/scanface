@@ -14,6 +14,7 @@ import androidx.test.uiautomator.Until
 import com.scanface.ml.LiteRtAgeModel
 import java.io.File
 import java.util.regex.Pattern
+import kotlin.math.abs
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -51,7 +52,7 @@ class ScanFaceSmokeTest {
     @Test
     fun emptyHistoryAndDarkAppearancePersistAcrossActivityRecreation() {
         visible(By.text("History")).click()
-        visible(By.text("A fresh start"))
+        visible(By.text("No scans yet"))
         openSettings()
         visible(By.text("Dark")).click()
         assertTrue(snapshot().contains("\"theme\":\"DARK\""))
@@ -59,10 +60,16 @@ class ScanFaceSmokeTest {
 
         launch()
         visible(By.text("History")).click()
-        visible(By.text("A fresh start"))
+        visible(By.text("No scans yet"))
         assertEquals(0, JSONObject(snapshot()).getJSONArray("records").length())
         assertTrue(snapshot().contains("\"theme\":\"DARK\""))
         captureEvidence("android-dark-empty-history")
+        device.executeShellCommand("pm grant ${context.packageName} android.permission.CAMERA")
+        visible(By.text("Scan")).click()
+        visible(By.text("Front camera"), 20_000)
+        assertCameraControlsOverlayPreview()
+        captureEvidence("android-dark-camera")
+        visible(By.desc("Close camera")).click()
 
         openSettings()
         visible(By.text("Light")).click()
@@ -93,7 +100,7 @@ class ScanFaceSmokeTest {
             }
             assertTrue("Zoom completes or safely resets before switching lenses", zoomSettled)
             assertTrue(visible(By.desc("Switch to rear camera")).isEnabled)
-            visible(By.text("Capture photo"))
+            visible(By.desc("Capture photo"))
         }
         visible(By.desc("Switch to rear camera")).click()
         visible(By.text("Main rear camera"), 15_000)
@@ -101,8 +108,9 @@ class ScanFaceSmokeTest {
         visible(By.text("Front camera"), 15_000)
         visible(By.desc("Flash off. Change flash mode.")).click()
         visible(By.text("Screen flash"))
+        assertCameraControlsOverlayPreview()
         captureEvidence("android-camera")
-        visible(By.text("Capture photo")).click()
+        visible(By.desc("Capture photo")).click()
         val deadline = SystemClock.uptimeMillis() + 60_000
         fun pendingResult() = snapshot().takeIf(String::isNotBlank)?.let(::JSONObject)?.optJSONObject("pending")
         var pending = pendingResult()
@@ -151,28 +159,49 @@ class ScanFaceSmokeTest {
             setPosture(closedState, expanded = false)
             visible(By.text("History")).click()
             visible(By.text("Scan history"))
-            visible(By.text("A fresh start"))
+            visible(By.text("No scans yet"))
 
             setPosture(openedState, expanded = true)
             visible(By.text("Scan history"))
-            visible(By.text("A fresh start"))
+            visible(By.text("No scans yet"))
             captureEvidence("android-unfolded-empty-history")
 
             // Exercise both destinations while expanded, then ensure compact
             // navigation retains the chosen history destination after folding.
             visible(By.text("Overview")).click()
             visible(By.text("Start with a face scan"))
+            captureEvidence("android-unfolded-home")
+            device.executeShellCommand("pm grant ${context.packageName} android.permission.CAMERA")
+            visible(By.text("Scan")).click()
+            visible(By.text("Front camera"), 20_000)
+            assertCameraControlsOverlayPreview()
+            captureEvidence("android-unfolded-camera")
+            visible(By.desc("Close camera")).click()
             visible(By.text("History")).click()
-            visible(By.text("A fresh start"))
+            visible(By.text("No scans yet"))
             setPosture(closedState, expanded = false)
             visible(By.text("Scan history"))
-            visible(By.text("A fresh start"))
+            visible(By.text("No scans yet"))
             captureEvidence("android-folded-empty-history")
             visible(By.text("Overview")).click()
             visible(By.text("Start with a face scan"))
         } finally {
             initial?.let { setPosture(it) }
         }
+    }
+
+    private fun assertCameraControlsOverlayPreview() {
+        val preview = visible(By.desc("Camera preview. Tap to focus.")).visibleBounds
+        val shutter = visible(By.desc("Capture photo")).visibleBounds
+        val flip = visible(By.desc("Switch to rear camera")).visibleBounds
+        val library = visible(By.text("Choose an existing photo")).visibleBounds
+        val tolerance = (context.resources.displayMetrics.density * 2).toInt()
+        assertTrue("Shutter stays inside the camera preview", preview.contains(shutter))
+        assertTrue("Lens switching stays inside the camera preview", preview.contains(flip))
+        assertTrue("Shutter is centered horizontally", abs(preview.centerX() - shutter.centerX()) <= tolerance)
+        assertTrue("Shutter is anchored to the lower preview", shutter.centerY() > preview.centerY())
+        assertTrue("Photo library is below the camera preview", library.top >= preview.bottom)
+        assertTrue("Photo library is centered horizontally", abs(preview.centerX() - library.centerX()) <= tolerance)
     }
 
     private fun launch() {
@@ -228,6 +257,9 @@ class ScanFaceSmokeTest {
     }
 
     private fun captureEvidence(name: String) {
+        device.waitForIdle()
+        // Preference writes can precede the new theme's first rendered frame.
+        SystemClock.sleep(250)
         val directory = File(context.getExternalFilesDir(null), "qa").apply { mkdirs() }
         val image = File(directory, "$name.png")
         assertTrue(device.takeScreenshot(image))
