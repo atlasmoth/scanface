@@ -252,8 +252,11 @@ class AppStoreTest {
         first.capture(photo("/private/replacement.jpg"))
         assertEquals("/private/original.jpg", first.state.value.pending?.photoPath)
         assertTrue(first.state.value.isAnalyzing)
-        assertEquals(listOf("/private/replacement.jpg"), removed)
+        assertTrue(removed.isEmpty())
+        assertEquals(1, first.state.value.cleanupPendingCount)
         disk.failWrites = false
+        assertTrue(first.retryCleanup())
+        assertEquals(listOf("/private/replacement.jpg"), removed)
         gate.complete(Unit)
         advanceUntilIdle()
         assertEquals(36.0, first.state.value.pending?.age)
@@ -346,6 +349,187 @@ class AppStoreTest {
         assertEquals(raw, disk.get(AppStore.STORAGE_KEY))
     }
 
+    @Test
+    fun failedFileDeletionIsJournaledBeforeAttemptAndRetriedAfterRestart() = runTest {
+        val disk = MemoryStore()
+        var failDelete = true
+        val removed = mutableListOf<String>()
+        val delete: (String) -> Unit = { path ->
+            assertTrue(disk.get(AppStore.STORAGE_KEY).orEmpty().contains("\"cleanupPaths\":[\"$path\"]"))
+            check(!failDelete) { "Photo is locked" }
+            removed.add(path)
+        }
+        val first = store(disk, delete = delete)
+        first.capture(photo())
+        val saved = assertNotNull(first.savePending())
+        assertTrue(first.deleteRecord(saved.id))
+        assertTrue(first.state.value.records.isEmpty())
+        assertEquals(1, first.state.value.cleanupPendingCount)
+        assertNotNull(first.state.value.error)
+        assertTrue(removed.isEmpty())
+        failDelete = false
+        val restored = store(disk, delete = delete)
+        assertEquals(listOf("/private/capture.jpg"), removed)
+        assertEquals(0, restored.state.value.cleanupPendingCount)
+        assertTrue(restored.state.value.records.isEmpty())
+        assertEquals(0, store(disk).state.value.cleanupPendingCount)
+    }
+
+    @Test
+    fun failedDiscardRemainsRetryableAcrossRestarts() = runTest {
+        val disk = MemoryStore()
+        var failDelete = true
+        val removed = mutableListOf<String>()
+        val delete: (String) -> Unit = { path ->
+            check(!failDelete)
+            removed.add(path)
+        }
+        val first = store(disk, delete = delete)
+        first.capture(photo())
+        assertTrue(first.discardPending())
+        assertNull(first.state.value.pending)
+        assertEquals(1, first.state.value.cleanupPendingCount)
+        val restored = store(disk, delete = delete)
+        assertEquals(1, restored.state.value.cleanupPendingCount)
+        assertFalse(restored.retryCleanup())
+        failDelete = false
+        assertTrue(restored.retryCleanup())
+        assertEquals(0, restored.state.value.cleanupPendingCount)
+        assertNull(restored.state.value.error)
+        assertEquals(listOf("/private/capture.jpg"), removed)
+    }
+
+    @Test
+    fun recapturingQueuedPathTransfersOwnershipWithoutDeletingIt() = runTest {
+        val disk = MemoryStore()
+        var failDelete = true
+        val removed = mutableListOf<String>()
+        val first = store(disk, delete = { path ->
+            check(!failDelete)
+            removed.add(path)
+        })
+        first.capture(photo())
+        first.discardPending()
+        assertEquals(1, first.state.value.cleanupPendingCount)
+        first.capture(photo())
+        failDelete = false
+        assertTrue(first.retryCleanup())
+        assertEquals(0, first.state.value.cleanupPendingCount)
+        assertTrue(removed.isEmpty())
+        assertEquals("/private/capture.jpg", first.savePending()?.photoPath)
+        store(disk, removed)
+        assertTrue(removed.isEmpty())
+    }
+
+    @Test
+    fun loadedCleanupQueueNeverDeletesAnOwnedPhoto() = runTest {
+        val disk = MemoryStore()
+        val first = store(disk)
+        first.capture(photo())
+        first.savePending()
+        disk.put(AppStore.STORAGE_KEY, assertNotNull(disk.get(AppStore.STORAGE_KEY)).replace(
+            "\"cleanupPaths\":[]", "\"cleanupPaths\":[\"/private/capture.jpg\"]",
+        ))
+        val removed = mutableListOf<String>()
+        val restored = store(disk, removed)
+        assertEquals(1, restored.state.value.records.size)
+        assertEquals(0, restored.state.value.cleanupPendingCount)
+        assertTrue(removed.isEmpty())
+    }
+
+    @Test
+    fun failedQueueClearingWriteSafelyRetriesAnAlreadyDeletedFile() = runTest {
+        val disk = MemoryStore()
+        val existingFiles = mutableSetOf("/private/capture.jpg")
+        var attempts = 0
+        val first = store(disk, delete = { path ->
+            attempts++
+            existingFiles.remove(path)
+            disk.failWrites = true
+        })
+        first.capture(photo())
+        val record = assertNotNull(first.savePending())
+        assertTrue(first.deleteRecord(record.id))
+        assertTrue(existingFiles.isEmpty())
+        assertEquals(1, first.state.value.cleanupPendingCount)
+        disk.failWrites = false
+        val restored = store(disk, delete = { path ->
+            attempts++
+            existingFiles.remove(path)
+        })
+        assertEquals(2, attempts)
+        assertEquals(0, restored.state.value.cleanupPendingCount)
+        assertTrue(restored.state.value.records.isEmpty())
+    }
+
+    @Test
+    fun replacementCleanupFailureDoesNotDeleteNewCapture() = runTest {
+        val disk = MemoryStore()
+        var failDelete = true
+        val removed = mutableListOf<String>()
+        val first = store(disk, delete = { path ->
+            check(!failDelete)
+            removed.add(path)
+        })
+        first.capture(photo("/private/old.jpg"))
+        first.capture(photo("/private/new.jpg"))
+        assertEquals("/private/new.jpg", first.state.value.pending?.photoPath)
+        assertEquals(1, first.state.value.cleanupPendingCount)
+        failDelete = false
+        assertTrue(first.retryCleanup())
+        assertEquals(listOf("/private/old.jpg"), removed)
+        assertEquals("/private/new.jpg", first.state.value.pending?.photoPath)
+    }
+
+    @Test
+    fun failedCaptureWaitsForDurableQueueBeforeDeletingItsPhoto() = runTest {
+        val disk = MemoryStore()
+        var failDelete = true
+        val removed = mutableListOf<String>()
+        val delete: (String) -> Unit = { path ->
+            assertTrue(disk.get(AppStore.STORAGE_KEY).orEmpty().contains("\"cleanupPaths\":[\"$path\"]"))
+            check(!failDelete)
+            removed.add(path)
+        }
+        val first = store(disk, delete = delete)
+        disk.failWrites = true
+        first.capture(photo().copy(width = 0))
+        assertNull(first.state.value.pending)
+        assertEquals(1, first.state.value.cleanupPendingCount)
+        assertTrue(removed.isEmpty())
+        disk.failWrites = false
+        assertFalse(first.retryCleanup())
+        assertTrue(removed.isEmpty())
+        failDelete = false
+        val restored = store(disk, delete = delete)
+        assertEquals(0, restored.state.value.cleanupPendingCount)
+        assertEquals(listOf("/private/capture.jpg"), removed)
+    }
+
+    @Test
+    fun clearHistoryKeepsOnlyFailedCleanupEntriesAndProtectsPendingImage() = runTest {
+        val disk = MemoryStore()
+        val removed = mutableListOf<String>()
+        val first = store(disk, delete = { path ->
+            check(path != "/private/locked.jpg")
+            removed.add(path)
+        })
+        listOf("/private/ready.jpg", "/private/locked.jpg", "/private/owned.jpg").forEach { path ->
+            first.capture(photo(path))
+            first.savePending()
+        }
+        first.capture(photo("/private/owned.jpg"))
+        assertTrue(first.clearHistory())
+        assertTrue(first.state.value.records.isEmpty())
+        assertEquals("/private/owned.jpg", first.state.value.pending?.photoPath)
+        assertEquals(listOf("/private/ready.jpg"), removed)
+        assertEquals(1, first.state.value.cleanupPendingCount)
+        val restored = store(disk, removed)
+        assertEquals(listOf("/private/ready.jpg", "/private/locked.jpg"), removed)
+        assertEquals("/private/owned.jpg", restored.state.value.pending?.photoPath)
+        assertEquals(0, restored.state.value.cleanupPendingCount)
+    }
+
     private fun delayedAnalyzer(gate: CompletableDeferred<Unit>) = object : FaceAnalyzer {
         override suspend fun analyze(photo: CapturedPhoto): AnalysisResult {
             gate.await()
@@ -357,11 +541,12 @@ class AppStoreTest {
         disk: MemoryStore = MemoryStore(),
         removed: MutableList<String> = mutableListOf(),
         analyzer: FaceAnalyzer = PendingModelAnalyzer(),
+        delete: ((String) -> Unit)? = null,
     ) = AppStore(
         storage = disk,
         analyzer = analyzer,
         nowMillis = { now },
-        deletePhoto = { removed.add(it) },
+        deletePhoto = { path -> if (delete != null) delete(path) else removed.add(path) },
         scope = this,
     )
 

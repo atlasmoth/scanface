@@ -74,6 +74,7 @@ data class AppState(
     val pending: ScanRecord? = null,
     val isAnalyzing: Boolean = false,
     val error: String? = null,
+    val cleanupPendingCount: Int = 0,
 ) {
     val latest: ScanRecord? get() = records.firstOrNull()
 }

@@ -148,7 +148,8 @@ fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingM
                                     Route.SETTINGS -> SettingsScreen(state, { store.setTheme(it) },
                                         { store.setEnteredAge(it).also { success -> if (success) notify("Age saved") } },
                                         { if (store.seedDemo()) notify("Sample results added") },
-                                        { if (store.removeDemo()) notify("Sample results removed") }, { clearAll = true })
+                                        { if (store.removeDemo()) notify("Sample results removed") }, { clearAll = true },
+                                        { if (store.retryCleanup()) notify("Photo cleanup complete") })
                                     Route.RESULT -> {
                                         val record = state.pending ?: state.records.firstOrNull { it.id == selectedId }
                                         if (record != null) ResultScreen(record, state.pending != null, state.isAnalyzing,
@@ -178,7 +179,12 @@ fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingM
                 confirmButton = {
                     TextButton({
                         val success = if (clearAll) store.clearHistory() else store.deleteRecord(deleteId!!)
-                        if (success) { deleteId = null; clearAll = false; if (route == Route.RESULT) routeName = Route.HISTORY.name; notify("Scans deleted") }
+                        if (success) {
+                            deleteId = null
+                            clearAll = false
+                            if (route == Route.RESULT) routeName = Route.HISTORY.name
+                            if (store.state.value.cleanupPendingCount == 0) notify("Deleted from history")
+                        }
                     }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
                 },
                 dismissButton = { TextButton({ deleteId = null; clearAll = false }) { Text("Keep scans") } })

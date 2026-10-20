@@ -232,7 +232,7 @@ fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
 
 @Composable
 fun SettingsScreen(state: AppState, onTheme: (ThemeMode) -> Unit, onAge: (Int?) -> Boolean,
-                   onDemo: () -> Unit, onRemoveDemo: () -> Unit, onClear: () -> Unit) {
+                   onDemo: () -> Unit, onRemoveDemo: () -> Unit, onClear: () -> Unit, onRetryCleanup: () -> Unit) {
     var ageText by rememberSaveable(state.enteredAge) { mutableStateOf(state.enteredAge?.toString() ?: "") }
     var ageError by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
@@ -268,6 +268,12 @@ fun SettingsScreen(state: AppState, onTheme: (ThemeMode) -> Unit, onAge: (Int?) 
             ScanCard {
                 Text("Your data", style = MaterialTheme.typography.titleLarge)
                 PrivacyNote()
+                if (state.cleanupPendingCount > 0) {
+                    Badge("Photo deletion pending")
+                    Text("${state.cleanupPendingCount} ${if (state.cleanupPendingCount == 1) "photo could" else "photos could"} not be removed. The app will retry when you reopen it, or you can try again now.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    PrimaryButton("Retry photo deletion", AppIcon.Delete, onClick = onRetryCleanup)
+                }
                 if (state.records.any { it.isDemo }) TextButton(onRemoveDemo) { Text("Remove sample results") }
                 else TextButton(onDemo) { Text("Explore sample results") }
                 TextButton(onClear, enabled = state.records.isNotEmpty(), colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {

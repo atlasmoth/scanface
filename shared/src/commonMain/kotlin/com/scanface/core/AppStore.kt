@@ -29,16 +29,22 @@ class AppStore(
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private var unreadableSnapshot: String? = null
     private var initialReadFailed = false
+    private var cleanupPaths = emptyList<String>()
+    private var durableCleanupPaths = emptySet<String>()
     private val mutableState = MutableStateFlow(load())
     val state: StateFlow<AppState> = mutableState.asStateFlow()
     private var analysisJob: Job? = null
     private var captureGeneration = 0L
 
+    init {
+        if (cleanupPaths.isNotEmpty()) retryCleanup()
+    }
+
     fun capture(photo: CapturedPhoto): Job {
         val previous = mutableState.value.pending
         if (photo.path.isBlank() || photo.width <= 0 || photo.height <= 0 || photo.capturedAtMillis < 0) {
             fail("The camera did not return a readable photo. Please try again.")
-            cleanupUnowned(photo.path)
+            queueUnownedPhoto(photo.path)
             return scope.launch {}
         }
         val pending = ScanRecord(
@@ -52,15 +58,18 @@ class AppStore(
             mirrored = photo.mirrored,
             analysisMessage = "Preparing your photo.",
         )
-        if (!commit(mutableState.value.copy(pending = pending, isAnalyzing = true, error = null))) {
-            cleanupUnowned(photo.path)
+        if (!commit(
+            mutableState.value.copy(pending = pending, isAnalyzing = true, error = null),
+            listOfNotNull(previous?.photoPath),
+        )) {
+            queueUnownedPhoto(photo.path)
             return scope.launch {}
         }
         // Replace ownership durably before cancelling the previous capture. A failed
         // replacement must leave its predecessor able to finish and be saved.
         val generation = ++captureGeneration
         analysisJob?.cancel()
-        previous?.photoPath?.let(::cleanupUnowned)
+        retryCleanup()
         return scope.launch(start = CoroutineStart.UNDISPATCHED) {
             try {
                 ensureActive()
@@ -119,27 +128,36 @@ class AppStore(
 
     fun discardPending(): Boolean {
         val previous = mutableState.value.pending
-        if (!commit(mutableState.value.copy(pending = null, isAnalyzing = false, error = null))) return false
+        if (!commit(
+            mutableState.value.copy(pending = null, isAnalyzing = false, error = null),
+            listOfNotNull(previous?.photoPath),
+        )) return false
         ++captureGeneration
         analysisJob?.cancel()
-        previous?.photoPath?.let(::cleanupUnowned)
+        retryCleanup()
         return true
     }
 
     fun deleteRecord(id: String): Boolean {
         val current = mutableState.value
         val record = current.records.find { it.id == id } ?: return true
-        if (!commit(current.copy(records = current.records.filterNot { it.id == id }, error = null))) {
+        if (!commit(
+            current.copy(records = current.records.filterNot { it.id == id }, error = null),
+            listOfNotNull(record.photoPath),
+        )) {
             return false
         }
-        record.photoPath?.let(::cleanupUnowned)
+        retryCleanup()
         return true
     }
 
     fun clearHistory(): Boolean {
         val previous = mutableState.value.records
-        if (!commit(mutableState.value.copy(records = emptyList(), error = null))) return false
-        previous.mapNotNull { it.photoPath }.distinct().forEach(::cleanupUnowned)
+        if (!commit(
+            mutableState.value.copy(records = emptyList(), error = null),
+            previous.mapNotNull { it.photoPath },
+        )) return false
+        retryCleanup()
         return true
     }
 
@@ -174,10 +192,42 @@ class AppStore(
         return commit(mutableState.value.copy(records = sorted(mutableState.value.records + demo), error = null))
     }
 
-    fun removeDemo(): Boolean = commit(mutableState.value.copy(
-        records = mutableState.value.records.filterNot { it.isDemo },
-        error = null,
-    ))
+    fun removeDemo(): Boolean {
+        val current = mutableState.value
+        if (!commit(
+            current.copy(records = current.records.filterNot { it.isDemo }, error = null),
+            current.records.filter { it.isDemo }.mapNotNull { it.photoPath },
+        )) return false
+        retryCleanup()
+        return true
+    }
+
+    /**
+     * Deletes only unowned images whose cleanup request has already reached durable
+     * storage. Completed entries are removed afterward, so a crash can safely retry.
+     * Platform deletion must be idempotent when a file no longer exists.
+     */
+    fun retryCleanup(): Boolean {
+        if (cleanupPaths.isEmpty()) return true
+        val current = mutableState.value
+        val unowned = cleanupPaths.filterNot { isOwned(it, current) }
+        if (unowned.any { it !in durableCleanupPaths } && !persist(current, unowned)) return false
+        val remaining = unowned.filter { path ->
+            if (isOwned(path, mutableState.value)) false else try {
+                deletePhoto(path)
+                false
+            } catch (_: Exception) {
+                true
+            }
+        }
+        val error = when {
+            remaining.isNotEmpty() -> CLEANUP_ERROR
+            current.error == CLEANUP_ERROR || current.error == STORAGE_ERROR -> null
+            else -> current.error
+        }
+        if (!persist(mutableState.value.copy(error = error), remaining)) return false
+        return remaining.isEmpty()
+    }
 
     fun clearError() {
         mutableState.value = mutableState.value.copy(error = null)
@@ -202,7 +252,10 @@ class AppStore(
         }
     }
 
-    private fun commit(next: AppState): Boolean {
+    private fun commit(next: AppState, cleanupCandidates: List<String> = emptyList()): Boolean =
+        persist(next, (cleanupPaths + cleanupCandidates).filter { it.isNotBlank() && !isOwned(it, next) }.distinct())
+
+    private fun persist(next: AppState, nextCleanupPaths: List<String>): Boolean {
         if (initialReadFailed) {
             fail("Saved data is temporarily unavailable. Restart the app to try reading it again.")
             return false
@@ -218,12 +271,15 @@ class AppStore(
                     theme = next.theme,
                     enteredAge = next.enteredAge,
                     pending = next.pending,
+                    cleanupPaths = nextCleanupPaths,
                 ),
             ))
-            mutableState.value = next.copy(records = sorted(next.records))
+            cleanupPaths = nextCleanupPaths
+            durableCleanupPaths = nextCleanupPaths.toSet()
+            mutableState.value = next.copy(records = sorted(next.records), cleanupPendingCount = nextCleanupPaths.size)
             true
         } catch (_: Exception) {
-            fail("Your changes could not be saved on this device. Please try again.")
+            fail(STORAGE_ERROR)
             false
         }
     }
@@ -239,6 +295,9 @@ class AppStore(
                 require(saved.records.all(::validRecord) && (saved.pending?.let(::validRecord) ?: true))
                 require(saved.records.map { it.id }.distinct().size == saved.records.size)
                 require(saved.pending == null || saved.records.none { it.id == saved.pending.id })
+                require(saved.cleanupPaths.none { it.isBlank() })
+                cleanupPaths = saved.cleanupPaths.distinct()
+                durableCleanupPaths = cleanupPaths.toSet()
                 AppState(
                     records = sorted(saved.records),
                     theme = saved.theme,
@@ -246,6 +305,7 @@ class AppStore(
                     pending = saved.pending?.copy(
                         analysisMessage = saved.pending.analysisMessage ?: "Your photo is ready for analysis.",
                     ),
+                    cleanupPendingCount = cleanupPaths.size,
                 )
             }
         } catch (_: Exception) {
@@ -268,16 +328,17 @@ class AppStore(
         mutableState.value = mutableState.value.copy(error = message)
     }
 
-    private fun cleanupUnowned(path: String) {
-        if (path.isBlank()) return
-        val current = mutableState.value
-        if (current.pending?.photoPath == path || current.records.any { it.photoPath == path }) return
-        try {
-            deletePhoto(path)
-        } catch (_: Exception) {
-            fail("The scan was removed, but its photo could not be deleted. Please check device storage.")
-        }
+    private fun queueUnownedPhoto(path: String) {
+        if (path.isBlank() || isOwned(path, mutableState.value)) return
+        // If storage itself is unavailable, retain the new file and request in
+        // memory until a later write succeeds. Never delete before journaling.
+        cleanupPaths = (cleanupPaths + path).distinct()
+        mutableState.value = mutableState.value.copy(cleanupPendingCount = cleanupPaths.size)
+        retryCleanup()
     }
+
+    private fun isOwned(path: String, state: AppState): Boolean =
+        state.pending?.photoPath == path || state.records.any { it.photoPath == path }
 
     private fun sorted(records: List<ScanRecord>) =
         records.sortedWith(compareByDescending<ScanRecord> { it.createdAtMillis }.thenBy { it.id })
@@ -295,10 +356,13 @@ class AppStore(
         val theme: ThemeMode = ThemeMode.SYSTEM,
         val enteredAge: Int? = null,
         val pending: ScanRecord? = null,
+        val cleanupPaths: List<String> = emptyList(),
     )
 
     companion object {
         const val STORAGE_KEY = "scanface.snapshot.v1"
         const val RECOVERY_KEY = "scanface.snapshot.recovery"
+        private const val STORAGE_ERROR = "Your changes could not be saved on this device. Please try again."
+        private const val CLEANUP_ERROR = "Some photos could not be deleted. Retry photo cleanup in Settings."
     }
 }
