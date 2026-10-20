@@ -181,7 +181,7 @@ fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
             }
             if (pending) {
                 Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    PrimaryButton("Save scan", AppIcon.Check, Modifier.fillMaxWidth(), !analyzing, onSave)
+                    PrimaryButton("Save scan", AppIcon.Check, Modifier.widthIn(max = 360.dp).fillMaxWidth(), !analyzing, onSave)
                     Spacer(Modifier.height(8.dp))
                     TextButton({ haptics.perform(AppHaptic.Warning); onRetake() }, Modifier.heightIn(min = 48.dp)) { Text("Retake photo") }
                 }
