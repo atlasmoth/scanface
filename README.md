@@ -71,9 +71,13 @@ simulator or dedicated test device.
 
 - System, light and dark appearance are persisted. Native camera controls follow
   the selected appearance.
-- Below 600 dp, the app uses bottom navigation. Larger windows use a rail.
-  At 840 dp, overview and history use multiple columns. Navigation and selection
-  survive resizing; all content respects safe areas and supports scrolling.
+- On iPhone Duo, navigation occupies the system-provided vertical bar region,
+  below the status controls and clear of the camera. It follows the system's
+  physical edge across folding and rotation without consuming extra content
+  width. This uses iOS 27.1 layout-region APIs with availability guards.
+- Elsewhere, windows below 600 dp use bottom navigation; larger windows use a
+  rail. At 840 dp, overview and history use multiple columns. Navigation and
+  selection survive resizing; all content respects safe areas and supports scrolling.
 - iOS supports all orientations and iPad multitasking. Layout decisions use
   available window bounds, including iPhone Duo's changing viewport and insets.
 - Android chooses a suitable main wide lens using camera capabilities, exposes

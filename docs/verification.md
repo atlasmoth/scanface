@@ -35,6 +35,17 @@ from Git. Build/test reports are also generated locally:
 - `androidApp/build/reports/lint-results-debug.html`
 - `build/ios/Logs/Test/`
 
+The navigation follow-up uses UIKit's iOS 27.1 vertical-bar edge and bar layout
+region for Duo. On the folded simulator, the 466 × 678-point view reports a bar
+region at (358, 174), sized 84 × 470 points. The shared icon rail occupies that
+region; the content retains its safe-area layout and the bottom bar is removed.
+Capture screenshots from the active outer display (`--display=1` in this
+simulator): the default internal display is inactive while folded.
+The updated rail was checked in both themes, through folding/rotation, and with
+all four destinations plus camera dismissal. Android debug, iOS simulator and
+unsigned iOS device builds passed after the change; the device binary still
+reports minimum iOS 17.0.
+
 The shared suite verifies failed writes, corrupt/unreadable storage, analysis
 cancellation, invalid model output, explicit sample labeling, CSV escaping and
 durable photo-deletion retries. Deletion requests are persisted before removing
