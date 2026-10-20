@@ -22,7 +22,6 @@ import kotlinx.serialization.json.Json
 class AppStore(
     private val storage: KeyValueStore,
     private val analyzer: FaceAnalyzer = PendingModelAnalyzer(),
-    private val nowMillis: () -> Long,
     private val deletePhoto: (String) -> Unit,
     private val scope: CoroutineScope,
 ) {
@@ -172,36 +171,6 @@ class AppStore(
         return commit(mutableState.value.copy(enteredAge = age, error = null))
     }
 
-    /** Demo data is opt-in and remains visibly distinguishable in UI and exports. */
-    fun seedDemo(): Boolean {
-        if (mutableState.value.records.any { it.isDemo }) return true
-        val now = nowMillis()
-        val demo = listOf(36.0, 37.0, 36.0).mapIndexed { index, age ->
-            ScanRecord(
-                id = "demo-$now-$index",
-                createdAtMillis = now - index * 7L * 24 * 60 * 60 * 1_000,
-                age = age,
-                enteredAge = 38,
-                isDemo = true,
-                modelId = "Sample data",
-                lens = "Sample",
-                status = AnalysisStatus.COMPLETE,
-                analysisMessage = "Fictional sample data to preview ScanFace. This is not an analysis of your face.",
-            )
-        }
-        return commit(mutableState.value.copy(records = sorted(mutableState.value.records + demo), error = null))
-    }
-
-    fun removeDemo(): Boolean {
-        val current = mutableState.value
-        if (!commit(
-            current.copy(records = current.records.filterNot { it.isDemo }, error = null),
-            current.records.filter { it.isDemo }.mapNotNull { it.photoPath },
-        )) return false
-        retryCleanup()
-        return true
-    }
-
     /**
      * Deletes only unowned images whose cleanup request has already reached durable
      * storage. Completed entries are removed afterward, so a crash can safely retry.
@@ -236,7 +205,7 @@ class AppStore(
     /** Metadata only: this never exports image bytes, local paths, or undisclosed identifiers. */
     fun exportCsv(recordId: String? = null): String {
         val records = mutableState.value.records.filter { recordId == null || it.id == recordId }
-        val header = "captured_at_epoch_ms,facial_age_years,entered_age_years,status,data_source,model"
+        val header = "captured_at_epoch_ms,facial_age_years,entered_age_years,status,model"
         return buildString {
             appendLine(header)
             records.forEach { record ->
@@ -245,7 +214,6 @@ class AppStore(
                     record.age?.toString().orEmpty(),
                     record.enteredAge?.toString().orEmpty(),
                     record.status.name,
-                    if (record.isDemo) "FICTIONAL_SAMPLE" else "USER_CAPTURE",
                     record.modelId.orEmpty(),
                 ).joinToString(",") { csvCell(it) })
             }

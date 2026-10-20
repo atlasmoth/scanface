@@ -36,7 +36,6 @@ class AppStoreTest {
         val pending = assertNotNull(first.state.value.pending)
         assertNull(pending.age)
         assertNull(pending.modelId)
-        assertFalse(pending.isDemo)
         assertEquals(AnalysisStatus.AWAITING_MODEL, pending.status)
         val restored = store(disk)
         assertEquals(pending, restored.state.value.pending)
@@ -134,33 +133,18 @@ class AppStoreTest {
     }
 
     @Test
-    fun sampleDataIsExplicitOrderedAndLabelledInExports() = runTest {
-        val first = store()
-        assertTrue(first.state.value.records.isEmpty())
-        first.seedDemo()
-        first.seedDemo()
-        val samples = first.state.value.records
-        assertEquals(3, samples.size)
-        assertTrue(samples.all { it.isDemo && it.photoPath == null })
-        assertEquals(listOf(36.0, 37.0, 36.0), samples.map { it.age })
-        assertTrue(samples.zipWithNext().all { (a, b) -> a.createdAtMillis > b.createdAtMillis })
-        assertTrue(first.exportCsv().contains("FICTIONAL_SAMPLE"))
-        assertTrue(first.removeDemo())
-        assertTrue(first.state.value.records.isEmpty())
-    }
-
-    @Test
     fun exportsNeverLeakPathsAndClearlyMarkPendingModel() = runTest {
         val first = store()
+        first.setEnteredAge(38)
         first.capture(photo())
         advanceUntilIdle()
         val saved = assertNotNull(first.savePending())
         val csv = first.exportCsv(saved.id)
         assertFalse(csv.contains("/private/"))
-        assertTrue(csv.contains("AWAITING_MODEL"))
-        assertTrue(csv.contains("USER_CAPTURE"))
-        assertFalse(csv.contains("FICTIONAL_SAMPLE"))
-        assertEquals(2, csv.trim().lines().size)
+        assertEquals(listOf(
+            "captured_at_epoch_ms,facial_age_years,entered_age_years,status,model",
+            "\"${saved.createdAtMillis}\",\"\",\"38\",\"AWAITING_MODEL\",\"\"",
+        ), csv.trim().lines())
     }
 
     @Test
@@ -298,7 +282,9 @@ class AppStoreTest {
     fun unreadableStorageCannotOverwriteUnseenHistory() = runTest {
         val disk = MemoryStore()
         val first = store(disk)
-        first.seedDemo()
+        first.capture(photo())
+        advanceUntilIdle()
+        val saved = assertNotNull(first.savePending())
         val savedBytes = disk.get(AppStore.STORAGE_KEY)
         disk.failReads = true
         val inaccessible = store(disk)
@@ -306,7 +292,7 @@ class AppStoreTest {
         assertFalse(inaccessible.setTheme(ThemeMode.DARK))
         disk.failReads = false
         assertEquals(savedBytes, disk.get(AppStore.STORAGE_KEY))
-        assertEquals(3, store(disk).state.value.records.size)
+        assertEquals(listOf(saved), store(disk).state.value.records)
     }
 
     @Test
@@ -545,7 +531,6 @@ class AppStoreTest {
     ) = AppStore(
         storage = disk,
         analyzer = analyzer,
-        nowMillis = { now },
         deletePhoto = { path -> if (delete != null) delete(path) else removed.add(path) },
         scope = this,
     )

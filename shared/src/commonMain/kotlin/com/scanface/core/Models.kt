@@ -31,7 +31,6 @@ data class ScanRecord(
     val photoPath: String? = null,
     val age: Double? = null,
     val enteredAge: Int? = null,
-    val isDemo: Boolean = false,
     val modelId: String? = null,
     val lens: String? = null,
     val width: Int = 0,

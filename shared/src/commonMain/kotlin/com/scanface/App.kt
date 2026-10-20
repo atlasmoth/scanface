@@ -22,7 +22,7 @@ private enum class Route { OVERVIEW, HISTORY, CAPTURE, RESULT, SETTINGS }
 @Composable
 fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingModelAnalyzer() }) {
     val scope = rememberCoroutineScope()
-    val store = remember(services, analyzer) { AppStore(services.storage, analyzer, services::nowMillis, services::deletePhoto, scope) }
+    val store = remember(services, analyzer) { AppStore(services.storage, analyzer, services::deletePhoto, scope) }
     val state by store.state.collectAsState()
     var routeName by rememberSaveable { mutableStateOf(if (state.pending != null) Route.RESULT.name else Route.OVERVIEW.name) }
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -145,7 +145,6 @@ fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingM
                                 Box(Modifier.fillMaxSize().padding(padding)) {
                                     when (route) {
                                         Route.OVERVIEW -> OverviewScreen(state, wide, services.nowMillis(), ::scan,
-                                            { if (store.seedDemo()) notify("Sample results added") },
                                             { routeName = Route.HISTORY.name },
                                             { selectedId = it.id; returnRoute = Route.OVERVIEW.name; routeName = Route.RESULT.name })
                                         Route.HISTORY -> HistoryScreen(state.records, selectedId, historyWide, services.nowMillis(),
@@ -153,8 +152,7 @@ fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingM
                                             ::scan, { services.shareText(store.exportCsv(it?.id)) }, { deleteId = it.id })
                                         Route.SETTINGS -> SettingsScreen(state, { store.setTheme(it) },
                                             { store.setEnteredAge(it).also { success -> if (success) notify("Age saved") } },
-                                            { if (store.seedDemo()) notify("Sample results added") },
-                                            { if (store.removeDemo()) notify("Sample results removed") }, { clearAll = true },
+                                            { clearAll = true },
                                             { if (store.retryCleanup()) notify("Photo cleanup complete") })
                                         Route.RESULT -> {
                                             val record = state.pending ?: state.records.firstOrNull { it.id == selectedId }

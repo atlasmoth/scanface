@@ -75,7 +75,7 @@ fun SectionTitle(title: String, action: String? = null, onAction: () -> Unit = {
 fun PhotoThumbnail(record: ScanRecord, modifier: Modifier = Modifier) {
     Box(modifier.clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.secondaryContainer), contentAlignment = Alignment.Center) {
         if (record.photoPath != null) PhotoImage(record.photoPath, Modifier.fillMaxSize(), "Captured face")
-        else Glyph(AppIcon.Face, Modifier.size(36.dp), tint = MaterialTheme.colorScheme.primary, description = "Sample portrait")
+        else Glyph(AppIcon.Face, Modifier.size(36.dp), tint = MaterialTheme.colorScheme.primary, description = "Photo unavailable")
     }
 }
 
@@ -87,7 +87,7 @@ fun RecordRow(record: ScanRecord, selected: Boolean = false, onClick: () -> Unit
             PhotoThumbnail(record, Modifier.size(52.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(dateLabel(record.createdAtMillis, true), style = MaterialTheme.typography.labelLarge)
-                Text(if (record.isDemo) "Sample result" else when (record.status) {
+                Text(when (record.status) {
                     AnalysisStatus.AWAITING_MODEL -> "Model unavailable"
                     AnalysisStatus.COMPLETE -> "Facial-age estimate"
                     AnalysisStatus.FAILED -> "Analysis unavailable"
@@ -156,7 +156,7 @@ fun AgeChart(records: List<ScanRecord>, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun EmptyState(title: String, body: String, action: String, onAction: () -> Unit, secondaryAction: String? = null, onSecondary: () -> Unit = {}) {
+fun EmptyState(title: String, body: String, action: String, onAction: () -> Unit) {
     ScanCard(Modifier.fillMaxWidth()) {
         Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = CircleShape) {
             Glyph(AppIcon.Face, Modifier.padding(24.dp).size(48.dp), MaterialTheme.colorScheme.primary)
@@ -164,6 +164,5 @@ fun EmptyState(title: String, body: String, action: String, onAction: () -> Unit
         Text(title, style = MaterialTheme.typography.headlineMedium)
         Text(body, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         PrimaryButton(action, AppIcon.Scan, Modifier.fillMaxWidth(), onClick = onAction)
-        if (secondaryAction != null) TextButton(onSecondary, Modifier.align(Alignment.CenterHorizontally)) { Text(secondaryAction) }
     }
 }

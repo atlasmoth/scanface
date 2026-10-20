@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.scanface.core.*
 
 @Composable
-fun OverviewScreen(state: AppState, wide: Boolean, now: Long, onScan: () -> Unit, onDemo: () -> Unit,
+fun OverviewScreen(state: AppState, wide: Boolean, now: Long, onScan: () -> Unit,
                    onHistory: () -> Unit, onRecord: (ScanRecord) -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)) {
@@ -34,7 +34,7 @@ fun OverviewScreen(state: AppState, wide: Boolean, now: Long, onScan: () -> Unit
                 Column(Modifier.weight(1f)) {
                     EmptyState("Start with a face scan",
                         "Capture one clear face for a research facial-age estimate. Analysis runs on your device, and your photos stay here.",
-                        "Take your first scan", onScan, "Explore sample results", onDemo)
+                        "Take your first scan", onScan)
                 }
                 if (wide) Column(Modifier.weight(1f)) { HowItWorks() }
             }
@@ -61,10 +61,7 @@ fun OverviewScreen(state: AppState, wide: Boolean, now: Long, onScan: () -> Unit
                                 }
                             }
                         }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text(dateLabel(latest.createdAtMillis, true), style = MaterialTheme.typography.bodyMedium)
-                            if (latest.isDemo) Badge("Sample data")
-                        }
+                        Text(dateLabel(latest.createdAtMillis, true), style = MaterialTheme.typography.bodyMedium)
                         PrimaryButton("New face scan", AppIcon.Scan, Modifier.fillMaxWidth(), onClick = onScan)
                     }
                     if (wide) RecentScans(state.records, onHistory, onRecord)
@@ -112,10 +109,7 @@ private fun HistoryChart(records: List<ScanRecord>, now: Long) {
     val rangeMillis = if (range == "Month") 30L * 86_400_000 else 365L * 86_400_000
     val filtered = records.filter { it.createdAtMillis >= now - rangeMillis }
     ScanCard(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("Over time", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-            if (filtered.any { it.isDemo }) Badge("Sample")
-        }
+        Text("Over time", style = MaterialTheme.typography.titleMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("Month", "Year").forEach {
                 FilterChip(selected = range == it, onClick = { range = it }, label = { Text(it) })
@@ -165,13 +159,9 @@ fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Column(Modifier.widthIn(max = 620.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(if (pending) "Your scan" else dateLabel(record.createdAtMillis, true), style = MaterialTheme.typography.headlineMedium)
-                    Text(if (record.isDemo) "An illustrative result" else "Stored privately on this device",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                if (record.isDemo) Badge("Sample")
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(if (pending) "Your scan" else dateLabel(record.createdAtMillis, true), style = MaterialTheme.typography.headlineMedium)
+                Text("Stored privately on this device", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             ScanCard(Modifier.fillMaxWidth()) {
                 val photoAspect = if (record.width > 0 && record.height > 0) record.width.toFloat() / record.height else 1f
@@ -184,7 +174,7 @@ fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
                         Text("Analyzing on this device…", style = MaterialTheme.typography.titleLarge)
                     }
                 } else if (record.age != null && record.status == AnalysisStatus.COMPLETE) {
-                    if (!record.isDemo) Badge("Research estimate")
+                    Badge("Research estimate")
                     Text("Estimated facial age", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(ageLabel(record.age), style = MaterialTheme.typography.displayLarge)
@@ -225,13 +215,12 @@ fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
             }
             ScanCard {
                 Text("About this scan", style = MaterialTheme.typography.titleMedium)
-                Text(if (record.isDemo) "This fictional sample demonstrates the interface. It is not an analysis of your face."
-                    else "Photos are processed and stored on this device. Sharing a summary includes scan details, never your photo.",
+                Text("Photos are processed and stored on this device. Sharing a summary includes scan details, never your photo.",
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (record.lens != null && record.width > 0 && record.height > 0) {
                     Text("${record.lens} · ${record.width} × ${record.height}", style = MaterialTheme.typography.labelMedium)
                 }
-                if (!record.isDemo && record.status == AnalysisStatus.COMPLETE) {
+                if (record.status == AnalysisStatus.COMPLETE) {
                     record.modelId?.takeIf { it.isNotBlank() }?.let {
                         Text("Model: $it", style = MaterialTheme.typography.labelMedium)
                     }
@@ -248,7 +237,7 @@ fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
 
 @Composable
 fun SettingsScreen(state: AppState, onTheme: (ThemeMode) -> Unit, onAge: (Int?) -> Boolean,
-                   onDemo: () -> Unit, onRemoveDemo: () -> Unit, onClear: () -> Unit, onRetryCleanup: () -> Unit) {
+                   onClear: () -> Unit, onRetryCleanup: () -> Unit) {
     var ageText by rememberSaveable(state.enteredAge) { mutableStateOf(state.enteredAge?.toString() ?: "") }
     var ageError by rememberSaveable { mutableStateOf(false) }
     val uriHandler = LocalUriHandler.current
@@ -296,8 +285,6 @@ fun SettingsScreen(state: AppState, onTheme: (ThemeMode) -> Unit, onAge: (Int?) 
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     PrimaryButton("Retry photo deletion", AppIcon.Delete, onClick = onRetryCleanup)
                 }
-                if (state.records.any { it.isDemo }) TextButton(onRemoveDemo) { Text("Remove sample results") }
-                else TextButton(onDemo) { Text("Explore sample results") }
                 TextButton(onClear, enabled = state.records.isNotEmpty(), colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
                     Text("Delete all saved scans")
                 }

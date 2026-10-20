@@ -57,8 +57,7 @@ class IosPhotoReferenceCodecTest {
             put("theme", "DARK")
             put("enteredAge", 38)
             put("records", buildJsonArray {
-                add(JsonObject(record("sample", null) + mapOf(
-                    "isDemo" to JsonPrimitive(true),
+                add(JsonObject(record("metadata-only", null) + mapOf(
                     "age" to JsonPrimitive(36.5),
                     "modelId" to JsonPrimitive("$oldRoot/$savedName"),
                     "futureMetadata" to buildJsonObject { put("photoPath", "not-a-photo-reference") },
@@ -237,7 +236,6 @@ class IosPhotoReferenceCodecTest {
 
     private fun TestScope.createStore(storage: KeyValueStore, delete: (String) -> Unit) = AppStore(
         storage = storage,
-        nowMillis = { 10_000 },
         deletePhoto = delete,
         scope = this,
     )
