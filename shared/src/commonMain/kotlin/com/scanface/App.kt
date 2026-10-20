@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -11,6 +12,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.scanface.core.*
 import com.scanface.platform.*
@@ -100,6 +103,7 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
                 val navigationRegion = PlatformNavigationRegion()
                 val systemSideNavigation = navigationRegion != null
                 BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+                    val viewportHeight = maxHeight
                     val rail = !systemSideNavigation && maxWidth >= 600.dp
                     val wide = maxWidth >= 840.dp
                     val historyWide = maxWidth >= 840.dp
@@ -137,18 +141,28 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
                     } else {
                         Row(Modifier.fillMaxSize()) {
                             if (rail) {
-                                NavigationRail(containerColor = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxHeight().width(96.dp)) {
-                                    Glyph(AppIcon.Face, Modifier.padding(vertical = 24.dp).size(32.dp), MaterialTheme.colorScheme.primary, "ScanFace")
-                                    Spacer(Modifier.height(16.dp))
-                                    NavigationRailItem(route == Route.OVERVIEW, { navigate(Route.OVERVIEW) },
-                                        icon = { Glyph(AppIcon.Overview) }, label = { Text("Overview") })
-                                    NavigationRailItem(route == Route.CAPTURE, ::scanFromNavigation, icon = { Glyph(AppIcon.Scan) }, label = { Text("Scan") })
-                                    NavigationRailItem(route == Route.HISTORY, { navigate(Route.HISTORY) },
-                                        icon = { Glyph(AppIcon.History) }, label = { Text("History") })
-                                    Spacer(Modifier.weight(1f))
-                                    NavigationRailItem(route == Route.SETTINGS, ::settings,
-                                        icon = { Glyph(AppIcon.Settings) }, label = { Text("Settings") })
-                                    Spacer(Modifier.height(16.dp))
+                                // A minimum content height keeps Settings at the bottom
+                                // on tablets, while short landscape windows can scroll.
+                                Column(Modifier.fillMaxHeight().width(96.dp)
+                                    .verticalScroll(rememberScrollState()).heightIn(min = viewportHeight)
+                                    .padding(vertical = 4.dp).selectableGroup().semantics { isTraversalGroup = true },
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.SpaceBetween) {
+                                    Column(Modifier.padding(bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Glyph(AppIcon.Face, Modifier.padding(vertical = 24.dp).size(32.dp), MaterialTheme.colorScheme.primary, "ScanFace")
+                                        Spacer(Modifier.height(16.dp))
+                                        NavigationRailItem(route == Route.OVERVIEW, { navigate(Route.OVERVIEW) },
+                                            icon = { Glyph(AppIcon.Overview) }, label = { Text("Overview") })
+                                        NavigationRailItem(route == Route.CAPTURE, ::scanFromNavigation, icon = { Glyph(AppIcon.Scan) }, label = { Text("Scan") })
+                                        NavigationRailItem(route == Route.HISTORY, { navigate(Route.HISTORY) },
+                                            icon = { Glyph(AppIcon.History) }, label = { Text("History") })
+                                    }
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        NavigationRailItem(route == Route.SETTINGS, ::settings,
+                                            icon = { Glyph(AppIcon.Settings) }, label = { Text("Settings") })
+                                        Spacer(Modifier.height(16.dp))
+                                    }
                                 }
                                 VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                             }
