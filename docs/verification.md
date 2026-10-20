@@ -1,4 +1,4 @@
-# Verification — 20 October 2026
+# Verification — 21 October 2026
 
 The Android and iOS apps build and run with real FAHR-FaceAge inference, native
 capture/import, local history, appearance preferences, metadata sharing and
@@ -8,14 +8,50 @@ actionable feedback. Saved results come from captures or imported photos.
 | Check | Result |
 | --- | --- |
 | Shared JVM suite | 46 passed: 29 state/storage, 9 Ktor manifest and 8 photo-reference tests |
-| Android connected suite | 10 passed again with selected int8 weights, no skips, on the Pixel 10 Pro Fold AVD, API 37 |
+| Android connected suite | 3 UI flows passed after interface polish; all 10 UI/native tests passed with selected int8 weights during quantization, on the Pixel 10 Pro Fold AVD, API 37 |
 | Android debug build and lint | Build passed; lint reported no issues |
 | iOS native simulator suite | 23 passed with selected int8 weights, including actual Core ML inference, metadata rejection, preprocessing and storage regressions |
-| iOS UI suite | 3 flows passed after initial model integration; quantization was subsequently checked with the 23 native tests |
+| iOS UI suite | 3 flows passed after interface polish, including preview/control geometry and theme persistence |
 | iOS simulator and unsigned device builds | Both passed with Xcode 27.1 |
 | iOS deployment target | Compiled app binaries report minimum iOS 17.0 |
 | Model conversion | 24 pinned inputs agree with PyTorch; maximum error 0.0000687 years (LiteRT), 0.0000458 years (Core ML) |
 | Quantized installer | 8 safety tests passed, including corrupt artifacts, incomplete evidence, stale package cleanup and rollback |
+
+## Interface polish
+
+Home and empty history now use centered content with generous top spacing.
+Repeated cards, the home guidance panel, privacy tagline and Settings research
+section were removed. Populated overview/history use open sections and simple
+rows; scan details preserve the complete photo and reveal metadata through an
+accessible disclosure. Settings uses plain appearance, age and saved-scan
+sections. Light/dark colors remain consistent across shared and native views.
+
+Both camera screens use one centered preview, with a circular shutter at its
+bottom center, flash/zoom/camera-switch controls inside it, and photo import
+centered below. Android retains the existing CameraX lens/flash/zoom recovery
+logic. iOS adds capability-bounded zoom choices while retaining its physical
+lens selection and rotation coordinator. The camera tests assert control
+containment and horizontal centering. Regular navigation rails can scroll in
+short landscape windows; Duo's system-provided right-side region is preserved.
+
+Native feedback covers navigation, selections, camera controls, capture/import,
+successful persistence and errors. Android uses View haptic feedback, iOS uses
+UIKit generators, and desktop hosts use a no-op adapter. Tap and asynchronous
+outcome feedback are separate; restored state does not trigger a launch buzz.
+Physical haptic feel and actual iOS camera hardware still require device checks.
+
+All 46 shared tests passed, as did three Android UI flows and all 23 native plus
+three UI tests on iOS. The three UI flows also passed on iPad. Android build/lint,
+iOS simulator and unsigned device builds passed; the device minimum remains
+iOS 17.0. Camera denial recovery was checked again after fixing a late runtime
+error that could obscure the Open Settings action.
+
+Visual review covered folded/expanded Android, short landscape, folded Duo with
+right-side navigation, and iPad in light/dark modes. A real Android photo-picker
+import produced a 21.5-year estimate and was saved into the new history/detail
+layout. Returning from the picker now restores system-bar contrast for the app's
+explicit theme. Snackbar and elevated-surface colors use the same app palette.
+Actual screenshots are stored locally in `artifacts/screenshots/polish/`.
 
 ## Removal of sample results
 

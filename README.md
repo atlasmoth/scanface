@@ -4,6 +4,12 @@ A Kotlin Multiplatform app for private facial-age exploration. Android and iOS s
 the Compose interface, scan lifecycle, local history and appearance preferences.
 Camera capture stays native: CameraX on Android and AVFoundation on iOS.
 
+The interface uses open layouts, centered empty states, and full light/dark
+appearance. Phone and tablet camera views keep the shutter, flash, zoom and
+camera switch inside a centered viewfinder, with photo import below. Native
+haptics accompany navigation, selections, capture and completed save/delete
+actions, respecting the platform's feedback settings.
+
 Capture or import a photo and get a real **FAHR-FaceAge** research estimate on the
 device: LiteRT on Android, Core ML on iOS. Review and save the result, revisit
 history, export a metadata summary, or delete the local capture. Missing models

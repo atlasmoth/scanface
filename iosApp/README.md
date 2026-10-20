@@ -50,6 +50,10 @@ The SwiftUI host embeds the shared Compose application. Shared navigation opens
 the native AVFoundation capture screen through `CameraControllerFactory`.
 The capture screen uses current view bounds and safe areas, so it responds to
 iPhone Duo resizing, iPad multitasking, rotation, and large accessibility text.
+It keeps a single centered viewfinder, circular shutter and camera controls
+inside the preview, with the photo-library action below. Supported 1×, 1.5×
+and 2× zoom choices are constrained to the active camera's capabilities.
+UIKit feedback accompanies camera controls and shared app actions.
 
 The native camera defaults to a physical wide lens for less facial distortion,
 discovers available front/back cameras, and offers only the flash modes supported
