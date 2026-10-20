@@ -2,6 +2,7 @@ package com.scanface
 
 import android.app.Application
 import com.scanface.core.FaceAnalyzer
+import com.scanface.core.ModelManifestService
 import com.scanface.core.PendingModelAnalyzer
 import com.scanface.platform.PlatformServices
 import com.scanface.platform.createPlatformServices
@@ -27,6 +28,7 @@ class ScanFaceApplication : Application() {
 internal val scanFaceAndroidModule = module {
     single<PlatformServices> { createPlatformServices() }
     single<FaceAnalyzer> { PendingModelAnalyzer() }
+    single { ModelManifestService(get()) }
     // Ready for model-manifest / model-download integration. Creating this client does
     // not send requests, and the photo pipeline never hands image bytes to networking.
     single {
