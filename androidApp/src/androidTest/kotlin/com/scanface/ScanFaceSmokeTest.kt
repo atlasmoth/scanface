@@ -11,12 +11,11 @@ import androidx.test.uiautomator.BySelector
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
-import com.scanface.ui.dateLabel
+import com.scanface.ml.LiteRtAgeModel
 import java.io.File
 import java.util.regex.Pattern
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
@@ -50,11 +49,9 @@ class ScanFaceSmokeTest {
     }
 
     @Test
-    fun sampleHistoryAndDarkAppearancePersistAcrossActivityRecreation() {
-        visible(By.text("Explore sample results")).click()
-        visible(By.text("Sample data"))
+    fun emptyHistoryAndDarkAppearancePersistAcrossActivityRecreation() {
         visible(By.text("History")).click()
-        visible(By.text("3 saved scans"))
+        visible(By.text("A fresh start"))
         openSettings()
         visible(By.text("Dark")).click()
         assertTrue(snapshot().contains("\"theme\":\"DARK\""))
@@ -62,9 +59,10 @@ class ScanFaceSmokeTest {
 
         launch()
         visible(By.text("History")).click()
-        visible(By.text("3 saved scans"))
+        visible(By.text("A fresh start"))
+        assertEquals(0, JSONObject(snapshot()).getJSONArray("records").length())
         assertTrue(snapshot().contains("\"theme\":\"DARK\""))
-        captureEvidence("android-dark-history")
+        captureEvidence("android-dark-empty-history")
 
         openSettings()
         visible(By.text("Light")).click()
@@ -117,7 +115,7 @@ class ScanFaceSmokeTest {
             analyzed.getString("status") in listOf("COMPLETE", "FAILED"))
         if (analyzed.getString("status") == "COMPLETE") {
             assertTrue(analyzed.getDouble("age").isFinite() && analyzed.getDouble("age") in 0.0..130.0)
-            assertEquals("fahr-faceage-1fbb84e-litert-native-v1", analyzed.getString("modelId"))
+            assertEquals(LiteRtAgeModel.MODEL_ID, analyzed.getString("modelId"))
         } else {
             assertTrue("Rejected images must not have an age", analyzed.isNull("age"))
         }
@@ -140,7 +138,7 @@ class ScanFaceSmokeTest {
     }
 
     @Test
-    fun historySelectionSurvivesFoldingAndUnfolding() {
+    fun emptyHistoryAndNavigationSurviveFoldingAndUnfolding() {
         val states = device.executeShellCommand("cmd device_state print-states")
         val closed = postureIdentifier(states, "CLOSED")
         val opened = postureIdentifier(states, "OPENED")
@@ -151,37 +149,27 @@ class ScanFaceSmokeTest {
             .find(device.executeShellCommand("cmd device_state state"))?.groupValues?.get(1)?.toInt()
         try {
             setPosture(closedState, expanded = false)
-            scrollToText("Explore sample results").click()
-            visible(By.text("Sample data"))
             visible(By.text("History")).click()
-            visible(By.text("3 saved scans"))
-            val records = JSONObject(snapshot()).getJSONArray("records")
-            val selectedDate = dateLabel(records.getJSONObject(1).getLong("createdAtMillis"), true)
-            val oldestDate = dateLabel(records.getJSONObject(2).getLong("createdAtMillis"), true)
-            scrollToText(selectedDate).click()
-            visible(By.text("Scan details"))
-            visible(By.text(selectedDate))
-            visible(By.text("37"))
+            visible(By.text("Scan history"))
+            visible(By.text("A fresh start"))
 
             setPosture(openedState, expanded = true)
             visible(By.text("Scan history"))
-            visible(By.text("3 saved scans"))
-            visible(By.text("Estimated facial age"))
-            assertVisibleCount(By.text(selectedDate), 2)
-            device.wait(Until.gone(By.text("Sample results added")), 5_000)
-            captureEvidence("android-unfolded-selected-history")
+            visible(By.text("A fresh start"))
+            captureEvidence("android-unfolded-empty-history")
 
-            // Change the selection in the wide list before folding, proving that
-            // compact navigation follows selection rather than always the latest scan.
-            visible(By.text(oldestDate)).click()
-            assertVisibleCount(By.text(oldestDate), 2)
+            // Exercise both destinations while expanded, then ensure compact
+            // navigation retains the chosen history destination after folding.
+            visible(By.text("Overview")).click()
+            visible(By.text("Start with a face scan"))
+            visible(By.text("History")).click()
+            visible(By.text("A fresh start"))
             setPosture(closedState, expanded = false)
-            visible(By.text("Scan details"))
-            visible(By.text(oldestDate))
-            assertFalse(device.hasObject(By.text("3 saved scans")))
-            captureEvidence("android-folded-selected-history")
-            visible(By.desc("Back")).click()
-            visible(By.text("3 saved scans"))
+            visible(By.text("Scan history"))
+            visible(By.text("A fresh start"))
+            captureEvidence("android-folded-empty-history")
+            visible(By.text("Overview")).click()
+            visible(By.text("Start with a face scan"))
         } finally {
             initial?.let { setPosture(it) }
         }
@@ -229,15 +217,6 @@ class ScanFaceSmokeTest {
 
     private fun visible(selector: BySelector, timeout: Long = 10_000): UiObject2 =
         requireNotNull(device.wait(Until.findObject(selector), timeout)) { "Missing UI element: $selector" }
-
-    private fun assertVisibleCount(selector: BySelector, expected: Int) {
-        val deadline = SystemClock.uptimeMillis() + 5_000
-        while (device.findObjects(selector).size != expected && SystemClock.uptimeMillis() < deadline) {
-            SystemClock.sleep(100)
-        }
-        assertEquals("Expected matching list and detail content for $selector",
-            expected, device.findObjects(selector).size)
-    }
 
     private fun scrollToText(text: String): UiObject2 {
         repeat(6) {
