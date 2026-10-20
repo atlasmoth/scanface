@@ -629,45 +629,30 @@ private struct CaptureScreen: View {
     @State private var pickingPhoto = false
 
     private var canvas: Color { Color(hex: dark ? 0x101A16 : 0xF6F7F2) }
-    private var ink: Color { Color(hex: dark ? 0xF0F4EE : 0x16251F) }
     private var action: Color { Color(hex: dark ? 0xAED7BA : 0x245C45) }
     private var ready: Bool { model.availability == .ready && !model.isCapturing }
 
     var body: some View {
-        GeometryReader { geometry in
-            let landscape = geometry.size.width > geometry.size.height * 1.2
-            let aspect: CGFloat = landscape ? 4.0 / 3.0 : 3.0 / 4.0
-            let maximumWidth: CGFloat = landscape ? 720 : 540
-            let heightBudget = max(300, min(680, geometry.size.height - 142))
-            let previewWidth = min(maximumWidth, max(200, geometry.size.width - 40), heightBudget * aspect)
-            VStack(spacing: 12) {
-                header
-                ScrollView {
-                    VStack(spacing: 16) {
-                        preview
-                            .frame(width: previewWidth, height: previewWidth / aspect)
-                        Button {
-                            CameraFeedback.light()
-                            pickingPhoto = true
-                        } label: {
-                            Label("Choose an existing photo", systemImage: "photo.on.rectangle")
-                                .font(.subheadline.weight(.medium))
-                                .frame(minHeight: 48)
-                                .contentShape(Rectangle())
-                        }
-                        .foregroundStyle(action)
-                        .disabled(model.isCapturing)
-                        .accessibilityIdentifier("camera.import")
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.bottom, 20)
-                }
-                .scrollIndicators(.hidden)
+        VStack(spacing: 0) {
+            preview
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            Button {
+                CameraFeedback.light()
+                pickingPhoto = true
+            } label: {
+                Label("Choose an existing photo", systemImage: "photo.on.rectangle")
+                    .font(.subheadline.weight(.medium))
+                    .frame(maxWidth: .infinity, minHeight: 56)
+                    .contentShape(Rectangle())
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
-            .background(canvas)
+            .foregroundStyle(action)
+            .disabled(model.isCapturing)
+            .accessibilityIdentifier("camera.import")
         }
+        .padding(.horizontal, 12)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(canvas.ignoresSafeArea())
         .overlay {
             if model.illuminating { Color.white.ignoresSafeArea().allowsHitTesting(false) }
@@ -702,32 +687,6 @@ private struct CaptureScreen: View {
         } message: { Text(model.errorMessage ?? "") }
     }
 
-    private var header: some View {
-        ZStack {
-            Text("New scan")
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(ink)
-            HStack {
-                Button {
-                    CameraFeedback.light()
-                    close()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 17, weight: .medium))
-                        .frame(width: 48, height: 48)
-                        .contentShape(Rectangle())
-                }
-                .foregroundStyle(ink)
-                .accessibilityLabel("Close camera")
-                .accessibilityIdentifier("camera.close")
-                Spacer()
-            }
-        }
-        .frame(maxWidth: 760)
-        .frame(maxWidth: .infinity)
-        .frame(height: 48)
-    }
-
     private var preview: some View {
         ZStack {
             Color(hex: 0x121614)
@@ -750,21 +709,7 @@ private struct CaptureScreen: View {
             }
             .allowsHitTesting(false)
 
-            if model.availability == .ready {
-                GeometryReader { geometry in
-                    let guideTop: CGFloat = 72
-                    let guideSpace = max(0, geometry.size.height - guideTop - 180)
-                    let height = min(guideSpace, geometry.size.height * 0.48, geometry.size.width * 0.72)
-                    if height >= 120 {
-                        Ellipse()
-                            .stroke(.white.opacity(0.36), style: StrokeStyle(lineWidth: 1, dash: [4, 8]))
-                            .frame(width: height * 0.74, height: height)
-                            .position(x: geometry.size.width / 2, y: guideTop + guideSpace / 2)
-                    }
-                }
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
-            } else if model.availability != .preparing {
+            if model.availability != .ready && model.availability != .preparing {
                 unavailableContent
                     .padding(.horizontal, 24)
                     .padding(.top, 56)
@@ -775,8 +720,17 @@ private struct CaptureScreen: View {
             VStack(spacing: 0) {
                 topControls
                 Spacer(minLength: 8)
-                zoomControl
-                    .padding(.bottom, 12)
+                if model.showingZoom {
+                    Text(String(format: "%.1f×", Double(model.zoom.factor)))
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(.black.opacity(0.4), in: Capsule())
+                        .padding(.bottom, 12)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
                 shutterControls
             }
             .padding(16)
@@ -789,26 +743,18 @@ private struct CaptureScreen: View {
 
     private var topControls: some View {
         HStack {
-            Menu {
-                ForEach(model.availableFlashModes, id: \.self) { mode in
-                    Button {
-                        CameraFeedback.selection()
-                        model.flash = mode
-                    } label: {
-                        Label(mode.rawValue, systemImage: model.flash == mode ? "checkmark" : mode.symbol)
-                    }
-                }
+            Button {
+                CameraFeedback.light()
+                close()
             } label: {
-                Image(systemName: model.flash.symbol)
-                    .font(.system(size: 19, weight: .medium))
-                    .foregroundStyle(model.flash == .off ? .white : .yellow)
+                Image(systemName: "xmark")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(.white)
                     .frame(width: 48, height: 48)
                     .background(.black.opacity(0.28), in: Circle())
             }
-            .disabled(!model.supportsFlash || !ready)
-            .opacity(model.supportsFlash ? 1 : 0.4)
-            .accessibilityLabel(model.supportsFlash ? "Flash \(model.flash.rawValue)" : "Flash unavailable on this camera")
-            .accessibilityIdentifier("camera.flash")
+            .accessibilityLabel("Close camera")
+            .accessibilityIdentifier("camera.close")
             Spacer()
             if model.lenses.count > 1 {
                 Menu {
@@ -837,19 +783,6 @@ private struct CaptureScreen: View {
         }
     }
 
-    @ViewBuilder private var zoomControl: some View {
-        if model.showingZoom {
-            Text(String(format: "%.1f×", Double(model.zoom.factor)))
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(.black.opacity(0.4), in: Capsule())
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
-        }
-    }
-
     private var shutterControls: some View {
         ZStack {
             Button {
@@ -873,7 +806,6 @@ private struct CaptureScreen: View {
             .accessibilityIdentifier("camera.capture")
 
             HStack {
-                Spacer()
                 Button {
                     CameraFeedback.selection()
                     model.flipCamera()
@@ -888,9 +820,36 @@ private struct CaptureScreen: View {
                 .opacity(model.canFlip ? 1 : 0.35)
                 .accessibilityLabel("Switch to \(model.frontFacing ? "back" : "front") camera")
                 .accessibilityIdentifier("camera.flip")
+                Spacer()
+                flashControl
             }
         }
         .frame(height: 80)
+        .frame(maxWidth: 360)
+        .frame(maxWidth: .infinity)
+    }
+
+    private var flashControl: some View {
+        Menu {
+            ForEach(model.availableFlashModes, id: \.self) { mode in
+                Button {
+                    CameraFeedback.selection()
+                    model.flash = mode
+                } label: {
+                    Label(mode.rawValue, systemImage: model.flash == mode ? "checkmark" : mode.symbol)
+                }
+            }
+        } label: {
+            Image(systemName: model.flash.symbol)
+                .font(.system(size: 19, weight: .medium))
+                .foregroundStyle(model.flash == .off ? .white : .yellow)
+                .frame(width: 48, height: 48)
+                .background(.black.opacity(0.28), in: Circle())
+        }
+        .disabled(!model.supportsFlash || !ready)
+        .opacity(model.supportsFlash ? 1 : 0.4)
+        .accessibilityLabel(model.supportsFlash ? "Flash \(model.flash.rawValue)" : "Flash unavailable on this camera")
+        .accessibilityIdentifier("camera.flash")
     }
 
     @ViewBuilder private var unavailableContent: some View {
@@ -925,7 +884,6 @@ private struct CaptureScreen: View {
         .foregroundStyle(.white)
         .multilineTextAlignment(.center)
     }
-
 
 }
 

@@ -59,10 +59,21 @@ final class ScanFaceUITests: XCTestCase {
         XCTAssertTrue(shutter.exists)
         XCTAssertEqual(shutter.frame.midX, preview.frame.midX, accuracy: 2, "Shutter stays centered in the viewfinder.")
         XCTAssertTrue(preview.frame.contains(shutter.frame), "Shutter belongs inside the preview.")
-        XCTAssertTrue(preview.frame.contains(app.buttons["camera.flash"].frame))
-        XCTAssertTrue(preview.frame.contains(app.buttons["camera.flip"].frame))
+        let flash = app.buttons["camera.flash"]
+        let flip = app.buttons["camera.flip"]
+        XCTAssertTrue(preview.frame.contains(flash.frame))
+        XCTAssertTrue(preview.frame.contains(flip.frame))
+        XCTAssertLessThan(flip.frame.maxX, shutter.frame.minX)
+        XCTAssertGreaterThan(flash.frame.minX, shutter.frame.maxX)
+        XCTAssertEqual(flash.frame.midY, shutter.frame.midY, accuracy: 2)
+        XCTAssertEqual(flip.frame.midY, shutter.frame.midY, accuracy: 2)
+        XCTAssertTrue(preview.frame.contains(app.buttons["camera.close"].frame))
+        XCTAssertFalse(app.staticTexts["New scan"].exists, "Camera controls belong inside the viewfinder.")
+        XCTAssertFalse(app.buttons["camera.zoom"].exists, "Zoom uses pinch and VoiceOver adjustment, without zoom buttons.")
+        XCTAssertGreaterThan(preview.frame.height, app.frame.height * 0.65, "The preview uses the available height.")
         XCTAssertEqual(choose.frame.midX, preview.frame.midX, accuracy: 2, "Photo import is centered below the viewfinder.")
         XCTAssertGreaterThanOrEqual(choose.frame.minY, preview.frame.maxY)
+        XCTAssertTrue(app.frame.contains(choose.frame), "The photo library footer stays on screen.")
         choose.tap()
         let closePicker = app.navigationBars.buttons["Cancel"]
         XCTAssertTrue(closePicker.waitForExistence(timeout: 10))
