@@ -8,13 +8,47 @@ actionable feedback. Sample records remain explicitly fictional.
 | Check | Result |
 | --- | --- |
 | Shared JVM suite | 47 passed: 30 state/storage, 9 Ktor manifest and 8 photo-reference tests |
-| Android connected suite | 10 passed, no skips, on a fresh Pixel 10 Pro Fold AVD, API 37, with Wi-Fi/mobile data disabled |
+| Android connected suite | 10 passed again with selected int8 weights, no skips, on the Pixel 10 Pro Fold AVD, API 37 |
 | Android debug build and lint | Build passed; lint reported no issues |
-| iOS native simulator suite | 22 passed, including actual Core ML inference, image preprocessing, cancellation and photo-reference regressions |
-| iOS UI suite | 3 flows passed again after model integration |
+| iOS native simulator suite | 23 passed with selected int8 weights, including actual Core ML inference, metadata rejection, preprocessing and storage regressions |
+| iOS UI suite | 3 flows passed after initial model integration; quantization was subsequently checked with the 23 native tests |
 | iOS simulator and unsigned device builds | Both passed with Xcode 27.1 |
 | iOS deployment target | Compiled app binaries report minimum iOS 17.0 |
 | Model conversion | 24 pinned inputs agree with PyTorch; maximum error 0.0000687 years (LiteRT), 0.0000458 years (Core ML) |
+| Quantized installer | 8 safety tests passed, including corrupt artifacts, incomplete evidence, stale package cleanup and rollback |
+
+## Quantization follow-up
+
+Both apps now bundle the locked 8-bit-weight, float32-compute selection:
+83.34 MiB LiteRT and 82.54 MiB Core ML packages. Android's clean debug APK is
+153,867,249 bytes (146.74 MiB), down from 409,398,357 bytes (390.43 MiB).
+An incremental APK retained unused ZIP space after replacing the asset, so the
+final APK was rebuilt from clean Android outputs. The selected TFLite entry is
+uncompressed and its bytes match the committed selection hash.
+
+The compiled Core ML model in both simulator and unsigned device apps is
+86,584,797 bytes (82.574 MiB), confirming compression survives compilation.
+The device binary still reports minimum iOS 17.0. The new native model IDs
+identify the int8-weight selection, and build/runtime checks reject incompatible
+profiles. Negative missing/wrong metadata and modified-weight checks failed as
+expected; restored selected assets passed the builds.
+
+All six LiteRT candidates ran through Android's actual CompiledModel CPU path.
+Five Core ML candidates were compared on macOS CPU_ONLY and ALL requests.
+The selected models meet the preselected mean/max face-drift gate of
+0.10/0.25 years. Android native mean/max drift was 0.046233/0.166481 years;
+Core ML CPU was 0.048133/0.150932 and ALL was 0.048132/0.150948 years.
+These checks use 22 synthetic author crops plus two separate diagnostic
+patterns, not a clinical validation set. Timings show essentially unchanged
+warm inference for the selected models. See the complete
+[size, drift and latency comparison](quantization.md).
+
+Both selected artifacts reproduced byte-identically. An isolated fresh
+checkpoint-to-Core-ML export also reproduced the selected package, without
+modifying the historical baseline or app assets. All Python work used `dl`, and
+`pip check` reports no broken requirements. Final Android and Duo installations
+have empty histories and no private captures; temporary native benchmark models
+were removed from the emulator.
 
 ## Model integration
 
@@ -22,7 +56,7 @@ The source checkpoint's downloaded bytes match SHA-256
 `980ad2f134c5d82e9aca39a738f88a5b10aaf15ca9a5462bf95599be023cdbba`.
 Strict weights-only loading consumes all 200 state tensors. Transformers 4.57.6
 with the original key names and 5.14.1 with renamed ViT keys produce identical
-reference predictions on all 24 cases. The converted graphs use float32,
+reference predictions on all 24 cases. The original baseline graphs use float32,
 including normalization; installed assets match the hashes in
 [`models/conversion-validation.json`](../models/conversion-validation.json).
 
@@ -139,6 +173,8 @@ rotation still need a smoke test on an iPhone/iPad and an Android handset.
 Simulator success does not establish those hardware properties.
 
 Physical-device inference latency, memory use and battery cost remain unmeasured.
-Each full-precision model is approximately 327 MiB. Compression and prospective
-accuracy evaluation of the native face-detection pipeline are separate future
-work; no clinical performance claim follows from these simulator/emulator tests.
+Each preserved full-precision baseline is approximately 327 MiB; the apps now
+ship the approximately 83/82 MiB compressed selections described above.
+Prospective accuracy evaluation of the native face-detection pipeline remains
+future work; no clinical performance claim follows from these host and
+simulator/emulator tests.

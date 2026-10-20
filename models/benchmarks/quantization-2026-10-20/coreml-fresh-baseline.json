@@ -1,0 +1,35 @@
+{
+  "timestamp_utc": "2026-10-20T22:38:09.756945+00:00",
+  "environment": "conda dl; same pinned dependencies as the quantization experiment",
+  "method": "Ran an unchanged copy of scripts/models/prepare_models.py --runtime coreml as __main__ in an isolated workspace, using hard-linked pinned checkpoint and 22 hash-verified portraits. Then applied quantize_coreml.build([int8-float32], false) to that new baseline. No installation, original reference overwrite, fixture rewrite, or timing was performed.",
+  "checkpoint_sha256": "980ad2f134c5d82e9aca39a738f88a5b10aaf15ca9a5462bf95599be023cdbba",
+  "fresh_baseline": {
+    "canonical_spec_sha256": "38d413e83004a2b3e64b491bddb584ac6d381214879becd0ceefa38140784847",
+    "matches_pinned_canonical_spec": true,
+    "weight_sha256": "d56f345a2e16ea01ef8d7cb8dc0894f41c19a1d79739aa8202eab3ca137d8f79",
+    "matches_original_weight_bytes": true,
+    "numerical_cases": 24,
+    "maximum_absolute_drift_years": 4.57763671875e-05
+  },
+  "selected_candidate": "int8-float32",
+  "selected_files": {
+    "Data/com.apple.CoreML/model.mlmodel": {
+      "bytes": 132526,
+      "sha256": "0214ccb5d7a39d0bb99c1a9cad5bb1c1f48a636707d61d162335bee5beef34ce"
+    },
+    "Data/com.apple.CoreML/weights/weight.bin": {
+      "bytes": 86413760,
+      "sha256": "e9a51ca8ff28e1f9f1dc3dd625f8e42617b0abf038962b30c9d27e88de778c82"
+    },
+    "Manifest.json": {
+      "bytes": 617,
+      "sha256": "c3c44c082b56003e591d73305a2fc83fe1f937f485d0525771978d24f97b769d"
+    }
+  },
+  "matches_selected_model_lock_all_file_bytes": true,
+  "dependency_check": {
+    "command": "conda run -n dl python -m pip check",
+    "result": "No broken requirements found.",
+    "exit_code": 0
+  }
+}

@@ -1,0 +1,234 @@
+{
+  "schema": 1,
+  "checkpoint_sha256": "980ad2f134c5d82e9aca39a738f88a5b10aaf15ca9a5462bf95599be023cdbba",
+  "reference_file_sha256": "17cfcd70fa2ff1328671041bbea0fea8aa8ed5ff7a6509b369f435543cf35f52",
+  "litert_dependency_version": "2.3.0",
+  "input": {
+    "shape": [
+      1,
+      112,
+      112,
+      3
+    ],
+    "dtype": "float32",
+    "byte_order": "little",
+    "range": [
+      0,
+      255
+    ]
+  },
+  "models": [
+    {
+      "name": "fp32",
+      "file": "fp32.tflite",
+      "sha256": "e82f0e08ba65676758f97cbf656063907dd9dac7720fb3b507a8ed2ff96585bc",
+      "bytes": 342922444
+    },
+    {
+      "name": "fp16",
+      "file": "fp16.tflite",
+      "sha256": "b75574ade7c87cc3a35891c1d824b98bc517c340c11d30f346e2630cc8a7d2d7",
+      "bytes": 171910832
+    },
+    {
+      "name": "int8-weight",
+      "file": "int8-weight.tflite",
+      "sha256": "a46d86e69b33e834a6d81c4199c07d494492291f8770005489281d67ac8042cc",
+      "bytes": 87391392
+    },
+    {
+      "name": "int8-dynamic",
+      "file": "int8-dynamic.tflite",
+      "sha256": "35ec82842df6241ae259fb7d76ed03f4113ac8cc41116f1f2ae024210d566dc9",
+      "bytes": 87349552
+    },
+    {
+      "name": "int4-weight",
+      "file": "int4-weight.tflite",
+      "sha256": "23b62f673f66ba4dab639bc6a3e9ee595e65c93cb038d65adac00a4f9eeaf611",
+      "bytes": 44628768
+    },
+    {
+      "name": "int4-block32",
+      "file": "int4-block32.tflite",
+      "sha256": "82982712039ff5df95d99217c25e757aeb436f2ffd24043bfce7fa158da9dce2",
+      "bytes": 50997024
+    }
+  ],
+  "cases": [
+    {
+      "name": "gradient",
+      "file": "inputs/gradient.f32",
+      "sha256": "9b64c7eefeef7a14046b25f89fa6c9c69c7e9219ea8b7a88f1b0cbdbc224fe95",
+      "reference_years": 5.346164703369141,
+      "kind": "pattern"
+    },
+    {
+      "name": "gray",
+      "file": "inputs/gray.f32",
+      "sha256": "442d7286f94190e3a64dd2244844a6cf625a4082c94c0ef70853e865a07303e2",
+      "reference_years": 62.322818756103516,
+      "kind": "pattern"
+    },
+    {
+      "name": "author-00",
+      "file": "inputs/author-00.f32",
+      "sha256": "2b95b5dae138b0db9bb0a17a295e0da064d675a1a22e723ca5c98a00d7cbada3",
+      "reference_years": 77.83505249023438,
+      "kind": "portrait"
+    },
+    {
+      "name": "author-01",
+      "file": "inputs/author-01.f32",
+      "sha256": "f28253400c9c10f3556ec8198ee1fe7b0d3b701126a90bdd39e85432473dbaf4",
+      "reference_years": 81.22257995605469,
+      "kind": "portrait"
+    },
+    {
+      "name": "author-02",
+      "file": "inputs/author-02.f32",
+      "sha256": "5b2f48d0e2442c6e1465fa5062bd9e02edf20cf32873fca05a90650c9936081d",
+      "reference_years": 84.05179595947266,
+      "kind": "portrait"
+    },
+    {
+      "name": "author-03",
+      "file": "inputs/author-03.f32",
+      "sha256": "dd089ae80694a3657fa6a328ea4dcd1ebdf7865fad3d4c60135eeb995b6809f6",
+      "reference_years": 23.25370216369629,
+      "kind": "portrait"
+    },
+    {
+      "name": "author-04",
+      "file": "inputs/author-04.f32",
+      "sha256": "8c05d74c7f496ee162eabb46be08d8be9166aa6c83db8c15251ff35828290a76",
+      "reference_years": 17.19807243347168,
+      "kind": "portrait"
+    },
+    {
+      "name": "author-05",
+      "file": "inputs/author-05.f32",
+      "sha256": "339b931a6a2b8c6baf8ce937993f33698e604f99310c5e75fb91b4464d065e3f",
+      "reference_years": 23.800628662109375,
+      "kind": "portrait"
+    },
+    {
+      "name": "author-06",
+      "file": "inputs/author-06.f32",
+      "sha256": "ff3c80adbb63a42730091dcbfe152cb3cd52781bcea2a640257a24df673c231f",
+      "reference_years": 23.69601058959961,
+      "kind": "portrait"
+    },
+    {
+      "name": "author-07",
+      "file": "inputs/author-07.f32",
+      "sha256": "f4503e1343dc5fb8dc703a98b7c5dffe671d1dea78ccb7942c4dab976b45b723",
+      "reference_years": 86.94414520263672,
+      "kind": "portrait"
+    },
+    {
+      "name": "author-08",
+      "file": "inputs/author-08.f32",
+      "sha256": "e754be139add105c2439c82f1f53566b1ebc9841b94feb9f4c4404382a73fe38",
+      "reference_years": 77.53466033935547,
+      "kind": "portrait"
+    },
+    {
+      "name": "author-09",
+      "file": "inputs/author-09.f32",
+      "sha256": "de98e08175ac6dc915adedf1b91951a4ff163233ceba70ce5ded0bb5260e4920",
+      "reference_years": 27.171951293945312,
+      "kind": "portrait"
+    },
+    {
+      "name": "author-10",
+      "file": "inputs/author-10.f32",
+      "sha256": "cd1ed64bb301e46499c25724ddb30dba969fceb4e04222492396975e76788a93",
+      "reference_years": 18.793006896972656,
+      "kind": "portrait"
+    },
+    {
+      "name": "author-11",
+      "file": "inputs/author-11.f32",
+      "sha256": "b663ed3407a408a4ad66749be47919b4b5048c732035c1fd1730128f88132060",
+      "reference_years": 36.24942398071289,
+      "kind": "portrait"
+    },
+    {
+      "name": "author-12",
+      "file": "inputs/author-12.f32",
+      "sha256": "c8ad9f6968f5ec5224ada1bf922fb996bafeac127deaa65197ac5b923de9623f",
+      "reference_years": 23.028486251831055,
+      "kind": "portrait"
+    },
+    {
+      "name": "author-13",
+      "file": "inputs/author-13.f32",
+      "sha256": "00b387b582030d0f049c66c51eea44aad98e8a48931d58354167ad18eb51314c",
+      "reference_years": 82.4460678100586,
+      "kind": "portrait"
+    },
+    {
+      "name": "author-14",
+      "file": "inputs/author-14.f32",
+      "sha256": "baaa99e6a5a6e8b4020181bb87b8ad31a6bae8081c416471d6acde821c02f45b",
+      "reference_years": 13.665477752685547,
+      "kind": "portrait"
+    },
+    {
+      "name": "author-15",
+      "file": "inputs/author-15.f32",
+      "sha256": "38fee7cc56aa447b5992e6a2cc14a0cfceb853660e5bf505f336b539b66a205b",
+      "reference_years": 19.399290084838867,
+      "kind": "portrait"
+    },
+    {
+      "name": "author-16",
+      "file": "inputs/author-16.f32",
+      "sha256": "d6e764e23b0f87bf0f051a4abaf695f21513c0a2df487ed062897de2eb4a12ed",
+      "reference_years": 21.75579833984375,
+      "kind": "portrait"
+    },
+    {
+      "name": "author-17",
+      "file": "inputs/author-17.f32",
+      "sha256": "d445dfb723dfd90dd47a0986841c6fa153ebfac5d7ae1010dbf25003a7748bf5",
+      "reference_years": 16.275503158569336,
+      "kind": "portrait"
+    },
+    {
+      "name": "author-18",
+      "file": "inputs/author-18.f32",
+      "sha256": "66bdc2cd3d76daba4d4a71fd895ad925cb0ef523994ff6ba0fd98e5a506c12b5",
+      "reference_years": 77.29086303710938,
+      "kind": "portrait"
+    },
+    {
+      "name": "author-19",
+      "file": "inputs/author-19.f32",
+      "sha256": "3e11b29524d56a33b45f603ea8598edcb85ce2dba6a2537856a41a0013b5ae93",
+      "reference_years": 39.624786376953125,
+      "kind": "portrait"
+    },
+    {
+      "name": "author-20",
+      "file": "inputs/author-20.f32",
+      "sha256": "94fdcce337af4100821d013b5e4df693d16a24fd378214862da16116abc03bf9",
+      "reference_years": 16.773401260375977,
+      "kind": "portrait"
+    },
+    {
+      "name": "author-21",
+      "file": "inputs/author-21.f32",
+      "sha256": "3ddf9fc11a50356d38ad539009bdc2b165b86e3abc03669a1dee80dcc2b0bb9f",
+      "reference_years": 90.6021499633789,
+      "kind": "portrait"
+    }
+  ],
+  "timing_case": "author-03",
+  "warmups": 5,
+  "iterations": 25,
+  "rounds": 3,
+  "timing_scope": "Tensor write + CompiledModel.run + tensor read; excludes detection, preprocessing and file IO",
+  "license": "CC-BY-NC-SA-4.0; author test portraits are local validation data only"
+}

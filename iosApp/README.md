@@ -10,22 +10,25 @@ Prepare the model from the repository root before generating the Xcode project:
 
 ```sh
 bash scripts/models/install_tools.sh
-conda run -n dl python scripts/models/prepare_models.py --runtime both --install --test-portraits
+conda run -n dl python scripts/models/prepare_models.py --runtime coreml --test-portraits
+conda run -n dl python scripts/models/quantize_coreml.py --phase build --variants int8-float32
+conda run -n dl python scripts/models/quantize_coreml.py --phase evaluate --variants int8-float32
+conda run -n dl python scripts/models/install_quantized_models.py --runtime coreml
 cd iosApp
 xcodegen generate
 open ScanFace.xcodeproj
 ```
 
 Select the **ScanFace** scheme and an iPhone or iPad simulator. Choose your signing
-team before installing on a physical device. For only the iOS model, replace
-`--runtime both` with `--runtime coreml`. The full conversion/parity workflow
+team before installing on a physical device. The conversion/parity workflow
 requires macOS and runs all Python commands in the existing `conda dl`
 environment. Converter-only packages are isolated in
 `artifacts/models/converter-python`, keeping their older xDSL dependency separate
 from the shared environment.
 
-The pinned author checkpoint is approximately 981 MiB. The generated float32
-`ScanFace/Models/FAHRFaceAge.mlpackage` is approximately 327 MiB and is ignored by
+The pinned author checkpoint is approximately 981 MiB. The selected 8-bit-weight,
+float32-compute `ScanFace/Models/FAHRFaceAge.mlpackage` is approximately 82 MiB,
+down from the 327 MiB float32 baseline, and is ignored by
 Git. Xcode compiles it to `FAHRFaceAge.mlmodelc`. `project.yml` bundles the full
 `models/licenses` folder and `ScanFace/Models/conversion.json` with the app.
 Regenerate the project after model preparation so its resources are present.
@@ -85,13 +88,17 @@ The Core ML input `pixels` is float32 `[1, 112, 112, 3]`, RGB NHWC in `0..255`.
 The graph performs `/255` and ImageNet normalization itself. Output `age` is a
 single float32 value with shape `[1]`, in years. The runtime validates both tensor
 contracts and rejects nonfinite or out-of-range estimates. Its identifier is
-`fahr-faceage-1fbb84e-coreml-native-v1`. Missing model resources produce an
+`fahr-faceage-1fbb84e-coreml-int8w-native-v1`. Missing model resources produce an
 actionable error, never a substitute estimate.
 
 The conversion command checks 24 numerical cases when `--test-portraits` is
 supplied: two mathematical patterns and 22 hash-pinned synthetic portraits. The
-0.02-year tolerance compares converted outputs with the PyTorch reference; it is
-not a statement of accuracy on people. Models are for academic research and do
+0.02-year tolerance checks the original float32 conversion. Compression is
+screened separately against a 0.10-year mean and 0.25-year maximum drift on the
+22 synthetic faces, for both CPU_ONLY and ALL compute requests. Native regression
+tests use the selected model's predictions with a 0.02-year runtime tolerance.
+These are numerical checks, not accuracy on people. See the
+[quantization comparison](../docs/quantization.md). Models are for academic research and do
 not diagnose conditions, measure individual health, or predict lifespan.
 FAHR-FaceSurvival weights are not released and no survival score is produced.
 

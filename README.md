@@ -26,16 +26,21 @@ Prepare the model assets before building either app. From the repository root:
 
 ```sh
 bash scripts/models/install_tools.sh
-conda run -n dl python scripts/models/prepare_models.py --runtime both --install --test-portraits
+conda run -n dl python scripts/models/prepare_models.py --runtime both --test-portraits
+conda run -n dl python scripts/models/quantize_litert.py --candidates int8-weight
+conda run -n dl python scripts/models/quantize_coreml.py --phase build --variants int8-float32
+conda run -n dl python scripts/models/quantize_coreml.py --phase evaluate --variants int8-float32
+conda run -n dl python scripts/models/install_quantized_models.py
 ```
 
 This downloads and verifies the pinned approximately 981 MiB author checkpoint,
-converts it to float32 mobile models, checks numerical agreement, and installs
-the assets plus conversion metadata. Each inference model is approximately
-327 MiB and is ignored by Git; a fresh clone must run this preparation step.
+converts float32 baselines, evaluates 8-bit weight compression, and installs the
+hash-locked selection plus metadata. The installed models are approximately
+83 MiB on Android and 82 MiB on iOS, down from 327 MiB each. Generated weights
+are ignored by Git; a fresh clone must run this preparation step.
 Allow several gigabytes for the checkpoint, converters, outputs and build caches.
-The full `both` command runs on macOS; Android-only conversion can use
-`--runtime litert`.
+The full workflow runs on macOS; Android-only preparation can use
+`--runtime litert` for preparation/installation and omit Core ML commands.
 
 All model Python commands run in `conda dl`. The bootstrap isolates converter-only
 packages under `artifacts/models/converter-python`; do not downgrade shared
@@ -143,8 +148,10 @@ in `0..255`; channel transposition, `/255`, and ImageNet normalization are insid
 the exported graph. Android uses the LiteRT `serving_default` signature with
 `args_0` → `output_0`; iOS uses `pixels` → `age`. Both return one age in years.
 Do not normalize the input twice. Model identifiers are
-`fahr-faceage-1fbb84e-litert-native-v1` and
-`fahr-faceage-1fbb84e-coreml-native-v1`.
+`fahr-faceage-1fbb84e-litert-int8w-native-v1` and
+`fahr-faceage-1fbb84e-coreml-int8w-native-v1`. Both use 8-bit compressed weights
+with float32 computation and external tensors. See the
+[quantization comparison](docs/quantization.md) for size, drift and timing results.
 
 Android uses bundled ML Kit 16.1.7 and iOS uses Vision landmark revision 3 instead
 of the paper's RetinaFace detector. If Vision's eye landmarks are unusable, iOS

@@ -10,12 +10,18 @@ Run from the repository root on macOS with the existing Conda environment named 
 
 ```sh
 bash scripts/models/install_tools.sh
-conda run -n dl python scripts/models/prepare_models.py --runtime both --install --test-portraits
+conda run -n dl python scripts/models/prepare_models.py --runtime both --test-portraits
+conda run -n dl python scripts/models/quantize_litert.py --candidates int8-weight
+conda run -n dl python scripts/models/quantize_coreml.py --phase build --variants int8-float32
+conda run -n dl python scripts/models/quantize_coreml.py --phase evaluate --variants int8-float32
+conda run -n dl python scripts/models/install_quantized_models.py
 ```
 
 The bootstrap provisions conversion dependencies. Converter-only packages live in the ignored `artifacts/models/converter-python` overlay so their dependencies do not require downgrading the shared `dl` environment. The conversion script adds this overlay when loading the LiteRT converter; all Python execution still uses `conda dl`. Core ML conversion and prediction checks require macOS. Use `--runtime litert` for Android-only preparation or `--runtime coreml` for iOS only.
 
-The script verifies the approximately 981 MiB checkpoint against its pinned SHA-256 before restricted deserialization, strictly loads the author model, wraps its normalization, exports float32 inference graphs, and compares outputs before installing each artifact. Neither graph contains optimizer state. The generated LiteRT file and Core ML package are each approximately 327 MiB and are excluded from Git. A fresh clone must prepare them before building functional mobile apps; budget several gigabytes for conversion and build caches.
+The preparation script verifies the approximately 981 MiB checkpoint against its pinned SHA-256 before restricted deserialization, strictly loads the author model, wraps its normalization, exports float32 inference graphs, and compares outputs. Neither graph contains optimizer state. These 327 MiB baselines stay in `artifacts/models/` for comparison. The selected models use 8-bit weight compression with float32 computation: approximately 83 MiB for LiteRT and 82 MiB for Core ML. All generated weights are excluded from Git. A fresh clone must prepare them before building functional mobile apps; budget several gigabytes for conversion and build caches.
+
+The dedicated installer verifies [selected-models.json](../models/selected-models.json), complete artifact hashes, iOS 17 compatibility, external tensor contracts and recorded prediction drift before replacing the app assets. It stages clean directories and restores previous bundles if installation fails. Baseline preparation no longer accepts `--install`, preventing an older command from replacing compressed weights while the app identifies a compressed model. Android-only preparation can omit Core ML steps and pass `--runtime litert` to both preparation and installation; iOS-only uses `--runtime coreml` and omits the LiteRT step.
 
 | Generated material | Location |
 | --- | --- |
@@ -36,8 +42,8 @@ The [conversion wrapper](../scripts/models/prepare_models.py) accepts **unnormal
 
 | Runtime | Input | Output | Model identifier |
 | --- | --- | --- | --- |
-| Android LiteRT 2.3.0 | `serving_default` signature, `args_0`: float32 `[1, 112, 112, 3]`, RGB NHWC, `0..255` | `output_0`: float32 `[1]`, years | `fahr-faceage-1fbb84e-litert-native-v1` |
-| iOS Core ML, minimum iOS 17 | `pixels`: float32 `[1, 112, 112, 3]`, RGB NHWC, `0..255` | `age`: float32 `[1]`, years | `fahr-faceage-1fbb84e-coreml-native-v1` |
+| Android LiteRT 2.3.0 | `serving_default` signature, `args_0`: float32 `[1, 112, 112, 3]`, RGB NHWC, `0..255` | `output_0`: float32 `[1]`, years | `fahr-faceage-1fbb84e-litert-int8w-native-v1` |
+| iOS Core ML, minimum iOS 17 | `pixels`: float32 `[1, 112, 112, 3]`, RGB NHWC, `0..255` | `age`: float32 `[1]`, years | `fahr-faceage-1fbb84e-coreml-int8w-native-v1` |
 
 Android serializes detection and LiteRT CPU inference on a worker; iOS serializes Vision, its guarded Core Image eye fallback and Core ML inference on a worker. Vision and Core ML use CPU on the simulator and permit available compute units on devices; the Core Image fallback uses software rendering. Both validate the tensor contract and accept only finite age results within `0..130`. A missing or incompatible model produces an unavailable/failed result, never a sample value. Cancellation suppresses results from discarded captures, with checks before and after the synchronous Core Image fallback. The UI shows the model ID and native-preprocessing disclosure with completed real scans; sample results remain separately labelled.
 
@@ -145,4 +151,4 @@ The paper studies the association between facial-age deviation and outcomes in r
 
 ## Derived artifact record
 
-The generated `conversion.json` identifies this checkpoint, conversion tool versions, float32 precision, input tensor contract, resulting file/package hashes and measured output comparisons. Both app bundles include the weight license and [attribution notice](../models/licenses/NOTICE.md). The models are inference-only float32 conversions with a raw-RGB NHWC normalization wrapper; no quantization is applied. A converted model is not an official author release. Native preprocessing differences remain separate from the numerical model conversion results.
+The generated `conversion.json` identifies the checkpoint, selected model ID, compression recipe, float32 input/output contract, file/package hashes and measured predictions. The selection lock and [quantization results](quantization.md) preserve the evaluation evidence and tool versions; the original [conversion report](../models/conversion-validation.json) remains the float32 reference. Both app bundles include the weight license and [attribution notice](../models/licenses/NOTICE.md). The selected models use 8-bit weights, dequantized for float32 computation, with the same raw-RGB NHWC normalization wrapper. A converted model is not an official author release. Native preprocessing differences remain separate from numerical model conversion and compression drift.
