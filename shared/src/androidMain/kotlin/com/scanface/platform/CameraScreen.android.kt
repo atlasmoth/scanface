@@ -8,17 +8,17 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,10 +27,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -192,7 +190,8 @@ private fun GrantedCamera(
         CameraController(context, context.findActivity(), previewView)
     }
     val state by controller.state.collectAsState()
-    val busy = state.busy || state.zoomChanging || importing
+    val busy = state.busy || importing
+    val controlsLocked = busy || state.zoomChanging
     DisposableEffect(controller, lifecycleOwner) {
         controller.start(lifecycleOwner)
         onDispose { controller.close() }
@@ -201,61 +200,35 @@ private fun GrantedCamera(
         if (state.error != null) haptics.perform(AppHaptic.Error)
     }
     Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 20.dp),
+        Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 12.dp).padding(top = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(Modifier.fillMaxWidth().height(64.dp)) {
-                IconButton(
-                    onClick = { haptics.perform(AppHaptic.Light); onClose() },
-                    modifier = Modifier.align(Alignment.CenterStart).semantics { contentDescription = "Close camera" },
-                ) { Glyph(AppIcon.Close) }
-                Text("New scan", Modifier.align(Alignment.Center),
-                    style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            CameraPreview(
+                previewView, state, busy,
+                Modifier.fillMaxWidth().weight(1f),
+                onClose = { haptics.perform(AppHaptic.Light); onClose() },
+                onCapture = {
+                    haptics.perform(AppHaptic.Light)
+                    controller.takePhoto {
+                        haptics.perform(AppHaptic.Success)
+                        onCaptured(it)
+                    }
+                },
+                onFlip = { haptics.perform(AppHaptic.Selection); controller.flip() },
+                onFlash = { haptics.perform(AppHaptic.Selection); controller.cycleFlash() },
+            )
+            TextButton(onClick = openPicker, enabled = !controlsLocked, modifier = Modifier.heightIn(min = 56.dp)) {
+                Text(if (importing) "Preparing photo…" else "Choose an existing photo")
             }
-            BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
-                // Keep the viewfinder centered at every width. Short landscape
-                // windows use a wider crop; controls never move into a side panel.
-                val landscape = maxWidth > maxHeight * 1.35f
-                val aspect = if (landscape) 4f / 3f else 3f / 4f
-                val availableHeight = (maxHeight - 68.dp).coerceAtLeast(260.dp)
-                val widthLimit = if (landscape) 760.dp else 540.dp
-                val previewWidth = minOf(maxWidth, widthLimit, availableHeight * aspect)
-                Column(
-                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    CameraPreview(
-                        previewView, state, busy,
-                        Modifier.width(previewWidth).height(previewWidth / aspect),
-                        onCapture = {
-                            haptics.perform(AppHaptic.Light)
-                            controller.takePhoto {
-                                haptics.perform(AppHaptic.Success)
-                                onCaptured(it)
-                            }
-                        },
-                        onFlip = { haptics.perform(AppHaptic.Selection); controller.flip() },
-                        onFlash = { haptics.perform(AppHaptic.Selection); controller.cycleFlash() },
-                        onZoom = { haptics.perform(AppHaptic.Selection); controller.setZoom(it) },
-                    )
-                    TextButton(
-                        onClick = openPicker,
-                        enabled = !busy,
-                        modifier = Modifier.padding(top = 10.dp, bottom = 10.dp).heightIn(min = 48.dp),
-                    ) {
-                        Text(if (importing) "Preparing photo…" else "Choose an existing photo")
-                    }
-                    val error = importError ?: state.error
-                    if (error != null) {
-                        Text(error, Modifier.widthIn(max = 500.dp).padding(bottom = 8.dp).semantics {
-                            liveRegion = LiveRegionMode.Polite
-                        }, color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
-                        if (!state.ready) TextButton(onClick = {
-                            haptics.perform(AppHaptic.Light)
-                            controller.start(lifecycleOwner)
-                        }, enabled = !busy) { Text("Try camera again") }
-                    }
-                }
+            val error = importError ?: state.error
+            if (error != null) {
+                Text(error, Modifier.widthIn(max = 500.dp).padding(bottom = 8.dp).semantics {
+                    liveRegion = LiveRegionMode.Polite
+                }, color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
+                if (!state.ready) TextButton(onClick = {
+                    haptics.perform(AppHaptic.Light)
+                    controller.start(lifecycleOwner)
+                }, enabled = !controlsLocked) { Text("Try camera again") }
             }
         }
         if (state.screenFlashVisible) {
@@ -272,73 +245,48 @@ private fun CameraPreview(
     state: CameraUiState,
     busy: Boolean,
     modifier: Modifier,
+    onClose: () -> Unit,
     onCapture: () -> Unit,
     onFlip: () -> Unit,
     onFlash: () -> Unit,
-    onZoom: (Float) -> Unit,
 ) {
-    BoxWithConstraints(modifier.clip(RoundedCornerShape(24.dp)).background(Color(0xFF101414))) {
-        AndroidView(factory = { preview }, modifier = Modifier.fillMaxSize())
-        Box(Modifier.fillMaxWidth().height(100.dp).align(Alignment.TopCenter)
-            .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .48f), Color.Transparent))))
-        Box(Modifier.fillMaxWidth().height(190.dp).align(Alignment.BottomCenter)
-            .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .72f)))))
-        if (state.ready && maxHeight >= 360.dp) {
-            Canvas(Modifier.fillMaxSize().padding(top = 68.dp, bottom = 154.dp)) {
-                val ovalWidth = minOf(size.width * .58f, size.height * .75f)
-                val ovalHeight = minOf(size.height * .86f, ovalWidth * 1.38f)
-                drawOval(Color.White.copy(alpha = .28f),
-                    Offset((size.width - ovalWidth) / 2, (size.height - ovalHeight) / 2),
-                    Size(ovalWidth, ovalHeight), style = Stroke(1.dp.toPx()))
-            }
-        } else if (!state.ready && state.error == null) {
+    val controlsEnabled = state.ready && !busy && !state.zoomChanging
+    Box(modifier.clip(RoundedCornerShape(24.dp)).background(Color(0xFF101414))) {
+        AndroidView(factory = { preview }, update = { it.isEnabled = !busy }, modifier = Modifier.fillMaxSize())
+        Box(Modifier.fillMaxWidth().height(110.dp).align(Alignment.TopCenter)
+            .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .42f), Color.Transparent))))
+        Box(Modifier.fillMaxWidth().height(200.dp).align(Alignment.BottomCenter)
+            .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .68f)))))
+        if (!state.ready && state.error == null) {
             CircularProgressIndicator(Modifier.align(Alignment.Center), color = Color.White)
         } else if (!state.ready) {
             Text("Camera unavailable", Modifier.align(Alignment.Center).padding(24.dp),
                 color = Color.White, textAlign = TextAlign.Center)
         }
-        Text(state.cameraLabel,
-            Modifier.align(Alignment.TopCenter).padding(top = 28.dp, start = 66.dp, end = 66.dp),
-            style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = .9f),
-            textAlign = TextAlign.Center)
-        CameraCircleButton(
-            description = if (state.flashes.size > 1) "${state.flash.label}. Change flash mode." else "Flash unavailable on this camera",
-            enabled = state.ready && !busy && state.flashes.size > 1,
-            modifier = Modifier.align(Alignment.TopStart).padding(12.dp),
-            onClick = onFlash,
-        ) { FlashGlyph(state.flash) }
-        if (state.flash != CameraFlash.OFF) {
-            Text(state.flash.label, Modifier.align(Alignment.TopEnd).padding(top = 28.dp, end = 16.dp),
-                style = MaterialTheme.typography.labelSmall, color = CameraAccent)
+        CameraCircleButton("Close camera", true, Modifier.align(Alignment.TopStart).padding(12.dp), onClose) {
+            Glyph(AppIcon.Close, tint = Color.White)
         }
-        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                state.zoomChoices.forEach { zoom ->
-                    val selected = state.zoom == zoom
-                    Box(
-                        Modifier.size(48.dp).clip(CircleShape)
-                            .background(if (selected) Color.White.copy(alpha = .18f) else Color.Black.copy(alpha = .22f))
-                            .selectable(selected = selected, enabled = state.ready && !busy, role = Role.RadioButton,
-                                onClick = { onZoom(zoom) })
-                            .semantics { contentDescription = "${formatZoom(zoom)} zoom" },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(formatZoom(zoom), fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                            color = if (selected) CameraAccent else Color.White,
-                            style = MaterialTheme.typography.labelLarge)
-                    }
-                }
-            }
-            Box(Modifier.fillMaxWidth().height(82.dp)) {
-                ShutterButton(state.ready && !busy, busy, Modifier.align(Alignment.Center), onCapture)
-                CameraCircleButton(
-                    description = if (state.front) "Switch to rear camera" else "Switch to front camera",
-                    enabled = state.canFlip && !busy,
-                    modifier = Modifier.align(Alignment.CenterEnd), onClick = onFlip,
-                ) { FlipGlyph() }
-            }
+        AnimatedVisibility(
+            visible = state.zoomReadoutVisible,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 120.dp),
+            enter = fadeIn(), exit = fadeOut(),
+        ) {
+            Text(formatZoom(state.requestedZoom), color = CameraAccent,
+                style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Medium)
+        }
+        Box(Modifier.align(Alignment.BottomCenter).padding(horizontal = 20.dp, vertical = 24.dp)
+            .widthIn(max = 360.dp).fillMaxWidth().height(82.dp)) {
+            CameraCircleButton(
+                description = if (state.front) "Switch to rear camera" else "Switch to front camera",
+                enabled = state.canFlip && controlsEnabled,
+                modifier = Modifier.align(Alignment.CenterStart), onClick = onFlip,
+            ) { FlipGlyph() }
+            ShutterButton(controlsEnabled, busy, Modifier.align(Alignment.Center), onCapture)
+            CameraCircleButton(
+                description = if (state.flashes.size > 1) "${state.flash.label}. Change flash mode." else "Flash unavailable on this camera",
+                enabled = controlsEnabled && state.flashes.size > 1,
+                modifier = Modifier.align(Alignment.CenterEnd), onClick = onFlash,
+            ) { FlashGlyph(state.flash) }
         }
     }
 }
