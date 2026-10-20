@@ -106,13 +106,14 @@ private fun HistoryChart(records: List<ScanRecord>, now: Long) {
     val rangeMillis = if (range == "Month") 30L * 86_400_000 else 365L * 86_400_000
     val filtered = records.filter { it.createdAtMillis >= now - rangeMillis }
     ScanCard(Modifier.fillMaxWidth()) {
-        Text("Over time", style = MaterialTheme.typography.titleMedium)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Over time", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+            if (filtered.any { it.isDemo }) Badge("Sample")
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("Month", "Year").forEach {
                 FilterChip(selected = range == it, onClick = { range = it }, label = { Text(it) })
             }
-            Spacer(Modifier.weight(1f))
-            if (filtered.any { it.isDemo }) Badge("Includes samples")
         }
         AgeChart(filtered)
         Text("Facial-age estimates in years", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -120,7 +121,7 @@ private fun HistoryChart(records: List<ScanRecord>, now: Long) {
 }
 
 @Composable
-fun HistoryScreen(records: List<ScanRecord>, selectedId: String?, wide: Boolean, onSelect: (ScanRecord) -> Unit,
+fun HistoryScreen(records: List<ScanRecord>, selectedId: String?, wide: Boolean, now: Long, onSelect: (ScanRecord) -> Unit,
                   onScan: () -> Unit, onShare: (ScanRecord?) -> Unit, onDelete: (ScanRecord) -> Unit) {
     if (records.isEmpty()) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {
@@ -133,6 +134,7 @@ fun HistoryScreen(records: List<ScanRecord>, selectedId: String?, wide: Boolean,
     Row(Modifier.fillMaxSize()) {
         Column(Modifier.weight(if (wide) 0.42f else 1f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            HistoryChart(records, now)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("${records.size} saved scans", Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 IconButton({ onShare(null) }) { Glyph(AppIcon.Share, description = "Export scan history") }

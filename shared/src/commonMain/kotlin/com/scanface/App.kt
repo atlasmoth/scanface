@@ -40,6 +40,10 @@ fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingM
         returnRoute = if (route == Route.HISTORY) Route.HISTORY.name else Route.OVERVIEW.name
         if (state.pending != null) routeName = Route.RESULT.name else routeName = Route.CAPTURE.name
     }
+    fun settings() {
+        if (route == Route.OVERVIEW || route == Route.HISTORY) returnRoute = routeName
+        navigate(Route.SETTINGS)
+    }
     fun back() {
         when (route) {
             Route.CAPTURE -> routeName = returnRoute
@@ -58,12 +62,13 @@ fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingM
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
                 val rail = maxWidth >= 600.dp
-                val wide = maxWidth >= 1000.dp
-                val historyWide = maxWidth >= 900.dp
+                val wide = maxWidth >= 840.dp
+                val historyWide = maxWidth >= 840.dp
                 if (route == Route.CAPTURE) {
                     CameraScreen(dark, onCaptured = {
+                        selectedId = null
                         store.capture(it)
-                        routeName = Route.RESULT.name
+                        routeName = if (store.state.value.pending?.photoPath == it.path) Route.RESULT.name else returnRoute
                     }, onClose = ::back)
                 } else {
                     Row(Modifier.fillMaxSize()) {
@@ -77,10 +82,8 @@ fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingM
                                 NavigationRailItem(route == Route.HISTORY, { navigate(Route.HISTORY) },
                                     icon = { Glyph(AppIcon.History) }, label = { Text("History") })
                                 Spacer(Modifier.weight(1f))
-                                NavigationRailItem(route == Route.SETTINGS, {
-                                    returnRoute = routeName.takeIf { it == Route.HISTORY.name } ?: Route.OVERVIEW.name
-                                    navigate(Route.SETTINGS)
-                                }, icon = { Glyph(AppIcon.Settings) }, label = { Text("Settings") })
+                                NavigationRailItem(route == Route.SETTINGS, ::settings,
+                                    icon = { Glyph(AppIcon.Settings) }, label = { Text("Settings") })
                                 Spacer(Modifier.height(16.dp))
                             }
                             VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -101,10 +104,7 @@ fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingM
                                         Route.RESULT -> "Scan details"
                                         else -> "ScanFace"
                                     }, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
-                                    if (route != Route.SETTINGS) IconButton({
-                                        returnRoute = if (route == Route.HISTORY) Route.HISTORY.name else Route.OVERVIEW.name
-                                        navigate(Route.SETTINGS)
-                                    }) { Glyph(AppIcon.Settings, description = "Settings") }
+                                    if (route != Route.SETTINGS && !rail) IconButton(::settings) { Glyph(AppIcon.Settings, description = "Settings") }
                                 }
                             },
                             bottomBar = {
@@ -123,7 +123,7 @@ fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingM
                                         { if (store.seedDemo()) notify("Sample results added") },
                                         { routeName = Route.HISTORY.name },
                                         { selectedId = it.id; returnRoute = Route.OVERVIEW.name; routeName = Route.RESULT.name })
-                                    Route.HISTORY -> HistoryScreen(state.records, selectedId, historyWide,
+                                    Route.HISTORY -> HistoryScreen(state.records, selectedId, historyWide, services.nowMillis(),
                                         { selectedId = it.id; if (!historyWide) { returnRoute = Route.HISTORY.name; routeName = Route.RESULT.name } },
                                         ::scan, { services.shareText(store.exportCsv(it?.id)) }, { deleteId = it.id })
                                     Route.SETTINGS -> SettingsScreen(state, { store.setTheme(it) },

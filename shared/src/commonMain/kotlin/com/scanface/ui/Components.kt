@@ -120,14 +120,21 @@ fun AgeChart(records: List<ScanRecord>, modifier: Modifier = Modifier) {
         return
     }
     val description = values.joinToString { "${dateLabel(it.createdAtMillis)}: ${ageLabel(it.age!!)} years" }
+    val low = values.minOf { it.age!! } - 2
+    val high = values.maxOf { it.age!! } + 2
     Column(modifier.semantics { contentDescription = "Facial-age history. $description" }) {
-        Canvas(Modifier.fillMaxWidth().height(132.dp).padding(horizontal = 8.dp, vertical = 16.dp)) {
+        Row {
+            Column(Modifier.width(32.dp).height(132.dp).padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.SpaceBetween) {
+                listOf(high, (high + low) / 2, low).forEach {
+                    Text(ageLabel(it), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        Canvas(Modifier.weight(1f).height(132.dp).padding(horizontal = 8.dp, vertical = 16.dp)) {
             repeat(3) { index ->
                 val y = size.height * index / 2
                 drawLine(grid, Offset(0f, y), Offset(size.width, y), strokeWidth = 1.dp.toPx())
             }
-            val low = values.minOf { it.age!! } - 2
-            val high = values.maxOf { it.age!! } + 2
             val first = values.first().createdAtMillis
             val span = (values.last().createdAtMillis - first).coerceAtLeast(1)
             val points = values.map {
@@ -140,7 +147,8 @@ fun AgeChart(records: List<ScanRecord>, modifier: Modifier = Modifier) {
             drawPath(line, primary, style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round))
             points.forEach { drawCircle(primary, 4.dp.toPx(), it) }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        }
+        Row(Modifier.fillMaxWidth().padding(start = 32.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(dateLabel(values.first().createdAtMillis), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (values.size > 1) Text(dateLabel(values.last().createdAtMillis), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
