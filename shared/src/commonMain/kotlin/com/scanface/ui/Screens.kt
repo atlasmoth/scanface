@@ -161,6 +161,7 @@ fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
         Column(Modifier.widthIn(max = 720.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(28.dp)) {
             Text(if (pending) "Your scan" else dateLabel(record.createdAtMillis, true), style = MaterialTheme.typography.headlineMedium)
             BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val availablePhotoWidth = maxWidth
                 val photoAspect = if (record.width > 0 && record.height > 0) record.width.toFloat() / record.height else 1f
                 if (maxWidth >= 560.dp) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(36.dp)) {
@@ -172,7 +173,7 @@ fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
                 } else {
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(28.dp)) {
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            PhotoThumbnail(record, Modifier.width(minOf(maxWidth, 300.dp, 280.dp * photoAspect)).aspectRatio(photoAspect))
+                            PhotoThumbnail(record, Modifier.width(minOf(availablePhotoWidth, 300.dp, 280.dp * photoAspect)).aspectRatio(photoAspect))
                         }
                         ScanEstimate(record, analyzing)
                     }
