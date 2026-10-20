@@ -39,7 +39,7 @@ The [conversion wrapper](../scripts/models/prepare_models.py) accepts **unnormal
 | Android LiteRT 2.3.0 | `serving_default` signature, `args_0`: float32 `[1, 112, 112, 3]`, RGB NHWC, `0..255` | `output_0`: float32 `[1]`, years | `fahr-faceage-1fbb84e-litert-native-v1` |
 | iOS Core ML, minimum iOS 17 | `pixels`: float32 `[1, 112, 112, 3]`, RGB NHWC, `0..255` | `age`: float32 `[1]`, years | `fahr-faceage-1fbb84e-coreml-native-v1` |
 
-Android serializes detection and LiteRT CPU inference on a worker; iOS serializes Vision and Core ML inference on a worker, uses CPU on the simulator, and permits available compute units on devices. Both validate the tensor contract and accept only finite age results within `0..130`. A missing or incompatible model produces an unavailable/failed result, never a sample value. Cancellation suppresses results from discarded captures. The UI shows the model ID and native-preprocessing disclosure with completed real scans; sample results remain separately labelled.
+Android serializes detection and LiteRT CPU inference on a worker; iOS serializes Vision, its guarded Core Image eye fallback and Core ML inference on a worker. Vision and Core ML use CPU on the simulator and permit available compute units on devices; the Core Image fallback uses software rendering. Both validate the tensor contract and accept only finite age results within `0..130`. A missing or incompatible model produces an unavailable/failed result, never a sample value. Cancellation suppresses results from discarded captures, with checks before and after the synchronous Core Image fallback. The UI shows the model ID and native-preprocessing disclosure with completed real scans; sample results remain separately labelled.
 
 ## Pinned sources
 
@@ -120,6 +120,8 @@ The reference calls `PIL.Image.rotate` with its defaults: image-center rotation,
 
 ScanFace uses [bundled Android ML Kit face detection](https://developers.google.com/ml-kit/vision/face-detection/android), package version 16.1.7, with accurate mode and eye landmarks, and [iOS Vision face landmarks](https://developer.apple.com/documentation/vision/vndetectfacelandmarksrequest), request revision 3. Both require exactly one face and both eyes, then apply the geometry above to the upright source image. The Android detector is bundled, so first use works offline. There is no fallback to estimating age from a centered full-image crop.
 
+iOS supplies Vision with an explicit sRGB `kCVPixelFormatType_32BGRA` buffer derived from the upright source image. It first runs face-rectangle revision 3 to obtain the face bounds and pose, then supplies that observation to landmark revision 3. When the Vision eye geometry is unusable, an offline Core Image face detector may recover eye positions only if it independently finds exactly one face, reports both eyes, and its face box has intersection-over-union of at least `0.5` with the Vision box. The fallback retains the Vision bounds and the already-checked Vision pose; it does not replace the face crop with Core Image's box or relax the capture checks. Both iOS paths require eye centers inside the Vision box, spacing between `max(20 pixels, 15% of box width)` and `75% of box width`, and eye-line roll no greater than 30 degrees. A failed fallback produces no estimate.
+
 The adapters reject faces smaller than 112 pixels or 8% of the corresponding image dimension, boxes reaching the outer 1% image boundary, missing eyes, inter-eye distance below 20 pixels, yaw/pitch above 25 degrees, or eye-line roll above 30 degrees. These are ScanFace capture-quality rules, not validated confidence scores from FAHR. They are implemented in [Android preprocessing](../androidApp/src/main/kotlin/com/scanface/ml/FacePreprocessing.kt) and [iOS preprocessing](../iosApp/ScanFace/FaceImagePreprocessor.swift).
 
 For Vision, convert the normalized bottom-left-origin face bbox to top-left image pixels before using this geometry. For a bbox `(bx, by, bw, bh)` and a landmark `(u, v)` normalized within that bbox:
@@ -130,6 +132,8 @@ image_y = (1 - by - v * bh) * H
 ```
 
 Eye-region centroids or pupil landmarks are estimates of eye centers; detector names referring to the subject's left/right must not be mistaken for image-left/right. Android landmarks must likewise use the same upright image coordinate space as the sampled pixels.
+
+Core Image's face box and eye positions use lower-left image coordinates. The fallback maps each eye `(x, y)` to `(x, H - y)` and the box's top to `H - box.maxY` before comparing it with Vision's top-left pixel bounds. Both detectors inspect the same upright image; only the accepted eye positions are substituted.
 
 These native detectors do not reproduce RetinaFace detections, bounding boxes, or confidence calibration. The `native-v1` model IDs identify the platform-specific pipeline documented here. This is a **documented preprocessing substitution**, not validated reproduction of the study. There are two separate sources of difference: exported model outputs on identical input tensors, and end-to-end estimates from native versus author face crops. Pixel fixtures exercise the alignment and resampling independently of a detector; native tests exercise face rejection, inference and cancellation. Numeric conversion agreement on 24 cases does not establish clinical accuracy or detector parity.
 

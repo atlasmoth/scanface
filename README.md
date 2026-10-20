@@ -91,7 +91,7 @@ simulator or dedicated test device.
 | `shared/src/androidMain` | CameraX, Android photo picker, EXIF normalization, private storage and native sharing |
 | `shared/src/iosMain` | UIKit bridge, native image rendering, preferences and sharing |
 | `androidApp` | Koin, Ktor/OkHttp, bundled ML Kit face detection and LiteRT inference |
-| `iosApp` | SwiftUI host, AVFoundation camera, Photos picker, Vision landmarks, Core ML inference and native tests |
+| `iosApp` | SwiftUI host, AVFoundation camera, Photos picker, Vision/Core Image face geometry, Core ML inference and native tests |
 | `shared/src/commonTest` | Persistence, cancellation, image ownership, malformed results and model-manifest tests |
 | `scripts/models` | Conda tool bootstrap, pinned checkpoint conversion and numerical fixtures |
 | `models` | Source/hash manifests, attribution, licenses and non-personal pixel fixtures |
@@ -147,10 +147,13 @@ Do not normalize the input twice. Model identifiers are
 `fahr-faceage-1fbb84e-coreml-native-v1`.
 
 Android uses bundled ML Kit 16.1.7 and iOS uses Vision landmark revision 3 instead
-of the paper's RetinaFace detector. The crop geometry and sampling follow the
-author pipeline, but these native detector substitutions have not been validated
-as clinically equivalent. The conversion checks use 24 inputs: two mathematical
-patterns and 22 author synthetic crops. Numerical agreement is a conversion
+of the paper's RetinaFace detector. If Vision's eye landmarks are unusable, iOS
+can recover eyes with Core Image only when it independently detects exactly one
+face whose box overlaps the Vision box by at least 50% intersection-over-union.
+Vision's face bounds and pose checks remain in force. The crop geometry and
+sampling follow the author pipeline, but these native detector substitutions
+have not been validated as clinically equivalent. The conversion checks use 24
+inputs: two mathematical patterns and 22 author synthetic crops. Numerical agreement is a conversion
 check, **not a clinical accuracy study**. The current app has no survival model;
 FAHR-FaceSurvival weights are not publicly released.
 

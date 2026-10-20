@@ -1,8 +1,9 @@
 # ScanFace for iOS
 
-ScanFace uses Apple Vision landmarks and a bundled Core ML FAHR-FaceAge model to
-analyze a fresh capture or imported photo entirely on the device. The minimum
-deployment target is iOS 17.0. Xcode 27.1, XcodeGen and Java 17 are required; the
+ScanFace uses Apple Vision with a guarded Core Image eye fallback and a bundled
+Core ML FAHR-FaceAge model to analyze a fresh capture or imported photo entirely
+on the device. The minimum deployment target is iOS 17.0.
+Xcode 27.1, XcodeGen and Java 17 are required; the
 build phase invokes the repository's Gradle wrapper to embed `ScanFaceKit`.
 
 Prepare the model from the repository root before generating the Xcode project:
@@ -61,18 +62,24 @@ Images are normalized upright, resized to a maximum edge of 2048 pixels, and
 stored as JPEGs under Application Support/ScanFace/Captures with complete file
 protection and backup exclusion. Originals in Photos are never modified.
 The shared model boundary receives the private path, image dimensions, lens
-description, mirroring state, and capture time. A serial worker performs Vision
-and Core ML work; cancellation stops Vision where possible and suppresses late
-results. The app does not upload photos or download models at runtime.
+description, mirroring state, and capture time. A serial worker performs Vision,
+Core Image and Core ML work; cancellation stops Vision where possible and
+suppresses late results, including after the synchronous Core Image fallback.
+The app does not upload photos or download models at runtime.
 
 ## Model contract and research scope
 
-`CoreMLFaceAnalyzer` uses Vision landmark request revision 3, requires exactly one
-face and visible eyes, and rejects small, clipped or strongly turned faces. It
-aligns the eye line and samples the original-size face rectangle using the
-author-style rotation and Pillow-compatible resizing. Vision is a substitute for
-the authors' RetinaFace detector; equivalent clinical performance has not been
-established.
+`CoreMLFaceAnalyzer` supplies upright sRGB pixels in an explicit BGRA buffer to
+Vision rectangle and landmark request revision 3. It requires exactly one face
+and visible eyes, and rejects small, clipped or strongly turned faces. If Vision's
+eye landmarks fail geometry checks, an offline Core Image detector may supply
+eyes only when it finds exactly one face with both eyes and its box overlaps the
+Vision box by at least 50% intersection-over-union. The fallback retains Vision's
+face bounds and pose checks; both paths require plausible eye spacing and roll.
+It aligns the eye line and samples the original-size face rectangle using the
+author-style rotation and Pillow-compatible resizing. Vision and the guarded
+Core Image fallback substitute for the authors' RetinaFace detector; equivalent
+clinical performance has not been established.
 
 The Core ML input `pixels` is float32 `[1, 112, 112, 3]`, RGB NHWC in `0..255`.
 The graph performs `/255` and ImageNet normalization itself. Output `age` is a
@@ -97,7 +104,7 @@ See [provenance, preprocessing and licenses](../docs/models.md) and
 Simulator tests cover navigation, appearance, adaptation, import, photo
 normalization, preprocessing fixtures, model tensor checks and cancellation.
 Provisioning `--test-portraits` also supplies the local synthetic portrait for
-end-to-end Vision/Core ML tests; regenerate the project afterward. Camera preview,
-hardware flash, camera switching, focus, and physical rotation require a real
+end-to-end native detection/Core ML tests; regenerate the project afterward.
+Camera preview, hardware flash, camera switching, focus, and physical rotation require a real
 iPhone or iPad for final verification. Current recorded test results are in
 [verification.md](../docs/verification.md).
