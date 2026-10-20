@@ -12,7 +12,7 @@ final class ScanFaceUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["History"].exists || app.buttons["History"].exists)
     }
 
-    func testThemePersistsAndSampleHistoryOpensResult() {
+    func testThemePersistsAndEmptyHistoryOffersCapture() {
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting-reset"]
         app.launch()
@@ -27,14 +27,14 @@ final class ScanFaceUITests: XCTestCase {
         tap("Light", in: app)
         XCTAssertTrue(element("Light", in: app).isSelected)
         tap("Back", in: app)
-        tap("Explore sample results", in: app)
-        XCTAssertTrue(app.staticTexts["Latest scan"].waitForExistence(timeout: 5))
-        tap("View", in: app)
-        XCTAssertTrue(app.staticTexts["An illustrative result"].waitForExistence(timeout: 5))
-        tap("Back", in: app)
         tap("History", in: app)
-        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "saved scans")).firstMatch.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["Export scan history"].exists)
+        XCTAssertTrue(app.staticTexts["A fresh start"].waitForExistence(timeout: 5))
+        XCTAssertTrue(element("New face scan", in: app).exists)
+        XCTAssertFalse(app.buttons["Export scan history"].exists)
+        tap("Overview", in: app)
+        XCTAssertTrue(app.staticTexts["Start with a face scan"].waitForExistence(timeout: 5))
+        XCTAssertTrue(element("Take your first scan", in: app).exists)
+        XCTAssertFalse(app.staticTexts["Latest scan"].exists)
     }
 
     func testCameraCanOpenPickerAndReturnToOverview() {
