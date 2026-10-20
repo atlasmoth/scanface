@@ -1,0 +1,93 @@
+{
+  "name": "ScanFace concept v1",
+  "status": "Visual proposal, not an implemented application",
+  "theme": {
+    "default": "system",
+    "options": ["system", "light", "dark"],
+    "persistExplicitSelection": true,
+    "preserveNaturalPhotoColors": true,
+    "light": {
+      "canvas": "#F6F7F2",
+      "surface": "#FFFFFF",
+      "surfaceRaised": "#E5EDE6",
+      "textPrimary": "#16251F",
+      "textSecondary": "#59695F",
+      "action": "#245C45",
+      "onAction": "#FFFFFF",
+      "outline": "#D9E1D9",
+      "outlineStrong": "#687C6E",
+      "selectedContainer": "#E5EDE6",
+      "selectedContent": "#245C45",
+      "chartLine": "#245C45",
+      "focusRing": "#245C45",
+      "warningContainer": "#FFF0CC",
+      "warningContent": "#72500C",
+      "errorContainer": "#FBE9E5",
+      "errorContent": "#9D342C"
+    },
+    "dark": {
+      "canvas": "#101A16",
+      "surface": "#192820",
+      "surfaceRaised": "#23382D",
+      "textPrimary": "#F0F4EE",
+      "textSecondary": "#B5C5B9",
+      "action": "#AED7BA",
+      "onAction": "#12261A",
+      "outline": "#3B5143",
+      "outlineStrong": "#8AA994",
+      "selectedContainer": "#2D4B39",
+      "selectedContent": "#AED7BA",
+      "chartLine": "#AED7BA",
+      "focusRing": "#AED7BA",
+      "warningContainer": "#3B301A",
+      "warningContent": "#E7C978",
+      "errorContainer": "#432925",
+      "errorContent": "#FFB4A8"
+    }
+  },
+  "typography": {
+    "familyIntent": "Single native or Inter-like sans serif",
+    "numberStyle": "Tabular figures",
+    "bodySp": 16,
+    "labelSp": 14,
+    "pageTitleSp": 28,
+    "metricSp": 64,
+    "supportDynamicText": true
+  },
+  "geometry": {
+    "spacingUnitDp": 8,
+    "pagePaddingDp": 24,
+    "cardRadiusDp": 20,
+    "buttonRadiusDp": 14,
+    "minimumTouchTargetDp": 48
+  },
+  "navigation": ["Overview", "Scan", "History"],
+  "adaptiveLayout": {
+    "compact": "Single pane with bottom navigation. Capture is a focused flow with a close control.",
+    "medium": "Navigation rail; single content pane or list-detail according to usable width.",
+    "expanded": "Navigation rail plus scan history list and selected-result detail.",
+    "captureExpanded": "Camera preview beside capture guidance; avoid stretching the preview.",
+    "scrolling": "Content remains scrollable with dynamic text and window resizing."
+  },
+  "contentPrinciples": [
+    "Label the primary output Estimated facial age.",
+    "Show entered chronological age only when supplied voluntarily.",
+    "Treat age difference neutrally, without good/bad colors.",
+    "Capture quality describes the photo, not the reliability of a health claim.",
+    "Do not invent health scores or confidence percentages.",
+    "Historical estimates must not imply verified improvement or deterioration in health.",
+    "Display model provenance in expandable estimate details in production.",
+    "Any image retention or export is an explicit user choice.",
+    "All portraits, measurements and dates in these concepts are fictional examples."
+  ],
+  "implementationRequirements": [
+    "Apply semantic themes to navigation, charts, dialogs, sheets, settings, loading, disabled, error and empty states.",
+    "Respond to OS theme changes while System is selected.",
+    "Adapt platform status and navigation bars to the chosen app theme.",
+    "Never recolor the camera preview or stored portraits when switching themes.",
+    "Use textual or icon cues alongside status colors.",
+    "Use strong outlines for controls that require a visible boundary; subtle outlines are decorative.",
+    "Honor reduced-motion settings and dynamic text.",
+    "Validate theme contrast and accessibility in the implemented app; raster concepts are not pixel specifications."
+  ]
+}
