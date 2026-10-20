@@ -6,7 +6,7 @@ import Vision
 /// Vision is an offline research substitute for the authors' RetinaFace detector.
 /// Its results have not been validated as clinically equivalent to that pipeline.
 final class CoreMLFaceAnalyzer: NSObject, NativeFaceAnalyzer {
-    static let modelID = "fahr-faceage-1fbb84e-coreml-native-v1"
+    static let modelID = "fahr-faceage-1fbb84e-coreml-int8w-native-v1"
     private let queue = DispatchQueue(label: "app.scanface.face-analysis", qos: .userInitiated)
     private let model: CoreMLAgeModel
     private let analyzeOverride: ((CapturedPhoto, NativeAnalysisOperation) throws -> AnalysisResult)?
@@ -136,6 +136,11 @@ final class CoreMLAgeModel {
         guard let url = bundle.url(forResource: "FAHRFaceAge", withExtension: "mlmodelc") else {
             throw FaceAnalysisFailure.modelMissing
         }
+        guard let metadataURL = bundle.url(forResource: "conversion", withExtension: "json"),
+              let metadata = try? Data(contentsOf: metadataURL) else {
+            throw FaceAnalysisFailure.incompatibleModel
+        }
+        try Self.validateSelection(metadata)
         let configuration = MLModelConfiguration()
         #if targetEnvironment(simulator)
         configuration.computeUnits = .cpuOnly
@@ -148,6 +153,14 @@ final class CoreMLAgeModel {
         outputName = contract.output
         loaded = model
         return model
+    }
+
+    static func validateSelection(_ data: Data) throws {
+        struct Selection: Decodable { let model_id: String }
+        guard let selection = try? JSONDecoder().decode(Selection.self, from: data),
+              selection.model_id == CoreMLFaceAnalyzer.modelID else {
+            throw FaceAnalysisFailure.incompatibleModel
+        }
     }
 
     static func validate(_ description: MLModelDescription) throws -> (input: String, output: String) {

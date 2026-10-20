@@ -95,7 +95,14 @@ final class FaceAnalysisTests: XCTestCase {
         XCTAssertLessThanOrEqual(maximumError, fixture.max_pixel_error)
     }
 
-    func testBundledCoreMLMatchesAuthorReferenceForGradientAndGray() throws {
+    func testBundledCoreMLMatchesSelectedQuantizationForGradientAndGray() throws {
+        struct Selection: Decodable {
+            let model_id: String
+            let predictions_years: [String: Double]
+        }
+        let url = try XCTUnwrap(Bundle.main.url(forResource: "conversion", withExtension: "json"))
+        let selection = try JSONDecoder().decode(Selection.self, from: Data(contentsOf: url))
+        XCTAssertEqual(selection.model_id, CoreMLFaceAnalyzer.modelID)
         let model = CoreMLAgeModel(bundle: .main)
         var gradient = [Float]()
         for y in 0..<112 {
@@ -103,8 +110,19 @@ final class FaceAnalysisTests: XCTestCase {
                 gradient.append(contentsOf: [Float((3 * x + y) % 256), Float((x + 2 * y) % 256), Float((7 * x + 5 * y) % 256)])
             }
         }
-        XCTAssertEqual(try model.predict(rgb: gradient), 5.346164703369141, accuracy: 0.02)
-        XCTAssertEqual(try model.predict(rgb: [Float](repeating: 127, count: 112 * 112 * 3)), 62.322818756103516, accuracy: 0.02)
+        // Conversion drift from the original PyTorch model is gated by the
+        // installer; this verifies native execution of that exact selection.
+        XCTAssertEqual(try model.predict(rgb: gradient), try XCTUnwrap(selection.predictions_years["gradient"]), accuracy: 0.02)
+        XCTAssertEqual(try model.predict(rgb: [Float](repeating: 127, count: 112 * 112 * 3)),
+            try XCTUnwrap(selection.predictions_years["gray"]), accuracy: 0.02)
+    }
+
+    func testModelRejectsMissingOrWrongSelectionMetadata() {
+        for json in ["{}", "{\"model_id\":\"fahr-faceage-1fbb84e-coreml-native-v1\"}"] {
+            XCTAssertThrowsError(try CoreMLAgeModel.validateSelection(Data(json.utf8))) {
+                XCTAssertEqual($0 as? FaceAnalysisFailure, .incompatibleModel)
+            }
+        }
     }
 
     func testModelRejectsInvalidTensorBeforeInference() {

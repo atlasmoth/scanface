@@ -307,7 +307,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\ncd \"$SRCROOT/..\"\nif [ ! -d iosApp/ScanFace/Models/FAHRFaceAge.mlpackage ] || [ ! -f iosApp/ScanFace/Models/conversion.json ]; then\n  echo \"error: Prepare the on-device model first: conda run -n dl python scripts/models/prepare_models.py --runtime coreml --install\"\n  exit 1\nfi\nif [ -n \"$JAVA_HOME\" ]; then\n  export JAVA_HOME\nelse\n  export JAVA_HOME=$(/usr/libexec/java_home -v 17)\nfi\n./gradlew :shared:embedAndSignAppleFrameworkForXcode\n";
+			shellScript = "set -e\ncd \"$SRCROOT/..\"\nxcrun --sdk macosx swift -sdk \"$(xcrun --sdk macosx --show-sdk-path)\" scripts/models/verify_coreml_selection.swift \"$PWD\"\nif [ -n \"$JAVA_HOME\" ]; then\n  export JAVA_HOME\nelse\n  export JAVA_HOME=$(/usr/libexec/java_home -v 17)\nfi\n./gradlew :shared:embedAndSignAppleFrameworkForXcode\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

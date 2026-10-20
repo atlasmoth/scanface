@@ -62,10 +62,7 @@ targets:
         script: |
           set -e
           cd "$SRCROOT/.."
-          if [ ! -d iosApp/ScanFace/Models/FAHRFaceAge.mlpackage ] || [ ! -f iosApp/ScanFace/Models/conversion.json ]; then
-            echo "error: Prepare the on-device model first: conda run -n dl python scripts/models/prepare_models.py --runtime coreml --install"
-            exit 1
-          fi
+          xcrun --sdk macosx swift -sdk "$(xcrun --sdk macosx --show-sdk-path)" scripts/models/verify_coreml_selection.swift "$PWD"
           if [ -n "$JAVA_HOME" ]; then
             export JAVA_HOME
           else
