@@ -67,12 +67,28 @@ fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingM
                 val rail = maxWidth >= 600.dp
                 val wide = maxWidth >= 840.dp
                 val historyWide = maxWidth >= 840.dp
+                var previouslyWide by remember { mutableStateOf(historyWide) }
+                LaunchedEffect(historyWide) {
+                    if (previouslyWide != historyWide && state.pending == null) {
+                        if (historyWide && route == Route.RESULT && returnRoute == Route.HISTORY.name) {
+                            routeName = Route.HISTORY.name
+                        } else if (!historyWide && route == Route.HISTORY && state.records.isNotEmpty()) {
+                            selectedId = state.records.firstOrNull { it.id == selectedId }?.id ?: state.records.first().id
+                            returnRoute = Route.HISTORY.name
+                            routeName = Route.RESULT.name
+                        }
+                    }
+                    previouslyWide = historyWide
+                }
                 if (route == Route.CAPTURE) {
+                    Box(Modifier.fillMaxSize()) {
                     CameraScreen(dark, onCaptured = {
                         selectedId = null
                         store.capture(it)
                         routeName = if (store.state.value.pending?.photoPath == it.path) Route.RESULT.name else returnRoute
                     }, onClose = ::back)
+                    SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(16.dp))
+                    }
                 } else {
                     Row(Modifier.fillMaxSize()) {
                         if (rail) {
