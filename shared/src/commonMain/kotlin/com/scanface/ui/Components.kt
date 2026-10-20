@@ -88,7 +88,7 @@ fun RecordRow(record: ScanRecord, selected: Boolean = false, onClick: () -> Unit
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(dateLabel(record.createdAtMillis, true), style = MaterialTheme.typography.labelLarge)
                 Text(if (record.isDemo) "Sample result" else when (record.status) {
-                    AnalysisStatus.AWAITING_MODEL -> "Awaiting model"
+                    AnalysisStatus.AWAITING_MODEL -> "Model unavailable"
                     AnalysisStatus.COMPLETE -> "Facial-age estimate"
                     AnalysisStatus.FAILED -> "Analysis unavailable"
                 }, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

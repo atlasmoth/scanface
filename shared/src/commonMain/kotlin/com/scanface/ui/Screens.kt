@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -26,13 +27,13 @@ fun OverviewScreen(state: AppState, wide: Boolean, now: Long, onScan: () -> Unit
         verticalArrangement = Arrangement.spacedBy(24.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Your face. Your perspective.", style = MaterialTheme.typography.headlineLarge)
-            Text("A little insight, over time.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Facial-age research, on your device.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (state.records.isEmpty()) {
             Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 Column(Modifier.weight(1f)) {
                     EmptyState("Start with a face scan",
-                        "Capture a clear photo and build your private scan history. Facial-age estimates will be available when the model is connected.",
+                        "Capture one clear face for a research facial-age estimate. Analysis runs on your device, and your photos stay here.",
                         "Take your first scan", onScan, "Explore sample results", onDemo)
                 }
                 if (wide) Column(Modifier.weight(1f)) { HowItWorks() }
@@ -54,8 +55,9 @@ fun OverviewScreen(state: AppState, wide: Boolean, now: Long, onScan: () -> Unit
                                     }
                                     Text("Estimated facial age", color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 } else {
-                                    Text("Photo ready", style = MaterialTheme.typography.headlineMedium)
-                                    Text("Awaiting model", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("No estimate", style = MaterialTheme.typography.headlineMedium)
+                                    Text(if (latest.status == AnalysisStatus.FAILED) "Analysis unavailable" else "Model unavailable",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         }
@@ -93,7 +95,7 @@ private fun RecentScans(records: List<ScanRecord>, onHistory: () -> Unit, onReco
 private fun HowItWorks() {
     ScanCard(Modifier.fillMaxWidth()) {
         Text("Make room for perspective", style = MaterialTheme.typography.titleLarge)
-        Text("Use even lighting, face the camera and keep a natural expression. Consistent photos make it easier to compare scans.",
+        Text("Use even lighting, face the camera and keep a natural expression. Changes between photos can reflect lighting or pose, even when your appearance has not changed.",
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -179,9 +181,10 @@ fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
                 if (analyzing) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         CircularProgressIndicator(Modifier.size(24.dp))
-                        Text("Preparing your scan…", style = MaterialTheme.typography.titleLarge)
+                        Text("Analyzing on this device…", style = MaterialTheme.typography.titleLarge)
                     }
                 } else if (record.age != null && record.status == AnalysisStatus.COMPLETE) {
+                    if (!record.isDemo) Badge("Research estimate")
                     Text("Estimated facial age", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(ageLabel(record.age), style = MaterialTheme.typography.displayLarge)
@@ -202,9 +205,9 @@ fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
                         }
                     }
                 } else {
-                    Badge(if (record.status == AnalysisStatus.FAILED) "Analysis unavailable" else "Awaiting model")
-                    Text(if (record.status == AnalysisStatus.FAILED) "Your photo is saved here" else "Ready for the next step", style = MaterialTheme.typography.headlineMedium)
-                    Text(record.analysisMessage ?: "The face-analysis model is not connected yet. Save this capture to your history.",
+                    Badge(if (record.status == AnalysisStatus.FAILED) "Analysis unavailable" else "Model unavailable")
+                    Text("No estimate was produced", style = MaterialTheme.typography.headlineMedium)
+                    Text(record.analysisMessage ?: "This photo could not be analyzed on this device. You can keep the capture or take another photo.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -228,7 +231,15 @@ fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
                 if (record.lens != null && record.width > 0 && record.height > 0) {
                     Text("${record.lens} · ${record.width} × ${record.height}", style = MaterialTheme.typography.labelMedium)
                 }
-                Text("Facial-age estimates are for exploration. They do not diagnose conditions or predict an individual's lifespan.",
+                if (!record.isDemo && record.status == AnalysisStatus.COMPLETE) {
+                    record.modelId?.takeIf { it.isNotBlank() }?.let {
+                        Text("Model: $it", style = MaterialTheme.typography.labelMedium)
+                    }
+                    record.analysisMessage?.takeIf { it.isNotBlank() }?.let {
+                        Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                Text("Facial-age estimates are for research. They are not a measure of your health, a diagnosis, or a prediction of your lifespan.",
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -240,6 +251,12 @@ fun SettingsScreen(state: AppState, onTheme: (ThemeMode) -> Unit, onAge: (Int?) 
                    onDemo: () -> Unit, onRemoveDemo: () -> Unit, onClear: () -> Unit, onRetryCleanup: () -> Unit) {
     var ageText by rememberSaveable(state.enteredAge) { mutableStateOf(state.enteredAge?.toString() ?: "") }
     var ageError by rememberSaveable { mutableStateOf(false) }
+    val uriHandler = LocalUriHandler.current
+    var linkError by remember { mutableStateOf<String?>(null) }
+    fun openLink(url: String) {
+        linkError = null
+        runCatching { uriHandler.openUri(url) }.onFailure { linkError = "This device could not open the link." }
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Column(Modifier.widthIn(max = 700.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -260,7 +277,7 @@ fun SettingsScreen(state: AppState, onTheme: (ThemeMode) -> Unit, onAge: (Int?) 
             }
             ScanCard {
                 Text("A little context", style = MaterialTheme.typography.titleLarge)
-                Text("Optionally add your age for comparison in future scans.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Optionally add your age for comparison in new scans. It does not affect the model's estimate.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 OutlinedTextField(ageText, { ageText = it.take(3); ageError = false }, label = { Text("Your age (optional)") },
                     modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     isError = ageError, supportingText = { if (ageError) Text("Enter an age from 1 to 120, or leave blank.") })
@@ -286,10 +303,20 @@ fun SettingsScreen(state: AppState, onTheme: (ThemeMode) -> Unit, onAge: (Int?) 
                 }
             }
             ScanCard {
-                Badge("Model integration pending")
-                Text("Built for a private perspective", style = MaterialTheme.typography.titleLarge)
-                Text("ScanFace · 0.1.0\nAn open-source app for exploring facial-age estimation. Camera, history and appearance are ready; LiteRT and Core ML analysis will connect through the shared model interface.",
+                Badge("Research use")
+                Text("About the model", style = MaterialTheme.typography.titleLarge)
+                Text("FAHR-FaceAge · Haugg, Lee and colleagues\nThe Lancet Digital Health, 2026",
+                    style = MaterialTheme.typography.titleMedium)
+                Text("ScanFace runs facial-age estimation on this device using LiteRT on Android and Core ML on iOS. Photos are not sent to a server for analysis.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("This research model estimates age from facial appearance. Its clinical findings come from retrospective cancer studies; it has not been validated as a health assessment for individual app users. Lighting, pose and demographic differences can affect estimates.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Model weights: CC BY-NC-SA 4.0. Noncommercial use only; attribution and share-alike terms apply to redistributed adaptations. Author code: Apache 2.0. ScanFace uses converted weights and native face detection; it is not an official author release.",
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton({ openLink("https://doi.org/10.1016/j.landig.2026.101056") }) { Text("Read the study") }
+                TextButton({ openLink("https://github.com/AIM-Harvard/FAHR-Face") }) { Text("Author code and model source") }
+                TextButton({ openLink("https://creativecommons.org/licenses/by-nc-sa/4.0/") }) { Text("Model weight license") }
+                linkError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
             }
         }
     }

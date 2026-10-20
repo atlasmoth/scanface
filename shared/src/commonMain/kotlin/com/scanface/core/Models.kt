@@ -59,11 +59,11 @@ interface FaceAnalyzer {
     suspend fun analyze(photo: CapturedPhoto): AnalysisResult
 }
 
-/** The shipping scaffold never invents an estimate from a real photograph. */
+/** Fallback for a platform/build where a real on-device model is unavailable. */
 class PendingModelAnalyzer : FaceAnalyzer {
     override suspend fun analyze(photo: CapturedPhoto) = AnalysisResult(
         status = AnalysisStatus.AWAITING_MODEL,
-        message = "Your photo is ready. Facial-age estimation will be available after the model is installed.",
+        message = "The on-device age model is unavailable in this build. No facial-age estimate was produced.",
     )
 }
 
