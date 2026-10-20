@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "role": "upstream_source_lockfile",
+  "model": "FAHR-FaceAge",
+  "verified_on": "2026-10-20",
+  "paper": {
+    "title": "Foundation artificial intelligence models for health recognition by use of face photographs (FAHR-Face): a model development and validation study",
+    "authors": "Haugg F, Lee G, He J, et al.",
+    "journal": "The Lancet Digital Health",
+    "year": 2026,
+    "doi": "10.1016/j.landig.2026.101056",
+    "pii": "S2589-7500(26)00079-8",
+    "url": "https://doi.org/10.1016/j.landig.2026.101056",
+    "identity_evidence_url": "https://api.elsevier.com/content/article/PII:S2589750026000798?httpAccept=text/xml",
+    "license": "CC-BY-NC-ND-4.0"
+  },
+  "code": {
+    "repository": "https://github.com/AIM-Harvard/FAHR-Face",
+    "revision": "a49cb07f3e15858eab5024b00e1796a8b3cfef9e",
+    "architecture_path": "ViTForAgeEstimation.py",
+    "license": "Apache-2.0",
+    "license_declaration_url": "https://github.com/AIM-Harvard/FAHR-Face/blob/a49cb07f3e15858eab5024b00e1796a8b3cfef9e/README.md#licensing"
+  },
+  "checkpoint": {
+    "repository": "https://huggingface.co/fridolin22/FAHR-Face",
+    "revision": "1fbb84ef25956aeeb26e9e279abda2eaeef0504c",
+    "filename": "fahr_faceage.pth",
+    "download_url": "https://huggingface.co/fridolin22/FAHR-Face/resolve/1fbb84ef25956aeeb26e9e279abda2eaeef0504c/fahr_faceage.pth",
+    "size_bytes": 1028501154,
+    "sha256": "980ad2f134c5d82e9aca39a738f88a5b10aaf15ca9a5462bf95599be023cdbba",
+    "digest_source": "Hugging Face Git LFS metadata; verify downloaded bytes before use",
+    "metadata_url": "https://huggingface.co/api/models/fridolin22/FAHR-Face?blobs=true",
+    "format": "PyTorch training checkpoint containing model_state_dict and optimizer state",
+    "license": "CC-BY-NC-SA-4.0",
+    "model_card_url": "https://huggingface.co/fridolin22/FAHR-Face/blob/1fbb84ef25956aeeb26e9e279abda2eaeef0504c/README.md",
+    "additional_foundation_checkpoint_required": false,
+    "survival_checkpoint_publicly_released": false
+  },
+  "reference_model": {
+    "class": "ViTForAgeRegression",
+    "config": "transformers.ViTConfig(image_size=112)",
+    "pooling_layer": false,
+    "head": "linear projection of CLS token to one age value",
+    "target": "chronological age in years",
+    "output": "one unconstrained scalar facial-age estimate in years",
+    "confidence_output": false,
+    "survival_output": false
+  },
+  "reference_input": {
+    "dtype": "float32",
+    "shape": [1, 3, 112, 112],
+    "layout": "NCHW",
+    "channels": "RGB",
+    "orientation": "upright, unmirrored source pixels",
+    "required_face_count": 1,
+    "requires_face_crop_and_alignment": true,
+    "resize": "PIL bilinear to 112x112 after aligned rectangular crop",
+    "scale": 0.00392156862745098,
+    "mean": [0.485, 0.456, 0.406],
+    "standard_deviation": [0.229, 0.224, 0.225],
+    "formula": "(RGB_uint8 / 255.0 - mean) / standard_deviation",
+    "entered_age_is_model_input": false
+  },
+  "reference_face_preprocessing": {
+    "package": "retina-face",
+    "version": "0.0.17",
+    "repository": "https://github.com/serengil/retinaface",
+    "revision": "1233104ebe368b7446a93200fc09ebeaa5ed0062",
+    "code_license": "MIT",
+    "threshold": 0.9,
+    "allow_upscaling": true,
+    "expand_face_area_percent": 0,
+    "alignment": "eye-line rotation around full-image center; transform bbox center and retain bbox dimensions",
+    "rotation_resampling": "nearest",
+    "rotation_expand_canvas": false,
+    "rotation_fill_rgb": [0, 0, 0],
+    "crop_bounds": "integer truncation toward zero, clamped, half-open rectangle",
+    "geometry_source_url": "https://github.com/serengil/retinaface/blob/1233104ebe368b7446a93200fc09ebeaa5ed0062/retinaface/commons/postprocess.py",
+    "native_detector_substitution": "must be documented and validated separately; not equivalent to RetinaFace"
+  },
+  "usage": {
+    "author_intent": "academic research",
+    "weights_commercial_use_granted": false,
+    "author_prohibited_uses": ["discrimination", "surveillance", "harmful applications"],
+    "redistribution": "noncommercial, attributed, license and change notices retained; adaptations share alike",
+    "clinical_status": "research model; retrospective cancer-cohort evidence is not individual diagnostic validation"
+  },
+  "license_files": {
+    "code": "licenses/Apache-2.0.txt",
+    "weights": "licenses/CC-BY-NC-SA-4.0.txt",
+    "reference_preprocessing": "licenses/RetinaFace-MIT.txt",
+    "attribution": "licenses/NOTICE.md"
+  }
+}
