@@ -3,7 +3,9 @@ package com.scanface.core
 import kotlin.random.Random
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,16 +28,15 @@ class AppStore(
 ) {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private var unreadableSnapshot: String? = null
+    private var initialReadFailed = false
     private val mutableState = MutableStateFlow(load())
     val state: StateFlow<AppState> = mutableState.asStateFlow()
     private var analysisJob: Job? = null
     private var captureGeneration = 0L
 
     fun capture(photo: CapturedPhoto): Job {
-        analysisJob?.cancel()
-        val generation = ++captureGeneration
         val previous = mutableState.value.pending
-        if (photo.path.isBlank() || photo.width <= 0 || photo.height <= 0) {
+        if (photo.path.isBlank() || photo.width <= 0 || photo.height <= 0 || photo.capturedAtMillis < 0) {
             fail("The camera did not return a readable photo. Please try again.")
             cleanupUnowned(photo.path)
             return scope.launch {}
@@ -55,9 +56,14 @@ class AppStore(
             cleanupUnowned(photo.path)
             return scope.launch {}
         }
+        // Replace ownership durably before cancelling the previous capture. A failed
+        // replacement must leave its predecessor able to finish and be saved.
+        val generation = ++captureGeneration
+        analysisJob?.cancel()
         previous?.photoPath?.let(::cleanupUnowned)
-        return scope.launch {
+        return scope.launch(start = CoroutineStart.UNDISPATCHED) {
             try {
+                ensureActive()
                 val result = analyzer.analyze(photo)
                 if (generation != captureGeneration || mutableState.value.pending?.id != pending.id) {
                     return@launch
@@ -72,21 +78,27 @@ class AppStore(
                     analysisMessage = if (valid) result.message else
                         "The model returned an invalid result. No estimate has been saved.",
                 )
-                commit(mutableState.value.copy(pending = completed, isAnalyzing = false))
+                if (!commit(mutableState.value.copy(pending = completed, isAnalyzing = false))) {
+                    // The durable pending photo remains intact; this transient flag
+                    // must settle even if storage rejected the analysis result.
+                    mutableState.value = mutableState.value.copy(isAnalyzing = false)
+                }
             } catch (cancelled: CancellationException) {
                 if (generation == captureGeneration) {
-                    commit(mutableState.value.copy(isAnalyzing = false))
+                    mutableState.value = mutableState.value.copy(isAnalyzing = false)
                 }
                 throw cancelled
             } catch (_: Exception) {
                 if (generation == captureGeneration && mutableState.value.pending?.id == pending.id) {
-                    commit(mutableState.value.copy(
+                    if (!commit(mutableState.value.copy(
                         pending = pending.copy(
                             status = AnalysisStatus.FAILED,
                             analysisMessage = "This photo could not be analyzed. You can keep it and try again later.",
                         ),
                         isAnalyzing = false,
-                    ))
+                    ))) {
+                        mutableState.value = mutableState.value.copy(isAnalyzing = false)
+                    }
                 }
             }
         }.also { analysisJob = it }
@@ -190,24 +202,30 @@ class AppStore(
         }
     }
 
-    private fun commit(next: AppState): Boolean = try {
-        unreadableSnapshot?.let { raw ->
-            storage.put(RECOVERY_KEY, raw)
-            unreadableSnapshot = null
+    private fun commit(next: AppState): Boolean {
+        if (initialReadFailed) {
+            fail("Saved data is temporarily unavailable. Restart the app to try reading it again.")
+            return false
         }
-        storage.put(STORAGE_KEY, json.encodeToString(
-            Snapshot(
-                records = sorted(next.records),
-                theme = next.theme,
-                enteredAge = next.enteredAge,
-                pending = next.pending,
-            ),
-        ))
-        mutableState.value = next.copy(records = sorted(next.records))
-        true
-    } catch (_: Exception) {
-        fail("Your changes could not be saved on this device. Please try again.")
-        false
+        return try {
+            unreadableSnapshot?.let { raw ->
+                storage.put(RECOVERY_KEY, raw)
+                unreadableSnapshot = null
+            }
+            storage.put(STORAGE_KEY, json.encodeToString(
+                Snapshot(
+                    records = sorted(next.records),
+                    theme = next.theme,
+                    enteredAge = next.enteredAge,
+                    pending = next.pending,
+                ),
+            ))
+            mutableState.value = next.copy(records = sorted(next.records))
+            true
+        } catch (_: Exception) {
+            fail("Your changes could not be saved on this device. Please try again.")
+            false
+        }
     }
 
     private fun load(): AppState {
@@ -220,6 +238,7 @@ class AppStore(
                 require(saved.enteredAge == null || saved.enteredAge in 1..120)
                 require(saved.records.all(::validRecord) && (saved.pending?.let(::validRecord) ?: true))
                 require(saved.records.map { it.id }.distinct().size == saved.records.size)
+                require(saved.pending == null || saved.records.none { it.id == saved.pending.id })
                 AppState(
                     records = sorted(saved.records),
                     theme = saved.theme,
@@ -232,6 +251,8 @@ class AppStore(
         } catch (_: Exception) {
             // Preserve original bytes before the next successful write. Never delete images on a failed read.
             unreadableSnapshot = raw
+            // If get() itself failed, the unseen snapshot cannot safely be replaced.
+            initialReadFailed = raw == null
             AppState(error = "Saved data could not be read. Your existing photos have not been deleted.")
         }
     }
@@ -240,11 +261,11 @@ class AppStore(
         record.id.isNotBlank() && record.createdAtMillis >= 0 &&
             (record.enteredAge == null || record.enteredAge in 1..120) &&
             (record.age == null || (record.age.isFinite() && record.age in 0.0..130.0)) &&
-            (record.status != AnalysisStatus.COMPLETE || record.age != null) &&
+            (record.status != AnalysisStatus.COMPLETE || (record.age != null && !record.modelId.isNullOrBlank())) &&
             (record.status == AnalysisStatus.COMPLETE || record.age == null)
 
     private fun fail(message: String) {
-        mutableState.value = mutableState.value.copy(error = message, isAnalyzing = false)
+        mutableState.value = mutableState.value.copy(error = message)
     }
 
     private fun cleanupUnowned(path: String) {
