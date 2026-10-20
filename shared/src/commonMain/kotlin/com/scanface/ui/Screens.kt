@@ -161,15 +161,18 @@ fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
         Column(Modifier.widthIn(max = 720.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(28.dp)) {
             Text(if (pending) "Your scan" else dateLabel(record.createdAtMillis, true), style = MaterialTheme.typography.headlineMedium)
             BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val photoAspect = if (record.width > 0 && record.height > 0) record.width.toFloat() / record.height else 1f
                 if (maxWidth >= 560.dp) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(36.dp)) {
-                        PhotoThumbnail(record, Modifier.weight(.45f).aspectRatio(.85f))
+                        BoxWithConstraints(Modifier.weight(.45f), contentAlignment = Alignment.Center) {
+                            PhotoThumbnail(record, Modifier.width(minOf(maxWidth, 320.dp * photoAspect)).aspectRatio(photoAspect))
+                        }
                         Column(Modifier.weight(.55f)) { ScanEstimate(record, analyzing) }
                     }
                 } else {
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(28.dp)) {
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            PhotoThumbnail(record, Modifier.widthIn(max = 300.dp).fillMaxWidth().aspectRatio(1.15f))
+                            PhotoThumbnail(record, Modifier.width(minOf(maxWidth, 300.dp, 280.dp * photoAspect)).aspectRatio(photoAspect))
                         }
                         ScanEstimate(record, analyzing)
                     }
