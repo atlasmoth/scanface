@@ -49,6 +49,8 @@ xcodebuild -project iosApp/ScanFace.xcodeproj -scheme ScanFace \
 
 `scripts/check.sh` runs the shared checks and Android build; setting
 `SCANFACE_IOS_DESTINATION` also runs the Xcode suite.
+The Android and iOS UI suites reset ScanFace's local test data; run them on a
+simulator or dedicated test device.
 
 ## Structure
 
@@ -84,7 +86,8 @@ xcodebuild -project iosApp/ScanFace.xcodeproj -scheme ScanFace \
 Photos never enter the networking layer. The share action exports CSV metadata
 without local paths or photo bytes. Android backup is disabled; iOS captures are
 excluded from backup. Saved photos and metadata persist until deleted in the app
-or the app is removed.
+or the app is removed. Photo deletions are journaled before cleanup; failed
+deletions can be retried in Settings and are retried on the next launch.
 
 ## Model integration is the next boundary
 
