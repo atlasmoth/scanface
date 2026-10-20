@@ -45,6 +45,7 @@ internal enum class CameraFlash(val label: String) {
 internal data class CameraUiState(
     val ready: Boolean = false,
     val busy: Boolean = false,
+    val zoomChanging: Boolean = false,
     val front: Boolean = true,
     val canFlip: Boolean = false,
     val flash: CameraFlash = CameraFlash.OFF,
@@ -135,7 +136,7 @@ internal class CameraController(
         previewView.scaleType = PreviewView.ScaleType.FILL_CENTER
         previewView.contentDescription = "Camera preview. Tap to focus."
         previewView.setOnTouchListener { view, event ->
-            if (event.action == MotionEvent.ACTION_UP && !mutableState.value.busy) {
+            if (event.action == MotionEvent.ACTION_UP && !mutableState.value.busy && !mutableState.value.zoomChanging) {
                 val point = previewView.meteringPointFactory.createPoint(event.x, event.y)
                 camera?.cameraControl?.startFocusAndMetering(
                     FocusMeteringAction.Builder(point)
@@ -149,7 +150,7 @@ internal class CameraController(
     }
 
     fun start(lifecycleOwner: LifecycleOwner) {
-        if (closed || mutableState.value.busy) return
+        if (closed || mutableState.value.busy || mutableState.value.zoomChanging) return
         owner?.lifecycle?.removeObserver(lifecycleObserver)
         owner = lifecycleOwner
         lifecycleOwner.lifecycle.addObserver(lifecycleObserver)
@@ -166,7 +167,7 @@ internal class CameraController(
     }
 
     fun flip() {
-        if (mutableState.value.busy || !mutableState.value.canFlip) return
+        if (mutableState.value.busy || mutableState.value.zoomChanging || !mutableState.value.canFlip) return
         desiredFront = !mutableState.value.front
         runCatching { bindCamera() }
             .onFailure { fail("This camera is unavailable. Try switching again.") }
@@ -174,7 +175,7 @@ internal class CameraController(
 
     fun cycleFlash() {
         val current = mutableState.value
-        if (!current.ready || current.busy) return
+        if (!current.ready || current.busy || current.zoomChanging) return
         val next = current.flashes[(current.flashes.indexOf(current.flash) + 1) % current.flashes.size]
         capture?.flashMode = next.mode()
         mutableState.value = current.copy(flash = next)
@@ -182,14 +183,20 @@ internal class CameraController(
 
     fun setZoom(value: Float) {
         val current = mutableState.value
-        if (!current.ready || current.busy || value !in current.zoomChoices) return
-        camera?.cameraControl?.setZoomRatio(value)?.let { future ->
-            future.addListener({
-                runCatching { future.get() }
-                    .onSuccess { mutableState.value = mutableState.value.copy(zoom = value) }
-                    .onFailure { mutableState.value = mutableState.value.copy(error = "This zoom is unavailable.") }
-            }, main)
-        }
+        if (!current.ready || current.busy || current.zoomChanging || value !in current.zoomChoices) return
+        val activeCamera = camera ?: return
+        mutableState.value = current.copy(zoomChanging = true, error = null)
+        val future = activeCamera.cameraControl.setZoomRatio(value)
+        future.addListener({
+            if (closed || camera !== activeCamera) return@addListener
+            runCatching { future.get() }
+                .onSuccess { mutableState.value = mutableState.value.copy(zoom = value, zoomChanging = false) }
+                .onFailure {
+                    mutableState.value = mutableState.value.copy(
+                        zoomChanging = false, error = "This zoom is unavailable.",
+                    )
+                }
+        }, main)
     }
 
     private fun bindCamera() {
@@ -271,7 +278,7 @@ internal class CameraController(
 
     fun takePhoto(onCaptured: (CapturedPhoto) -> Unit) {
         val imageCapture = capture ?: return
-        if (!mutableState.value.ready || mutableState.value.busy) return
+        if (!mutableState.value.ready || mutableState.value.busy || mutableState.value.zoomChanging) return
         val snapshot = mutableState.value
         mutableState.value = snapshot.copy(busy = true, error = null)
         val token = generation
