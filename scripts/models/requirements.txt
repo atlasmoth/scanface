@@ -1,0 +1,24 @@
+# Validated conversion/runtime dependencies for the existing conda dl environment.
+torch==2.13.0
+transformers==5.14.1
+numpy==2.5.1
+pillow==12.3.0
+coremltools==9.0
+ai-edge-litert==2.3.0
+ai-edge-quantizer==0.10.0
+litert-lm-builder==0.18.1
+torchao==0.18.0
+jax==0.12.0
+jaxtyping==0.3.11
+absl-py==2.5.1
+kagglehub==1.0.2
+multipledispatch==1.0.0
+fire==0.7.1
+tabulate==0.10.0
+safetensors==0.8.0
+sentencepiece==0.2.2
+rich==15.0.0
+immutabledict==4.2.1
+ordered-set==4.1.0
+lark==1.3.1
+typing-extensions==4.16.0

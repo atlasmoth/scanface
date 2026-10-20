@@ -1,0 +1,116 @@
+{
+  "purpose": "Locally downloaded synthetic test portraits supplied by the authors; images are not redistributed.",
+  "source": "https://github.com/AIM-Harvard/FAHR-Face#test-images",
+  "images": [
+    {
+      "local_name": "00.png",
+      "archive_name": "Frido_Create_a_realistic_face_photo_of_a_person_with_the_foll_2863c17a-549c-45cd-ac0e-14839420622e_0.png",
+      "sha256": "949e6af0c82ca07c4f90ad3344171c9cf69f1c3a003c26d34e2336b18be21f79"
+    },
+    {
+      "local_name": "01.png",
+      "archive_name": "Frido_Create_a_realistic_face_photo_of_a_person_with_the_follow_23ebdc10-6ca6-4472-9bc4-1793f9d288f3.png",
+      "sha256": "2c4bbabf3e6c85a1e211fc7f33021d2033301dfb9a533cba4241220fab27cea0"
+    },
+    {
+      "local_name": "02.png",
+      "archive_name": "Frido_Create_a_realistic_face_photo_of_a_person_with_the_follow_25f9cb17-8c81-47e4-99af-51c1255276bc.png",
+      "sha256": "54615321538d573320d64ab1691def8a0eabe5427e7a93c7102db3d889aad2c6"
+    },
+    {
+      "local_name": "03.png",
+      "archive_name": "Frido_Create_a_realistic_face_photo_of_a_person_with_the_follow_26ca49b5-9b6f-4b19-8999-bd28f7599e3a.png",
+      "sha256": "42743ca2d36c4f2e6f3aeea6a84e4de959bf0f30615f02a5af7e37fd29062db2"
+    },
+    {
+      "local_name": "04.png",
+      "archive_name": "Frido_Create_a_realistic_face_photo_of_a_person_with_the_follow_2a10a8b5-0edb-4435-a873-1a4f79ad38b5.png",
+      "sha256": "f59e829c8279e12db0e0a7e11155eef4cad1d1d89355f16ff0708ff7e1a3d469"
+    },
+    {
+      "local_name": "05.png",
+      "archive_name": "Frido_Create_a_realistic_face_photo_of_a_person_with_the_follow_32d328d4-ee73-4f8e-8ebf-54cdc2e8cb7e.png",
+      "sha256": "419e47dd00fa59d2413d77dff94238981f62ba3f7222848a8f4c3ae5e7f4517c"
+    },
+    {
+      "local_name": "06.png",
+      "archive_name": "Frido_Create_a_realistic_face_photo_of_a_person_with_the_follow_4448d565-a2dc-4ca2-b525-eb4e3ed07829.png",
+      "sha256": "77f00e487cbf9334fa65479336a766dd2d4a266ac93508a35eb748115e5b5511"
+    },
+    {
+      "local_name": "07.png",
+      "archive_name": "Frido_Create_a_realistic_face_photo_of_a_person_with_the_follow_4653520e-1f9f-48c0-96f9-6517157b02e3.png",
+      "sha256": "094a22da3c57519a385ab01b4d91b1e5ad3c65671f3f8f0cd2c4f5e96545a1da"
+    },
+    {
+      "local_name": "08.png",
+      "archive_name": "Frido_Create_a_realistic_face_photo_of_a_person_with_the_follow_609c5d9b-f052-4f6d-8327-f612ae1facde.png",
+      "sha256": "71488b044b4dda3bd6fbe1cd95ef388154762bc2ef1c5bb0a49b5f4b86ab48a2"
+    },
+    {
+      "local_name": "09.png",
+      "archive_name": "Frido_Create_a_realistic_face_photo_of_a_person_with_the_follow_6260e2b7-b2ce-40d7-9a28-0aa20dfac0f3.png",
+      "sha256": "40e19bbe47ef3203e48aa741710696eed9655dc59d0816672f5ade7e1514d81b"
+    },
+    {
+      "local_name": "10.png",
+      "archive_name": "Frido_Create_a_realistic_face_photo_of_a_person_with_the_follow_6bc7fa65-820d-4769-9cb2-9e2dde1c031b.png",
+      "sha256": "e5fb39e9a47d302acb49402c6903d8fb6bfdc9369f7bd7b3611f7723f9fa2316"
+    },
+    {
+      "local_name": "11.png",
+      "archive_name": "Frido_Create_a_realistic_face_photo_of_a_person_with_the_follow_70494d95-e468-4286-b402-961ff2d7814f.png",
+      "sha256": "60f188076ff5ef507c4b825ace4f020f7be87db79f6f7db94b4487d562acb730"
+    },
+    {
+      "local_name": "12.png",
+      "archive_name": "Frido_Create_a_realistic_face_photo_of_a_person_with_the_follow_7809a566-28f9-4a8d-b03b-e0677cf2335a.png",
+      "sha256": "be06d3f2de88b736027fd464c468b42ab463309f5ff375212343321f3a848695"
+    },
+    {
+      "local_name": "13.png",
+      "archive_name": "Frido_Create_a_realistic_face_photo_of_a_person_with_the_follow_79119bb7-e103-4239-8e04-f68f353a8e9e.png",
+      "sha256": "fd629163617203bbe0e3b04a1819b691cd600c2f69db89401e4b09825fc07b49"
+    },
+    {
+      "local_name": "14.png",
+      "archive_name": "Frido_Create_a_realistic_face_photo_of_a_person_with_the_follow_7ca3c89e-cfbb-4d85-b402-7a3c1cc60025.png",
+      "sha256": "446179e2fb54b88f04066b0023b57c550dc105884f0d429ac465b227e95b3ba4"
+    },
+    {
+      "local_name": "15.png",
+      "archive_name": "Frido_Create_a_realistic_face_photo_of_a_person_with_the_follow_830e4b66-7ed0-4fef-bab1-654ced1edd80.png",
+      "sha256": "33a3bf9c322050c962a6df68ad1435c08d5188291d1cb4e268d34ee52886199d"
+    },
+    {
+      "local_name": "16.png",
+      "archive_name": "Frido_Create_a_realistic_face_photo_of_a_person_with_the_follow_9ab4c67e-60cd-4c83-a5ee-ce66f3b21678.png",
+      "sha256": "cf246ec8ca084d2f73174d61d49dd9eb01298e90e02dc7dbdfecefb40cbb2573"
+    },
+    {
+      "local_name": "17.png",
+      "archive_name": "Frido_Create_a_realistic_face_photo_of_a_person_with_the_follow_ca96b87d-d8b5-47c2-99f5-7e589cc1a0de.png",
+      "sha256": "f1f276579106b2dd651e1347528aa4d2dd47a84386f7d0d5736e91d249e0d482"
+    },
+    {
+      "local_name": "18.png",
+      "archive_name": "Frido_Create_a_realistic_face_photo_of_a_person_with_the_follow_cb09137e-1e91-4ad0-a955-6cd8e3df0bcd.png",
+      "sha256": "9bf1c73bbc8ff004c82bd29190fdadbc3ce20a8da9ccb5d90bae11225c2f6b08"
+    },
+    {
+      "local_name": "19.png",
+      "archive_name": "Frido_Create_a_realistic_face_photo_of_a_person_with_the_follow_cd378554-60a8-418d-9841-3fb2be7a6256.png",
+      "sha256": "570e64d0f24e8e8b1797a0bf8e2eb8ac79b7e70fdb9e79466307a9dc5d9e5eb4"
+    },
+    {
+      "local_name": "20.png",
+      "archive_name": "Frido_Create_a_realistic_face_photo_of_a_person_with_the_follow_e6769a49-5866-4820-9f02-129c6189f941.png",
+      "sha256": "3c5c235b4c0c6eabaaf616e59042071c42eba31b58863dcc39529a916d657d07"
+    },
+    {
+      "local_name": "21.png",
+      "archive_name": "Frido_Create_a_realistic_face_photo_of_a_person_with_the_follow_f4fc74d3-c16d-4163-aa3d-1848beb5db4a.png",
+      "sha256": "f38cc0707dbd82ad5a15433c053c56d5a788026d278b62917a15d2503c51570f"
+    }
+  ]
+}

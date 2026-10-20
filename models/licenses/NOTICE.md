@@ -16,10 +16,13 @@ ScanFace's converted LiteRT/Core ML or quantized model assets are derived from t
 
 Reference face-cropping/alignment code: RetinaFace, Sefik Ilkin Serengil and contributors, version 0.0.17, commit `1233104ebe368b7446a93200fc09ebeaa5ed0062`. Its MIT notice is copied intact in `RetinaFace-MIT.txt`. That code license must not be assumed to license a separately obtained detector checkpoint or a native platform SDK.
 
+Native pixel resampling follows Pillow 12.3.0 affine nearest-neighbor and separable bilinear behavior, including fixed-point rounding. Pillow/PIL attribution and MIT-CMU terms are preserved in `Pillow-MIT-CMU.txt`. The mathematical regression fixture was generated locally with Pillow; it contains no person or face photograph.
+
 Unmodified license texts retrieved on 2026-10-20:
 
 - `Apache-2.0.txt`: https://www.apache.org/licenses/LICENSE-2.0.txt
 - `CC-BY-NC-SA-4.0.txt`: https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.txt
 - `RetinaFace-MIT.txt`: https://raw.githubusercontent.com/serengil/retinaface/1233104ebe368b7446a93200fc09ebeaa5ed0062/LICENSE
+- `Pillow-MIT-CMU.txt`: https://raw.githubusercontent.com/python-pillow/Pillow/12.3.0/LICENSE
 
 These license texts are copied for the materials identified above; they do not assign a license to unrelated ScanFace code. The research model comes without a warranty of accuracy or fitness for an individual or clinical decision. See the complete upstream licenses for their warranty and liability provisions.
