@@ -12,6 +12,7 @@
 		5F312A22035886BDFCE111E2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1B54D81ED119CE3BC890B72 /* Assets.xcassets */; };
 		651D10396FE856075293EA0E /* NativeCamera.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF8E5FB8E8649C2C797FD984 /* NativeCamera.swift */; };
 		89AF4282C821D49F46EAECB8 /* CapturePhotoStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDB7DC7BF2AB51763F127598 /* CapturePhotoStorageTests.swift */; };
+		A1CC4CEDDCC74109CF255F10 /* PhotoReferenceStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD2C1DAC69D916CCBBCF0436 /* PhotoReferenceStorageTests.swift */; };
 		B7EC2DDE9F958CB458F258A9 /* ScanFaceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5C43FC02ABB929004F333B3 /* ScanFaceApp.swift */; };
 		F8AB991DB52D42A9A9B2DA24 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 02CF3144DC38CB2DCBBCD3E8 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
@@ -41,6 +42,7 @@
 		91F44C35C6CC30EABA41063B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		9BF84394F586F716F6D60003 /* ScanFaceTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = ScanFaceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1B54D81ED119CE3BC890B72 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		CD2C1DAC69D916CCBBCF0436 /* PhotoReferenceStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoReferenceStorageTests.swift; sourceTree = "<group>"; };
 		E619FA8DC0D7C98586F0435E /* ScanFaceUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanFaceUITests.swift; sourceTree = "<group>"; };
 		EF8E5FB8E8649C2C797FD984 /* NativeCamera.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeCamera.swift; sourceTree = "<group>"; };
 		F5C43FC02ABB929004F333B3 /* ScanFaceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanFaceApp.swift; sourceTree = "<group>"; };
@@ -62,6 +64,7 @@
 			isa = PBXGroup;
 			children = (
 				FDB7DC7BF2AB51763F127598 /* CapturePhotoStorageTests.swift */,
+				CD2C1DAC69D916CCBBCF0436 /* PhotoReferenceStorageTests.swift */,
 				4E60E0A0E56EDC147DA11F47 /* SnapshotStorageTests.swift */,
 			);
 			path = ScanFaceTests;
@@ -248,6 +251,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				89AF4282C821D49F46EAECB8 /* CapturePhotoStorageTests.swift in Sources */,
+				A1CC4CEDDCC74109CF255F10 /* PhotoReferenceStorageTests.swift in Sources */,
 				28E9CF76B96C59E375BEDB54 /* SnapshotStorageTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
