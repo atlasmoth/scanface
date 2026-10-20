@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
@@ -173,7 +174,8 @@ private fun GrantedCamera(
         CameraController(context, context.findActivity(), previewView)
     }
     val state by controller.state.collectAsState()
-    val busy = state.busy || importing
+    val busy = state.busy || state.zoomChanging || importing
+    val fontScale = LocalDensity.current.fontScale
     DisposableEffect(controller, lifecycleOwner) {
         controller.start(lifecycleOwner)
         onDispose { controller.close() }
@@ -226,7 +228,12 @@ private fun GrantedCamera(
                         }
                     }
                 } else {
-                    Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    val scrollCompact = maxHeight < 520.dp || fontScale >= 1.5f
+                    val compactPreviewHeight = maxOf(240.dp, minOf(420.dp, maxHeight * 0.55f))
+                    val compactModifier = if (scrollCompact) {
+                        Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                    } else Modifier.fillMaxSize()
+                    Column(compactModifier, horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             "A moment for you",
                             style = MaterialTheme.typography.headlineSmall,
@@ -239,7 +246,13 @@ private fun GrantedCamera(
                             modifier = Modifier.padding(top = 4.dp, bottom = 16.dp),
                             textAlign = TextAlign.Center,
                         )
-                        CameraPreview(previewView, state, Modifier.fillMaxWidth().weight(1f))
+                        CameraPreview(
+                            previewView, state,
+                            Modifier.fillMaxWidth().then(
+                                if (scrollCompact) Modifier.height(compactPreviewHeight)
+                                else Modifier.weight(1f),
+                            ),
+                        )
                         Spacer(Modifier.height(12.dp))
                         CameraControls(
                             state, busy, importError,
@@ -407,7 +420,7 @@ private fun CameraControls(
             if (busy) {
                 CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
                 Spacer(Modifier.width(12.dp))
-                Text("Preparing photo…")
+                Text(if (state.zoomChanging) "Adjusting camera…" else "Preparing photo…")
             } else {
                 Canvas(Modifier.size(22.dp)) {
                     drawCircle(shutterColor, size.minDimension * 0.42f, style = Stroke(2.dp.toPx()))
