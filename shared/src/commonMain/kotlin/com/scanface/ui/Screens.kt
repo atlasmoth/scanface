@@ -172,7 +172,10 @@ fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
                 if (record.isDemo) Badge("Sample")
             }
             ScanCard(Modifier.fillMaxWidth()) {
-                PhotoThumbnail(record, Modifier.fillMaxWidth().heightIn(min = 140.dp, max = 220.dp).aspectRatio(1.8f))
+                val photoAspect = if (record.width > 0 && record.height > 0) record.width.toFloat() / record.height else 1f
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    PhotoThumbnail(record, Modifier.heightIn(max = 220.dp).aspectRatio(photoAspect))
+                }
                 if (analyzing) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         CircularProgressIndicator(Modifier.size(24.dp))
@@ -222,7 +225,9 @@ fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
                 Text(if (record.isDemo) "This fictional sample demonstrates the interface. It is not an analysis of your face."
                     else "Photos are processed and stored on this device. Sharing a summary includes scan details, never your photo.",
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (record.lens != null) Text("${record.lens} · ${record.width} × ${record.height}", style = MaterialTheme.typography.labelMedium)
+                if (record.lens != null && record.width > 0 && record.height > 0) {
+                    Text("${record.lens} · ${record.width} × ${record.height}", style = MaterialTheme.typography.labelMedium)
+                }
                 Text("Facial-age estimates are for exploration. They do not diagnose conditions or predict an individual's lifespan.",
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
