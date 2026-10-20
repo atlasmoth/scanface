@@ -1,0 +1,14 @@
+.DS_Store
+.gradle/
+.kotlin/
+.idea/
+**/build/
+local.properties
+*.iml
+iosApp/DerivedData/
+**/xcuserdata/
+**/*.xcuserstate
+artifacts/
+.swiftpm/
+*.hprof
+*.log
