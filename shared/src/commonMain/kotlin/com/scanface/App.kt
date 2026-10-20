@@ -1,0 +1,176 @@
+package com.scanface
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.scanface.core.*
+import com.scanface.platform.*
+import com.scanface.ui.*
+import kotlinx.coroutines.launch
+
+private enum class Route { OVERVIEW, HISTORY, CAPTURE, RESULT, SETTINGS }
+
+@Composable
+fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingModelAnalyzer() }) {
+    val scope = rememberCoroutineScope()
+    val store = remember(services, analyzer) { AppStore(services.storage, analyzer, services::nowMillis, services::deletePhoto, scope) }
+    val state by store.state.collectAsState()
+    var routeName by rememberSaveable { mutableStateOf(if (state.pending != null) Route.RESULT.name else Route.OVERVIEW.name) }
+    var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
+    var returnRoute by rememberSaveable { mutableStateOf(Route.OVERVIEW.name) }
+    var deleteId by rememberSaveable { mutableStateOf<String?>(null) }
+    var clearAll by rememberSaveable { mutableStateOf(false) }
+    var discardTarget by rememberSaveable { mutableStateOf<String?>(null) }
+    val route = Route.valueOf(routeName)
+    val snackbar = remember { SnackbarHostState() }
+    val systemDark = isSystemInDarkTheme()
+    val dark = when (state.theme) { ThemeMode.SYSTEM -> systemDark; ThemeMode.LIGHT -> false; ThemeMode.DARK -> true }
+    fun notify(message: String) { scope.launch { snackbar.showSnackbar(message) } }
+    fun navigate(target: Route) {
+        if (state.pending != null && route == Route.RESULT && target != Route.RESULT) discardTarget = target.name
+        else routeName = target.name
+    }
+    fun scan() {
+        returnRoute = if (route == Route.HISTORY) Route.HISTORY.name else Route.OVERVIEW.name
+        if (state.pending != null) routeName = Route.RESULT.name else routeName = Route.CAPTURE.name
+    }
+    fun back() {
+        when (route) {
+            Route.CAPTURE -> routeName = returnRoute
+            Route.RESULT -> navigate(Route.valueOf(returnRoute))
+            Route.SETTINGS -> routeName = returnRoute
+            Route.HISTORY -> routeName = Route.OVERVIEW.name
+            Route.OVERVIEW -> Unit
+        }
+    }
+    LaunchedEffect(state.error) {
+        state.error?.let { snackbar.showSnackbar(it); store.clearError() }
+    }
+    ScanFaceTheme(dark) {
+        PlatformThemeEffect(dark)
+        PlatformBackHandler(route != Route.OVERVIEW, ::back)
+        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+                val rail = maxWidth >= 600.dp
+                val wide = maxWidth >= 1000.dp
+                val historyWide = maxWidth >= 900.dp
+                if (route == Route.CAPTURE) {
+                    CameraScreen(dark, onCaptured = {
+                        store.capture(it)
+                        routeName = Route.RESULT.name
+                    }, onClose = ::back)
+                } else {
+                    Row(Modifier.fillMaxSize()) {
+                        if (rail) {
+                            NavigationRail(containerColor = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxHeight().width(96.dp)) {
+                                Glyph(AppIcon.Face, Modifier.padding(vertical = 24.dp).size(32.dp), MaterialTheme.colorScheme.primary, "ScanFace")
+                                Spacer(Modifier.height(16.dp))
+                                NavigationRailItem(route == Route.OVERVIEW, { navigate(Route.OVERVIEW) },
+                                    icon = { Glyph(AppIcon.Overview) }, label = { Text("Overview") })
+                                NavigationRailItem(route == Route.CAPTURE, ::scan, icon = { Glyph(AppIcon.Scan) }, label = { Text("Scan") })
+                                NavigationRailItem(route == Route.HISTORY, { navigate(Route.HISTORY) },
+                                    icon = { Glyph(AppIcon.History) }, label = { Text("History") })
+                                Spacer(Modifier.weight(1f))
+                                NavigationRailItem(route == Route.SETTINGS, {
+                                    returnRoute = routeName.takeIf { it == Route.HISTORY.name } ?: Route.OVERVIEW.name
+                                    navigate(Route.SETTINGS)
+                                }, icon = { Glyph(AppIcon.Settings) }, label = { Text("Settings") })
+                                Spacer(Modifier.height(16.dp))
+                            }
+                            VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        }
+                        Scaffold(
+                            modifier = Modifier.weight(1f),
+                            containerColor = MaterialTheme.colorScheme.background,
+                            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                            snackbarHost = { SnackbarHost(snackbar) },
+                            topBar = {
+                                Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    if (route == Route.RESULT || route == Route.SETTINGS) IconButton(::back) { Glyph(AppIcon.Back, description = "Back") }
+                                    else if (!rail) Glyph(AppIcon.Face, Modifier.padding(8.dp).size(28.dp), MaterialTheme.colorScheme.primary)
+                                    Text(when (route) {
+                                        Route.HISTORY -> "Scan history"
+                                        Route.SETTINGS -> "Settings"
+                                        Route.RESULT -> "Scan details"
+                                        else -> "ScanFace"
+                                    }, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+                                    if (route != Route.SETTINGS) IconButton({
+                                        returnRoute = if (route == Route.HISTORY) Route.HISTORY.name else Route.OVERVIEW.name
+                                        navigate(Route.SETTINGS)
+                                    }) { Glyph(AppIcon.Settings, description = "Settings") }
+                                }
+                            },
+                            bottomBar = {
+                                if (!rail && route in listOf(Route.OVERVIEW, Route.HISTORY)) {
+                                    NavigationBar(containerColor = MaterialTheme.colorScheme.surface, windowInsets = WindowInsets(0, 0, 0, 0)) {
+                                        NavigationBarItem(route == Route.OVERVIEW, { navigate(Route.OVERVIEW) }, icon = { Glyph(AppIcon.Overview) }, label = { Text("Overview") })
+                                        NavigationBarItem(false, ::scan, icon = { Glyph(AppIcon.Scan) }, label = { Text("Scan") })
+                                        NavigationBarItem(route == Route.HISTORY, { navigate(Route.HISTORY) }, icon = { Glyph(AppIcon.History) }, label = { Text("History") })
+                                    }
+                                }
+                            },
+                        ) { padding ->
+                            Box(Modifier.fillMaxSize().padding(padding)) {
+                                when (route) {
+                                    Route.OVERVIEW -> OverviewScreen(state, wide, services.nowMillis(), ::scan,
+                                        { if (store.seedDemo()) notify("Sample results added") },
+                                        { routeName = Route.HISTORY.name },
+                                        { selectedId = it.id; returnRoute = Route.OVERVIEW.name; routeName = Route.RESULT.name })
+                                    Route.HISTORY -> HistoryScreen(state.records, selectedId, historyWide,
+                                        { selectedId = it.id; if (!historyWide) { returnRoute = Route.HISTORY.name; routeName = Route.RESULT.name } },
+                                        ::scan, { services.shareText(store.exportCsv(it?.id)) }, { deleteId = it.id })
+                                    Route.SETTINGS -> SettingsScreen(state, { store.setTheme(it) },
+                                        { store.setEnteredAge(it).also { success -> if (success) notify("Age saved") } },
+                                        { if (store.seedDemo()) notify("Sample results added") },
+                                        { if (store.removeDemo()) notify("Sample results removed") }, { clearAll = true })
+                                    Route.RESULT -> {
+                                        val record = state.pending ?: state.records.firstOrNull { it.id == selectedId }
+                                        if (record != null) ResultScreen(record, state.pending != null, state.isAnalyzing,
+                                            {
+                                                store.savePending()?.let {
+                                                    selectedId = it.id; routeName = Route.HISTORY.name; notify("Scan saved")
+                                                }
+                                            },
+                                            { discardTarget = Route.CAPTURE.name },
+                                            { services.shareText(store.exportCsv(record.id)) }, { deleteId = record.id })
+                                        else Column(Modifier.padding(24.dp)) {
+                                            EmptyState("This scan is no longer here", "Start a new capture or return to your history.", "New face scan", ::scan)
+                                        }
+                                    }
+                                    Route.CAPTURE -> Unit
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (deleteId != null || clearAll) {
+            AlertDialog(onDismissRequest = { deleteId = null; clearAll = false },
+                title = { Text(if (clearAll) "Delete all saved scans?" else "Delete this scan?") },
+                text = { Text("This removes the saved details and photo from this device. This action cannot be undone.") },
+                confirmButton = {
+                    TextButton({
+                        val success = if (clearAll) store.clearHistory() else store.deleteRecord(deleteId!!)
+                        if (success) { deleteId = null; clearAll = false; if (route == Route.RESULT) routeName = Route.HISTORY.name; notify("Scans deleted") }
+                    }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                },
+                dismissButton = { TextButton({ deleteId = null; clearAll = false }) { Text("Keep scans") } })
+        }
+        if (discardTarget != null) {
+            AlertDialog(onDismissRequest = { discardTarget = null },
+                title = { Text("Discard this capture?") }, text = { Text("Save this scan to keep it in your history, or discard the photo to continue.") },
+                confirmButton = { TextButton({
+                    if (store.discardPending()) { routeName = discardTarget!!; discardTarget = null }
+                }) { Text("Discard", color = MaterialTheme.colorScheme.error) } },
+                dismissButton = { TextButton({ discardTarget = null }) { Text("Keep editing") } })
+        }
+    }
+}
