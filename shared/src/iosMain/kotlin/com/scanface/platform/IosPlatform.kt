@@ -18,6 +18,7 @@ import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitInteropInteractionMode
 import androidx.compose.ui.window.ComposeUIViewController
 import com.scanface.App
+import com.scanface.core.AppStore
 import com.scanface.core.CapturedPhoto
 import com.scanface.core.KeyValueStore
 import kotlinx.cinterop.addressOf
@@ -84,7 +85,10 @@ actual fun CameraScreen(
 
 @Composable
 actual fun PhotoImage(path: String?, modifier: Modifier, contentDescription: String) {
-    if (path.isNullOrBlank()) {
+    val resolvedPath = path?.takeIf { it.isNotBlank() }?.let {
+        runCatching { photoReferences().resolve(it) }.getOrNull()
+    }
+    if (resolvedPath == null) {
         Box(
             modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center,
@@ -103,7 +107,7 @@ actual fun PhotoImage(path: String?, modifier: Modifier, contentDescription: Str
                 }
             },
             update = { imageView ->
-                imageView.image = UIImage.imageWithContentsOfFile(path)
+                imageView.image = UIImage.imageWithContentsOfFile(resolvedPath)
                 imageView.accessibilityLabel = contentDescription
             },
             properties = UIKitInteropProperties(
@@ -133,23 +137,24 @@ actual fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit) = Unit
 
 actual fun createPlatformServices(): PlatformServices = IosPlatformServices
 
+private fun photoReferences(): IosPhotoReferenceCodec {
+    val support = NSSearchPathForDirectoriesInDomains(
+        NSApplicationSupportDirectory, NSUserDomainMask, true,
+    ).firstOrNull() as? String ?: error("Application storage is unavailable.")
+    return IosPhotoReferenceCodec("$support/ScanFace/Captures")
+}
+
 private object IosPlatformServices : PlatformServices {
     override val storage: KeyValueStore = AtomicIosKeyValueStore()
 
     override fun nowMillis(): Long = (NSDate().timeIntervalSince1970 * 1_000).toLong()
 
     override fun deletePhoto(path: String) {
-        val normalized = NSURL.fileURLWithPath(path).URLByStandardizingPath?.path ?: return
-        val support = NSSearchPathForDirectoriesInDomains(
-            NSApplicationSupportDirectory, NSUserDomainMask, true,
-        ).firstOrNull() as? String ?: return
-        val captureRoot = "$support/ScanFace/Captures/"
-        // Only app-owned captures can be removed. Imported originals stay in Photos.
-        if (normalized.startsWith(captureRoot)) {
-            val manager = NSFileManager.defaultManager
-            if (manager.fileExistsAtPath(normalized)) {
-                check(manager.removeItemAtPath(normalized, error = null)) { "Couldn't remove the saved photo." }
-            }
+        // Resolve only validated capture references into the current private folder.
+        val resolved = photoReferences().resolve(path)
+        val manager = NSFileManager.defaultManager
+        if (manager.fileExistsAtPath(resolved)) {
+            check(manager.removeItemAtPath(resolved, error = null)) { "Couldn't remove the saved photo." }
         }
     }
 
@@ -203,14 +208,17 @@ private class AtomicIosKeyValueStore : KeyValueStore {
             val legacy = legacyDefaults.stringForKey(key) ?: return null
             put(key, legacy)
             legacyDefaults.removeObjectForKey(key)
-            return legacy
+            return decode(key, legacy)
         }
         val data = checkNotNull(NSData.dataWithContentsOfFile(path)) { "Couldn't read saved scans." }
         if (data.length == 0UL) return ""
-        return checkNotNull(data.bytes).readBytes(data.length.toInt()).decodeToString()
+        return decode(key, checkNotNull(data.bytes).readBytes(data.length.toInt()).decodeToString())
     }
 
     override fun put(key: String, value: String) {
+        // Transform the whole snapshot before writing. Runtime ownership checks must
+        // see one canonical path for saved, pending, and queued references alike.
+        val storedValue = if (key == AppStore.STORAGE_KEY) photoReferences().encode(value) else value
         val path = path(key)
         check(manager.createDirectoryAtPath(folder, withIntermediateDirectories = true, attributes = null, error = null)) {
             "Couldn't create private storage."
@@ -218,7 +226,7 @@ private class AtomicIosKeyValueStore : KeyValueStore {
         check(NSURL.fileURLWithPath(folder).setResourceValue(true, forKey = NSURLIsExcludedFromBackupKey, error = null)) {
             "Couldn't protect private storage from backup."
         }
-        val bytes = value.encodeToByteArray()
+        val bytes = storedValue.encodeToByteArray()
         val data = if (bytes.isEmpty()) NSData() else bytes.usePinned {
             NSData.create(bytes = it.addressOf(0), length = bytes.size.toULong())
         }
@@ -226,6 +234,9 @@ private class AtomicIosKeyValueStore : KeyValueStore {
             "Couldn't save scans. Check available storage and try again."
         }
     }
+
+    private fun decode(key: String, value: String): String =
+        if (key == AppStore.STORAGE_KEY) photoReferences().decode(value) else value
 
     override fun remove(key: String) {
         val path = path(key)
