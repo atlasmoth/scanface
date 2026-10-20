@@ -3,11 +3,11 @@
 The Android and iOS apps build and run with real FAHR-FaceAge inference, native
 capture/import, local history, appearance preferences, metadata sharing and
 deletion. New usable photos produce model estimates; unusable photos receive
-actionable feedback. Sample records remain explicitly fictional.
+actionable feedback. Saved results come from captures or imported photos.
 
 | Check | Result |
 | --- | --- |
-| Shared JVM suite | 47 passed: 30 state/storage, 9 Ktor manifest and 8 photo-reference tests |
+| Shared JVM suite | 46 passed: 29 state/storage, 9 Ktor manifest and 8 photo-reference tests |
 | Android connected suite | 10 passed again with selected int8 weights, no skips, on the Pixel 10 Pro Fold AVD, API 37 |
 | Android debug build and lint | Build passed; lint reported no issues |
 | iOS native simulator suite | 23 passed with selected int8 weights, including actual Core ML inference, metadata rejection, preprocessing and storage regressions |
@@ -16,6 +16,21 @@ actionable feedback. Sample records remain explicitly fictional.
 | iOS deployment target | Compiled app binaries report minimum iOS 17.0 |
 | Model conversion | 24 pinned inputs agree with PyTorch; maximum error 0.0000687 years (LiteRT), 0.0000458 years (Core ML) |
 | Quantized installer | 8 safety tests passed, including corrupt artifacts, incomplete evidence, stale package cleanup and rollback |
+
+## Removal of sample results
+
+The preview-results feature was removed from Overview, Settings, history and
+result rendering. Its data generator, saved-record flag, callbacks and CSV
+classification column were deleted. History now contains only saved captures
+or imported photos. No migration workflow was added; the development installs
+were cleared.
+
+All 46 shared tests, three Android UI flows and three iOS UI flows passed after
+the removal. The UI tests now cover empty-history navigation, persisted
+appearance, adaptive folding, camera capture/save/relaunch and picker
+cancellation without generating preview records. Android debug/lint and the
+iOS simulator build passed. Final incremental builds include the simplified
+CSV export; both development apps were reinstalled with empty history.
 
 ## Quantization follow-up
 
@@ -72,7 +87,7 @@ Android's native tests cover real bundled ML Kit detection plus LiteRT inference
 zero/multiple-face rejection, missing-model feedback and cancellation ownership.
 The actual photo-picker UI was then used to import a fresh padded author portrait:
 Koin's analyzer returned 21.451419830322266 years (displayed as 21.5), the result
-was saved, and cold relaunch restored it with the correct non-demo model ID.
+was saved, and cold relaunch restored it with the correct model ID.
 The dedicated `ScanFace_Model_QA` AVD has a 12 GB data partition: the previous
 AVD had too little free space to install the approximately 400 MB debug APK.
 Both native tests and the manual UI flow ran with Wi-Fi and mobile data disabled.
@@ -117,8 +132,8 @@ request has a bounded recovery path; camera callbacks are guarded against stale
 sessions.
 
 iOS tests cover upright image normalization, private protected storage, atomic
-snapshot roundtrips/migration, launch/navigation, theme persistence, sample
-results and photo-picker cancellation. A separate actual picker import was saved,
+snapshot roundtrips/migration, launch/navigation, theme persistence, empty
+history and photo-picker cancellation. A separate actual picker import was saved,
 the app was terminated and relaunched, and the stored photo and pending result
 were confirmed.
 
@@ -161,7 +176,7 @@ workflow for those records. Android debug and unsigned iOS device builds passed;
 the iOS minimum remains 17.0.
 
 The shared suite verifies failed writes, corrupt/unreadable storage, analysis
-cancellation, invalid model output, explicit sample labeling, CSV escaping and
+cancellation, invalid model output, capture metadata exports, CSV escaping and
 durable photo-deletion retries. Deletion requests are persisted before removing
 images and are retried after restart without deleting images still owned by a
 saved or pending scan.

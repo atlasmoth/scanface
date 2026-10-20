@@ -7,8 +7,7 @@ Camera capture stays native: CameraX on Android and AVFoundation on iOS.
 Capture or import a photo and get a real **FAHR-FaceAge** research estimate on the
 device: LiteRT on Android, Core ML on iOS. Review and save the result, revisit
 history, export a metadata summary, or delete the local capture. Missing models
-and unusable photos produce an explanation, never an invented estimate. Optional
-sample results remain clearly labelled as fictional.
+and unusable photos produce an explanation, never an invented estimate.
 
 The model weights are **CC BY-NC-SA 4.0: noncommercial use only**. The author's
 code is Apache 2.0. Commercial use of the weights requires additional permission;
