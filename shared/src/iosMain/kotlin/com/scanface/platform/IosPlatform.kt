@@ -19,17 +19,12 @@ import androidx.compose.ui.window.ComposeUIViewController
 import com.scanface.App
 import com.scanface.core.CapturedPhoto
 import com.scanface.core.KeyValueStore
+import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.readBytes
+import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.useContents
 import platform.CoreGraphics.CGRectMake
-import platform.Foundation.NSDate
-import platform.Foundation.NSFileManager
-import platform.Foundation.NSNotificationCenter
-import platform.Foundation.NSApplicationSupportDirectory
-import platform.Foundation.NSSearchPathForDirectoriesInDomains
-import platform.Foundation.NSURL
-import platform.Foundation.NSUserDefaults
-import platform.Foundation.NSUserDomainMask
-import platform.Foundation.timeIntervalSince1970
+import platform.Foundation.*
 import platform.UIKit.*
 
 /** Swift owns AVFoundation; the shared UI owns the surrounding application flow. */
@@ -59,6 +54,13 @@ actual fun CameraScreen(
     UIKitViewController(
         factory = { factory.makeCameraController(darkTheme, onCaptured, onClose) },
         modifier = Modifier.fillMaxSize(),
+        update = { controller ->
+            controller.overrideUserInterfaceStyle = if (darkTheme) {
+                UIUserInterfaceStyle.UIUserInterfaceStyleDark
+            } else {
+                UIUserInterfaceStyle.UIUserInterfaceStyleLight
+            }
+        },
         properties = UIKitInteropProperties(
             interactionMode = UIKitInteropInteractionMode.NonCooperative,
             isNativeAccessibilityEnabled = true,
@@ -118,12 +120,7 @@ actual fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit) = Unit
 actual fun createPlatformServices(): PlatformServices = IosPlatformServices
 
 private object IosPlatformServices : PlatformServices {
-    override val storage: KeyValueStore = object : KeyValueStore {
-        private val defaults = NSUserDefaults.standardUserDefaults
-        override fun get(key: String): String? = defaults.stringForKey(key)
-        override fun put(key: String, value: String) = defaults.setObject(value, forKey = key)
-        override fun remove(key: String) = defaults.removeObjectForKey(key)
-    }
+    override val storage: KeyValueStore = AtomicIosKeyValueStore()
 
     override fun nowMillis(): Long = (NSDate().timeIntervalSince1970 * 1_000).toLong()
 
@@ -166,6 +163,62 @@ private object IosPlatformServices : PlatformServices {
         NSURL.URLWithString(UIApplicationOpenSettingsURLString)?.let {
             UIApplication.sharedApplication.openURL(it, options = emptyMap<Any?, Any?>(), completionHandler = null)
         }
+    }
+}
+
+/** Snapshot replacement must finish before AppStore deletes any superseded image. */
+private class AtomicIosKeyValueStore : KeyValueStore {
+    private val manager = NSFileManager.defaultManager
+    private val legacyDefaults = NSUserDefaults.standardUserDefaults
+    private val folder: String
+        get() {
+            val support = NSSearchPathForDirectoriesInDomains(
+                NSApplicationSupportDirectory, NSUserDomainMask, true,
+            ).firstOrNull() as? String ?: error("Application storage is unavailable.")
+            return "$support/ScanFace/State"
+        }
+
+    private fun path(key: String): String {
+        require(key.matches(Regex("[A-Za-z0-9._-]+"))) { "Invalid storage key." }
+        return "$folder/$key.json"
+    }
+
+    override fun get(key: String): String? {
+        val path = path(key)
+        if (!manager.fileExistsAtPath(path)) {
+            val legacy = legacyDefaults.stringForKey(key) ?: return null
+            put(key, legacy)
+            legacyDefaults.removeObjectForKey(key)
+            return legacy
+        }
+        val data = checkNotNull(NSData.dataWithContentsOfFile(path)) { "Couldn't read saved scans." }
+        if (data.length == 0UL) return ""
+        return checkNotNull(data.bytes).readBytes(data.length.toInt()).decodeToString()
+    }
+
+    override fun put(key: String, value: String) {
+        val path = path(key)
+        check(manager.createDirectoryAtPath(folder, withIntermediateDirectories = true, attributes = null, error = null)) {
+            "Couldn't create private storage."
+        }
+        check(NSURL.fileURLWithPath(folder).setResourceValue(true, forKey = NSURLIsExcludedFromBackupKey, error = null)) {
+            "Couldn't protect private storage from backup."
+        }
+        val bytes = value.encodeToByteArray()
+        val data = if (bytes.isEmpty()) NSData() else bytes.usePinned {
+            NSData.create(bytes = it.addressOf(0), length = bytes.size.toULong())
+        }
+        check(data.writeToFile(path, options = NSDataWritingAtomic or NSDataWritingFileProtectionComplete, error = null)) {
+            "Couldn't save scans. Check available storage and try again."
+        }
+    }
+
+    override fun remove(key: String) {
+        val path = path(key)
+        if (manager.fileExistsAtPath(path)) {
+            check(manager.removeItemAtPath(path, error = null)) { "Couldn't remove saved scans." }
+        }
+        legacyDefaults.removeObjectForKey(key)
     }
 }
 
