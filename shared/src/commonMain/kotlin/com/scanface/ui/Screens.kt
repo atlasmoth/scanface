@@ -2,6 +2,8 @@ package com.scanface.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -134,15 +136,17 @@ fun HistoryScreen(records: List<ScanRecord>, selectedId: String?, wide: Boolean,
     }
     val selected = records.firstOrNull { it.id == selectedId } ?: records.first()
     Row(Modifier.fillMaxSize()) {
-        Column(Modifier.weight(if (wide) 0.42f else 1f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(24.dp),
+        LazyColumn(Modifier.weight(if (wide) 0.42f else 1f).fillMaxHeight(), contentPadding = PaddingValues(24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            HistoryChart(records, now)
+            item { HistoryChart(records, now) }
+            item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("${records.size} saved ${if (records.size == 1) "scan" else "scans"}", Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 IconButton({ onShare(null) }) { Glyph(AppIcon.Share, description = "Export scan history") }
             }
-            records.forEach { record -> RecordRow(record, wide && selected.id == record.id) { onSelect(record) } }
-            PrivacyNote(Modifier.padding(top = 16.dp))
+            }
+            items(records, key = { it.id }) { record -> RecordRow(record, wide && selected.id == record.id) { onSelect(record) } }
+            item { PrivacyNote(Modifier.padding(top = 16.dp)) }
         }
         if (wide) {
             VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
