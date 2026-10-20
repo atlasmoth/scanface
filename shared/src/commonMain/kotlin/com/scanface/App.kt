@@ -21,6 +21,15 @@ private enum class Route { OVERVIEW, HISTORY, CAPTURE, RESULT, SETTINGS }
 
 @Composable
 fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingModelAnalyzer() }) {
+    val haptics = rememberAppHaptics()
+    CompositionLocalProvider(LocalAppHaptics provides haptics) {
+        AppContent(services, analyzer)
+    }
+}
+
+@Composable
+private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
+    val haptics = LocalAppHaptics.current
     val scope = rememberCoroutineScope()
     val store = remember(services, analyzer) { AppStore(services.storage, analyzer, services::deletePhoto, scope) }
     val state by store.state.collectAsState()
@@ -36,8 +45,14 @@ fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingM
     val dark = when (state.theme) { ThemeMode.SYSTEM -> systemDark; ThemeMode.LIGHT -> false; ThemeMode.DARK -> true }
     fun notify(message: String) { scope.launch { snackbar.showSnackbar(message) } }
     fun navigate(target: Route) {
-        if (state.pending != null && route == Route.RESULT && target != Route.RESULT) discardTarget = target.name
-        else routeName = target.name
+        if (target == route) return
+        if (state.pending != null && route == Route.RESULT && target != Route.RESULT) {
+            haptics.perform(AppHaptic.Warning)
+            discardTarget = target.name
+        } else {
+            haptics.perform(AppHaptic.Selection)
+            routeName = target.name
+        }
     }
     fun scan() {
         if (state.pending != null) routeName = Route.RESULT.name
@@ -50,17 +65,32 @@ fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingM
         if (route == Route.OVERVIEW || route == Route.HISTORY) returnRoute = routeName
         navigate(Route.SETTINGS)
     }
+    fun scanFromNavigation() {
+        haptics.perform(AppHaptic.Selection)
+        scan()
+    }
     fun back() {
         when (route) {
             Route.CAPTURE -> routeName = returnRoute
             Route.RESULT -> navigate(Route.valueOf(returnRoute))
-            Route.SETTINGS -> routeName = returnRoute
-            Route.HISTORY -> routeName = Route.OVERVIEW.name
+            Route.SETTINGS -> {
+                haptics.perform(AppHaptic.Selection)
+                routeName = returnRoute
+            }
+            Route.HISTORY -> navigate(Route.OVERVIEW)
             Route.OVERVIEW -> Unit
         }
     }
+    var previousError by remember(store) { mutableStateOf(state.error) }
     LaunchedEffect(state.error) {
-        state.error?.let { snackbar.showSnackbar(it); store.clearError() }
+        val error = state.error
+        if (error != null) {
+            // A restored storage error is shown without buzzing on app launch.
+            if (error != previousError) haptics.perform(AppHaptic.Error)
+            previousError = error
+            snackbar.showSnackbar(error)
+            store.clearError()
+        } else previousError = null
     }
     ScanFaceTheme(dark) {
         PlatformThemeEffect(dark)
@@ -90,8 +120,17 @@ fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingM
                         Box(Modifier.fillMaxSize()) {
                         CameraScreen(dark, onCaptured = {
                             selectedId = null
-                            store.capture(it)
-                            routeName = if (store.state.value.pending?.photoPath == it.path) Route.RESULT.name else returnRoute
+                            val analysis = store.capture(it)
+                            val captureId = store.state.value.pending?.takeIf { pending -> pending.photoPath == it.path }?.id
+                            routeName = if (captureId != null) Route.RESULT.name else returnRoute
+                            if (captureId != null) scope.launch {
+                                analysis.join()
+                                val completed = store.state.value
+                                if (completed.pending?.id == captureId && !completed.isAnalyzing &&
+                                    completed.pending.status != AnalysisStatus.COMPLETE && completed.error == null) {
+                                    haptics.perform(AppHaptic.Warning)
+                                }
+                            }
                         }, onClose = ::back)
                         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(16.dp))
                         }
@@ -103,7 +142,7 @@ fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingM
                                     Spacer(Modifier.height(16.dp))
                                     NavigationRailItem(route == Route.OVERVIEW, { navigate(Route.OVERVIEW) },
                                         icon = { Glyph(AppIcon.Overview) }, label = { Text("Overview") })
-                                    NavigationRailItem(route == Route.CAPTURE, ::scan, icon = { Glyph(AppIcon.Scan) }, label = { Text("Scan") })
+                                    NavigationRailItem(route == Route.CAPTURE, ::scanFromNavigation, icon = { Glyph(AppIcon.Scan) }, label = { Text("Scan") })
                                     NavigationRailItem(route == Route.HISTORY, { navigate(Route.HISTORY) },
                                         icon = { Glyph(AppIcon.History) }, label = { Text("History") })
                                     Spacer(Modifier.weight(1f))
@@ -134,9 +173,9 @@ fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingM
                                 },
                                 bottomBar = {
                                     if (!rail && !systemSideNavigation && route in listOf(Route.OVERVIEW, Route.HISTORY)) {
-                                        NavigationBar(containerColor = MaterialTheme.colorScheme.surface, windowInsets = WindowInsets(0, 0, 0, 0)) {
+                                        NavigationBar(containerColor = MaterialTheme.colorScheme.background, tonalElevation = 0.dp, windowInsets = WindowInsets(0, 0, 0, 0)) {
                                             NavigationBarItem(route == Route.OVERVIEW, { navigate(Route.OVERVIEW) }, icon = { Glyph(AppIcon.Overview) }, label = { Text("Overview") })
-                                            NavigationBarItem(false, ::scan, icon = { Glyph(AppIcon.Scan) }, label = { Text("Scan") })
+                                            NavigationBarItem(false, ::scanFromNavigation, icon = { Glyph(AppIcon.Scan) }, label = { Text("Scan") })
                                             NavigationBarItem(route == Route.HISTORY, { navigate(Route.HISTORY) }, icon = { Glyph(AppIcon.History) }, label = { Text("History") })
                                         }
                                     }
@@ -151,14 +190,17 @@ fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingM
                                             { selectedId = it.id; if (!historyWide) { returnRoute = Route.HISTORY.name; routeName = Route.RESULT.name } },
                                             ::scan, { services.shareText(store.exportCsv(it?.id)) }, { deleteId = it.id })
                                         Route.SETTINGS -> SettingsScreen(state, { store.setTheme(it) },
-                                            { store.setEnteredAge(it).also { success -> if (success) notify("Age saved") } },
+                                            { store.setEnteredAge(it).also { success ->
+                                                if (success) { haptics.perform(AppHaptic.Success); notify("Age saved") }
+                                            } },
                                             { clearAll = true },
-                                            { if (store.retryCleanup()) notify("Photo cleanup complete") })
+                                            { if (store.retryCleanup()) { haptics.perform(AppHaptic.Success); notify("Photo cleanup complete") } })
                                         Route.RESULT -> {
                                             val record = state.pending ?: state.records.firstOrNull { it.id == selectedId }
                                             if (record != null) ResultScreen(record, state.pending != null, state.isAnalyzing,
                                                 {
                                                     store.savePending()?.let {
+                                                        haptics.perform(AppHaptic.Success)
                                                         selectedId = it.id; routeName = Route.HISTORY.name; notify("Scan saved")
                                                     }
                                                 },
@@ -180,7 +222,7 @@ fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingM
                         region = navigationRegion,
                         route = if (route == Route.RESULT) Route.valueOf(returnRoute) else route,
                         onOverview = { navigate(Route.OVERVIEW) },
-                        onScan = ::scan,
+                        onScan = ::scanFromNavigation,
                         onHistory = { navigate(Route.HISTORY) },
                         onSettings = ::settings,
                     )
@@ -198,19 +240,35 @@ fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingM
                             deleteId = null
                             clearAll = false
                             if (route == Route.RESULT) routeName = Route.HISTORY.name
-                            if (store.state.value.cleanupPendingCount == 0) notify("Deleted from history")
+                            if (store.state.value.cleanupPendingCount == 0 && store.state.value.error == null) {
+                                haptics.perform(AppHaptic.Success)
+                                notify("Deleted from history")
+                            }
                         }
                     }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
                 },
-                dismissButton = { TextButton({ deleteId = null; clearAll = false }) { Text("Keep scans") } })
+                dismissButton = { TextButton({
+                    haptics.perform(AppHaptic.Light)
+                    deleteId = null
+                    clearAll = false
+                }) { Text("Keep scans") } })
         }
         if (discardTarget != null) {
             AlertDialog(onDismissRequest = { discardTarget = null },
                 title = { Text("Discard this capture?") }, text = { Text("Save this scan to keep it in your history, or discard the photo to continue.") },
                 confirmButton = { TextButton({
-                    if (store.discardPending()) { routeName = discardTarget!!; discardTarget = null }
+                    if (store.discardPending()) {
+                        if (store.state.value.cleanupPendingCount == 0 && store.state.value.error == null) {
+                            haptics.perform(AppHaptic.Success)
+                        }
+                        routeName = discardTarget!!
+                        discardTarget = null
+                    }
                 }) { Text("Discard", color = MaterialTheme.colorScheme.error) } },
-                dismissButton = { TextButton({ discardTarget = null }) { Text("Keep editing") } })
+                dismissButton = { TextButton({
+                    haptics.perform(AppHaptic.Light)
+                    discardTarget = null
+                }) { Text("Keep editing") } })
         }
     }
 }
