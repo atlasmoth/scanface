@@ -1,18 +1,80 @@
 # Verification — 20 October 2026
 
-The Android and iOS apps build and run with real capture/import, local history,
-appearance preferences, metadata sharing and deletion. Real photos remain in
-`AWAITING_MODEL`; only explicitly selected sample records contain estimates.
+The Android and iOS apps build and run with real FAHR-FaceAge inference, native
+capture/import, local history, appearance preferences, metadata sharing and
+deletion. New usable photos produce model estimates; unusable photos receive
+actionable feedback. Sample records remain explicitly fictional.
 
 | Check | Result |
 | --- | --- |
 | Shared JVM suite | 47 passed: 30 state/storage, 9 Ktor manifest and 8 photo-reference tests |
-| Android connected suite | 3 passed on Pixel 10 Pro Fold, API 37 |
+| Android connected suite | 10 passed, no skips, on a fresh Pixel 10 Pro Fold AVD, API 37, with Wi-Fi/mobile data disabled |
 | Android debug build and lint | Build passed; lint reported no issues |
-| iOS native simulator suite | 10 passed, including 5 photo-reference regressions |
-| iOS UI suite | 3 flows passed in the initial verification; follow-ups checked manually |
+| iOS native simulator suite | 22 passed, including actual Core ML inference, image preprocessing, cancellation and photo-reference regressions |
+| iOS UI suite | 3 flows passed again after model integration |
 | iOS simulator and unsigned device builds | Both passed with Xcode 27.1 |
 | iOS deployment target | Compiled app binaries report minimum iOS 17.0 |
+| Model conversion | 24 pinned inputs agree with PyTorch; maximum error 0.0000687 years (LiteRT), 0.0000458 years (Core ML) |
+
+## Model integration
+
+The source checkpoint's downloaded bytes match SHA-256
+`980ad2f134c5d82e9aca39a738f88a5b10aaf15ca9a5462bf95599be023cdbba`.
+Strict weights-only loading consumes all 200 state tensors. Transformers 4.57.6
+with the original key names and 5.14.1 with renamed ViT keys produce identical
+reference predictions on all 24 cases. The converted graphs use float32,
+including normalization; installed assets match the hashes in
+[`models/conversion-validation.json`](../models/conversion-validation.json).
+
+The 24 conversion cases are 22 hash-pinned author synthetic crops and two
+mathematical patterns. Native tests independently run the bundled model on
+gradient/gray inputs and compare tilted face alignment and resizing against
+Pillow-generated pixel fixtures. A synthetic pattern is never accepted as a
+face by bypassing detection in the shipping pipeline. These checks establish
+numerical conversion and implementation behavior, not clinical accuracy or
+equivalence of the native detectors to the paper's RetinaFace preprocessing.
+
+Android's native tests cover real bundled ML Kit detection plus LiteRT inference,
+zero/multiple-face rejection, missing-model feedback and cancellation ownership.
+The actual photo-picker UI was then used to import a fresh padded author portrait:
+Koin's analyzer returned 21.451419830322266 years (displayed as 21.5), the result
+was saved, and cold relaunch restored it with the correct non-demo model ID.
+The dedicated `ScanFace_Model_QA` AVD has a 12 GB data partition: the previous
+AVD had too little free space to install the approximately 400 MB debug APK.
+Both native tests and the manual UI flow ran with Wi-Fi and mobile data disabled.
+The model is stored uncompressed in the APK for mapping, and only LiteRT-supported
+ABIs are packaged. The build guard was tested with a missing notice, failed as
+expected, and passed after restoration. Lint reported no issues.
+
+iOS tests cover a fresh protected JPEG through Vision, guarded Core Image eye
+recovery, alignment and actual Core ML inference, plus zero/multiple-face
+rejection, invalid input, missing-model feedback and cancellation. The installed
+27.0/27.1 simulators returned unusable Vision eye landmarks on clear portraits;
+the native fallback must independently find exactly one face with both eyes and
+at least 0.5 bounding-box overlap, and retains Vision's pose/size/boundary gates.
+Tests verify usable geometry and rejection of mismatched fallback boxes. Input
+to Vision is explicit BGRA; RGB orientation/channel ordering has a separate test.
+The built app contains the compiled model, conversion metadata and license folder.
+The actual iOS photo-picker UI also completed a fresh import through the injected
+analyzer: the author portrait produced 82.6743392944336 years (displayed as 82.7),
+was saved as `COMPLETE` with the Core ML model ID and a relative capture path,
+and reopened after a cold relaunch. No source change was needed for either
+platform's manual import/save/relaunch check. Their portraits differ; these two
+numbers are not a comparison of Android and iOS numerical accuracy.
+
+All model Python work used `conda dl`. The documented bootstrap and complete
+conversion command were run successfully. Converter-only packages are isolated
+under `artifacts/models/converter-python`; `pip check` reports no broken
+requirements in `dl`. Weights and author portraits remain ignored generated
+files; reproducible setup is documented in [models.md](models.md).
+
+After validation, ScanFace's development app data was cleared and the Android,
+iPhone Duo and iPad apps were left installed with empty histories and no private
+capture files. The temporary Android MediaStore portrait was deleted; the single
+iOS Photos fixture was moved to Recently Deleted, and its temporary cleanup
+helper was uninstalled. No workflow was added for retrying existing photos.
+
+## Existing app coverage
 
 Android device tests cover front/rear switching, zoom or explicit recovery,
 screen flash, private JPEG capture, save/reopen, theme persistence and preserving
@@ -58,8 +120,11 @@ Eight shared regression tests also verify relocation, mixed path aliases,
 ownership-safe startup cleanup, failed writes, invalid references and recovery
 data preservation. The previously broken imported image was confirmed visible in
 the running app, then saved with a relative reference and confirmed after relaunch.
-All four existing records were retained. Android debug and unsigned iOS device
-builds passed; the iOS minimum remains 17.0.
+All four existing records were retained at that earlier verification. For the
+model-integration work, the user explicitly requested deleting existing photos:
+the development app containers were cleared instead of adding a retry/migration
+workflow for those records. Android debug and unsigned iOS device builds passed;
+the iOS minimum remains 17.0.
 
 The shared suite verifies failed writes, corrupt/unreadable storage, analysis
 cancellation, invalid model output, explicit sample labeling, CSV escaping and
@@ -73,6 +138,7 @@ checks used API 37. Physical lens quality, LED flash, autofocus and real sensor
 rotation still need a smoke test on an iPhone/iPad and an Android handset.
 Simulator success does not establish those hardware properties.
 
-Model installation, model-specific preprocessing and LiteRT/Core ML inference are
-intentionally the next implementation work. No weights or fabricated estimates
-for user photos are included.
+Physical-device inference latency, memory use and battery cost remain unmeasured.
+Each full-precision model is approximately 327 MiB. Compression and prospective
+accuracy evaluation of the native face-detection pipeline are separate future
+work; no clinical performance claim follows from these simulator/emulator tests.
