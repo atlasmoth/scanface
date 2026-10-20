@@ -1,0 +1,4772 @@
+{
+  "host": {
+    "cpu": "Apple M4 Pro",
+    "memory_bytes": 51539607552,
+    "os": "27.0.1",
+    "os_build": "26A434",
+    "machine": "arm64",
+    "python": "3.12.13",
+    "versions": {
+      "coremltools": "9.0",
+      "torch": "2.13.0",
+      "numpy": "2.5.1",
+      "pillow": "12.3.0"
+    },
+    "coreml_threads": "runtime managed; no public thread-count setting",
+    "compute_assignment": "requested units; per-operation hardware placement is not measured"
+  },
+  "timestamp_utc": "2026-10-20T22:30:05.293579+00:00",
+  "variants": {
+    "float32": {
+      "configuration": {
+        "weights": "float32",
+        "compute": "float32"
+      },
+      "path": "artifacts/models/FAHRFaceAge.mlpackage",
+      "bytes": 342875587,
+      "files": {
+        "Data/com.apple.CoreML/model.mlmodel": {
+          "bytes": 116058,
+          "sha256": "fa09458ab940c15a7daa7697efc769d0c0e893c76951695c0911a204dca06abe"
+        },
+        "Data/com.apple.CoreML/weights/weight.bin": {
+          "bytes": 342758912,
+          "sha256": "d56f345a2e16ea01ef8d7cb8dc0894f41c19a1d79739aa8202eab3ca137d8f79"
+        },
+        "Manifest.json": {
+          "bytes": 617,
+          "sha256": "e4a4d5cfedc139c80dcebdae65dcc23ce65044ca424731b2e4bd6f6a02b4abc8"
+        }
+      },
+      "specification_version": 8,
+      "opsets": [
+        "CoreML7"
+      ],
+      "operations": {
+        "add": 25,
+        "concat": 1,
+        "const": 413,
+        "conv": 1,
+        "gelu": 12,
+        "layer_norm": 25,
+        "linear": 73,
+        "matmul": 24,
+        "mul": 14,
+        "reshape": 50,
+        "slice_by_index": 1,
+        "softmax": 12,
+        "squeeze": 1,
+        "sub": 1,
+        "transpose": 50
+      },
+      "compute_units": {
+        "CPU_ONLY": {
+          "load_ms": 709.986458,
+          "count": 72,
+          "median_ms": 9.103729000000001,
+          "mean_ms": 9.123735513888889,
+          "p90_ms": 9.4164452,
+          "p95_ms": 9.4928516,
+          "minimum_ms": 8.527709,
+          "maximum_ms": 9.777416,
+          "samples": [
+            {
+              "round": 0,
+              "input": "gradient",
+              "ms": 9.777416,
+              "prediction_years": 5.346165657043457
+            },
+            {
+              "round": 0,
+              "input": "gray",
+              "ms": 8.900834,
+              "prediction_years": 62.32280349731445
+            },
+            {
+              "round": 0,
+              "input": "author-00",
+              "ms": 8.996041,
+              "prediction_years": 77.83504486083984
+            },
+            {
+              "round": 0,
+              "input": "author-01",
+              "ms": 9.1355,
+              "prediction_years": 81.22260284423828
+            },
+            {
+              "round": 0,
+              "input": "author-02",
+              "ms": 9.418041,
+              "prediction_years": 84.05180358886719
+            },
+            {
+              "round": 0,
+              "input": "author-03",
+              "ms": 9.176791,
+              "prediction_years": 23.253719329833984
+            },
+            {
+              "round": 0,
+              "input": "author-04",
+              "ms": 9.550958,
+              "prediction_years": 17.19808006286621
+            },
+            {
+              "round": 0,
+              "input": "author-05",
+              "ms": 9.374666,
+              "prediction_years": 23.800640106201172
+            },
+            {
+              "round": 0,
+              "input": "author-06",
+              "ms": 9.23525,
+              "prediction_years": 23.69603157043457
+            },
+            {
+              "round": 0,
+              "input": "author-07",
+              "ms": 9.212167,
+              "prediction_years": 86.94416809082031
+            },
+            {
+              "round": 0,
+              "input": "author-08",
+              "ms": 9.463958,
+              "prediction_years": 77.53459167480469
+            },
+            {
+              "round": 0,
+              "input": "author-09",
+              "ms": 9.11925,
+              "prediction_years": 27.171958923339844
+            },
+            {
+              "round": 0,
+              "input": "author-10",
+              "ms": 9.402083,
+              "prediction_years": 18.792997360229492
+            },
+            {
+              "round": 0,
+              "input": "author-11",
+              "ms": 9.328209,
+              "prediction_years": 36.24943923950195
+            },
+            {
+              "round": 0,
+              "input": "author-12",
+              "ms": 9.106208,
+              "prediction_years": 23.02849006652832
+            },
+            {
+              "round": 0,
+              "input": "author-13",
+              "ms": 9.033709,
+              "prediction_years": 82.44613647460938
+            },
+            {
+              "round": 0,
+              "input": "author-14",
+              "ms": 9.528166,
+              "prediction_years": 13.665472030639648
+            },
+            {
+              "round": 0,
+              "input": "author-15",
+              "ms": 9.546709,
+              "prediction_years": 19.3992977142334
+            },
+            {
+              "round": 0,
+              "input": "author-16",
+              "ms": 9.463042,
+              "prediction_years": 21.755802154541016
+            },
+            {
+              "round": 0,
+              "input": "author-17",
+              "ms": 9.462292,
+              "prediction_years": 16.27549934387207
+            },
+            {
+              "round": 0,
+              "input": "author-18",
+              "ms": 9.318209,
+              "prediction_years": 77.29084014892578
+            },
+            {
+              "round": 0,
+              "input": "author-19",
+              "ms": 9.158416,
+              "prediction_years": 39.62478256225586
+            },
+            {
+              "round": 0,
+              "input": "author-20",
+              "ms": 9.097083,
+              "prediction_years": 16.773406982421875
+            },
+            {
+              "round": 0,
+              "input": "author-21",
+              "ms": 9.063083,
+              "prediction_years": 90.60214233398438
+            },
+            {
+              "round": 1,
+              "input": "gray",
+              "ms": 9.045125,
+              "prediction_years": 62.32280349731445
+            },
+            {
+              "round": 1,
+              "input": "author-00",
+              "ms": 9.089542,
+              "prediction_years": 77.83504486083984
+            },
+            {
+              "round": 1,
+              "input": "author-01",
+              "ms": 9.227125,
+              "prediction_years": 81.22260284423828
+            },
+            {
+              "round": 1,
+              "input": "author-02",
+              "ms": 9.150292,
+              "prediction_years": 84.05180358886719
+            },
+            {
+              "round": 1,
+              "input": "author-03",
+              "ms": 9.04,
+              "prediction_years": 23.253719329833984
+            },
+            {
+              "round": 1,
+              "input": "author-04",
+              "ms": 8.994,
+              "prediction_years": 17.19808006286621
+            },
+            {
+              "round": 1,
+              "input": "author-05",
+              "ms": 8.934833,
+              "prediction_years": 23.800640106201172
+            },
+            {
+              "round": 1,
+              "input": "author-06",
+              "ms": 8.82725,
+              "prediction_years": 23.69603157043457
+            },
+            {
+              "round": 1,
+              "input": "author-07",
+              "ms": 9.027,
+              "prediction_years": 86.94416809082031
+            },
+            {
+              "round": 1,
+              "input": "author-08",
+              "ms": 8.905042,
+              "prediction_years": 77.53459167480469
+            },
+            {
+              "round": 1,
+              "input": "author-09",
+              "ms": 9.036791,
+              "prediction_years": 27.171958923339844
+            },
+            {
+              "round": 1,
+              "input": "author-10",
+              "ms": 9.092375,
+              "prediction_years": 18.792997360229492
+            },
+            {
+              "round": 1,
+              "input": "author-11",
+              "ms": 9.093042,
+              "prediction_years": 36.24943923950195
+            },
+            {
+              "round": 1,
+              "input": "author-12",
+              "ms": 9.112833,
+              "prediction_years": 23.02849006652832
+            },
+            {
+              "round": 1,
+              "input": "author-13",
+              "ms": 9.32525,
+              "prediction_years": 82.44613647460938
+            },
+            {
+              "round": 1,
+              "input": "author-14",
+              "ms": 9.188125,
+              "prediction_years": 13.665472030639648
+            },
+            {
+              "round": 1,
+              "input": "author-15",
+              "ms": 9.103291,
+              "prediction_years": 19.3992977142334
+            },
+            {
+              "round": 1,
+              "input": "author-16",
+              "ms": 9.147958,
+              "prediction_years": 21.755802154541016
+            },
+            {
+              "round": 1,
+              "input": "author-17",
+              "ms": 9.026583,
+              "prediction_years": 16.27549934387207
+            },
+            {
+              "round": 1,
+              "input": "author-18",
+              "ms": 9.18775,
+              "prediction_years": 77.29084014892578
+            },
+            {
+              "round": 1,
+              "input": "author-19",
+              "ms": 9.041375,
+              "prediction_years": 39.62478256225586
+            },
+            {
+              "round": 1,
+              "input": "author-20",
+              "ms": 9.049375,
+              "prediction_years": 16.773406982421875
+            },
+            {
+              "round": 1,
+              "input": "author-21",
+              "ms": 9.165875,
+              "prediction_years": 90.60214233398438
+            },
+            {
+              "round": 1,
+              "input": "gradient",
+              "ms": 9.170208,
+              "prediction_years": 5.346165657043457
+            },
+            {
+              "round": 2,
+              "input": "author-00",
+              "ms": 9.192042,
+              "prediction_years": 77.83504486083984
+            },
+            {
+              "round": 2,
+              "input": "author-01",
+              "ms": 9.005541,
+              "prediction_years": 81.22260284423828
+            },
+            {
+              "round": 2,
+              "input": "author-02",
+              "ms": 8.965458,
+              "prediction_years": 84.05180358886719
+            },
+            {
+              "round": 2,
+              "input": "author-03",
+              "ms": 9.104167,
+              "prediction_years": 23.253719329833984
+            },
+            {
+              "round": 2,
+              "input": "author-04",
+              "ms": 9.17025,
+              "prediction_years": 17.19808006286621
+            },
+            {
+              "round": 2,
+              "input": "author-05",
+              "ms": 9.114625,
+              "prediction_years": 23.800640106201172
+            },
+            {
+              "round": 2,
+              "input": "author-06",
+              "ms": 9.044583,
+              "prediction_years": 23.69603157043457
+            },
+            {
+              "round": 2,
+              "input": "author-07",
+              "ms": 9.095666,
+              "prediction_years": 86.94416809082031
+            },
+            {
+              "round": 2,
+              "input": "author-08",
+              "ms": 8.946042,
+              "prediction_years": 77.53459167480469
+            },
+            {
+              "round": 2,
+              "input": "author-09",
+              "ms": 8.939292,
+              "prediction_years": 27.171958923339844
+            },
+            {
+              "round": 2,
+              "input": "author-10",
+              "ms": 8.527709,
+              "prediction_years": 18.792997360229492
+            },
+            {
+              "round": 2,
+              "input": "author-11",
+              "ms": 8.60975,
+              "prediction_years": 36.24943923950195
+            },
+            {
+              "round": 2,
+              "input": "author-12",
+              "ms": 8.922917,
+              "prediction_years": 23.02849006652832
+            },
+            {
+              "round": 2,
+              "input": "author-13",
+              "ms": 8.863709,
+              "prediction_years": 82.44613647460938
+            },
+            {
+              "round": 2,
+              "input": "author-14",
+              "ms": 9.008292,
+              "prediction_years": 13.665472030639648
+            },
+            {
+              "round": 2,
+              "input": "author-15",
+              "ms": 9.314208,
+              "prediction_years": 19.3992977142334
+            },
+            {
+              "round": 2,
+              "input": "author-16",
+              "ms": 9.118292,
+              "prediction_years": 21.755802154541016
+            },
+            {
+              "round": 2,
+              "input": "author-17",
+              "ms": 9.231167,
+              "prediction_years": 16.27549934387207
+            },
+            {
+              "round": 2,
+              "input": "author-18",
+              "ms": 8.904333,
+              "prediction_years": 77.29084014892578
+            },
+            {
+              "round": 2,
+              "input": "author-19",
+              "ms": 9.129834,
+              "prediction_years": 39.62478256225586
+            },
+            {
+              "round": 2,
+              "input": "author-20",
+              "ms": 8.984334,
+              "prediction_years": 16.773406982421875
+            },
+            {
+              "round": 2,
+              "input": "author-21",
+              "ms": 8.881042,
+              "prediction_years": 90.60214233398438
+            },
+            {
+              "round": 2,
+              "input": "gradient",
+              "ms": 9.001125,
+              "prediction_years": 5.346165657043457
+            },
+            {
+              "round": 2,
+              "input": "gray",
+              "ms": 8.985458,
+              "prediction_years": 62.32280349731445
+            }
+          ]
+        },
+        "ALL": {
+          "load_ms": 988.556375,
+          "count": 72,
+          "median_ms": 4.5537705,
+          "mean_ms": 4.585130194444444,
+          "p90_ms": 4.8564375,
+          "p95_ms": 4.9188872,
+          "minimum_ms": 4.296958,
+          "maximum_ms": 5.194458,
+          "samples": [
+            {
+              "round": 0,
+              "input": "gradient",
+              "ms": 4.551125,
+              "prediction_years": 5.346165657043457
+            },
+            {
+              "round": 0,
+              "input": "gray",
+              "ms": 4.492459,
+              "prediction_years": 62.32277297973633
+            },
+            {
+              "round": 0,
+              "input": "author-00",
+              "ms": 4.488209,
+              "prediction_years": 77.83505249023438
+            },
+            {
+              "round": 0,
+              "input": "author-01",
+              "ms": 4.476458,
+              "prediction_years": 81.22261047363281
+            },
+            {
+              "round": 0,
+              "input": "author-02",
+              "ms": 4.532583,
+              "prediction_years": 84.05177307128906
+            },
+            {
+              "round": 0,
+              "input": "author-03",
+              "ms": 4.362542,
+              "prediction_years": 23.25370979309082
+            },
+            {
+              "round": 0,
+              "input": "author-04",
+              "ms": 4.452667,
+              "prediction_years": 17.198068618774414
+            },
+            {
+              "round": 0,
+              "input": "author-05",
+              "ms": 4.629291,
+              "prediction_years": 23.800643920898438
+            },
+            {
+              "round": 0,
+              "input": "author-06",
+              "ms": 4.401708,
+              "prediction_years": 23.696006774902344
+            },
+            {
+              "round": 0,
+              "input": "author-07",
+              "ms": 4.465708,
+              "prediction_years": 86.9441146850586
+            },
+            {
+              "round": 0,
+              "input": "author-08",
+              "ms": 4.501959,
+              "prediction_years": 77.53466796875
+            },
+            {
+              "round": 0,
+              "input": "author-09",
+              "ms": 4.356209,
+              "prediction_years": 27.171955108642578
+            },
+            {
+              "round": 0,
+              "input": "author-10",
+              "ms": 4.427833,
+              "prediction_years": 18.793001174926758
+            },
+            {
+              "round": 0,
+              "input": "author-11",
+              "ms": 4.425959,
+              "prediction_years": 36.24941635131836
+            },
+            {
+              "round": 0,
+              "input": "author-12",
+              "ms": 4.863125,
+              "prediction_years": 23.028488159179688
+            },
+            {
+              "round": 0,
+              "input": "author-13",
+              "ms": 4.52525,
+              "prediction_years": 82.44606018066406
+            },
+            {
+              "round": 0,
+              "input": "author-14",
+              "ms": 4.402959,
+              "prediction_years": 13.665474891662598
+            },
+            {
+              "round": 0,
+              "input": "author-15",
+              "ms": 4.577542,
+              "prediction_years": 19.399293899536133
+            },
+            {
+              "round": 0,
+              "input": "author-16",
+              "ms": 4.316,
+              "prediction_years": 21.75580596923828
+            },
+            {
+              "round": 0,
+              "input": "author-17",
+              "ms": 4.37375,
+              "prediction_years": 16.275501251220703
+            },
+            {
+              "round": 0,
+              "input": "author-18",
+              "ms": 4.296958,
+              "prediction_years": 77.29083251953125
+            },
+            {
+              "round": 0,
+              "input": "author-19",
+              "ms": 4.647583,
+              "prediction_years": 39.624778747558594
+            },
+            {
+              "round": 0,
+              "input": "author-20",
+              "ms": 4.618958,
+              "prediction_years": 16.77339744567871
+            },
+            {
+              "round": 0,
+              "input": "author-21",
+              "ms": 4.556416,
+              "prediction_years": 90.60213470458984
+            },
+            {
+              "round": 1,
+              "input": "gray",
+              "ms": 4.668958,
+              "prediction_years": 62.32277297973633
+            },
+            {
+              "round": 1,
+              "input": "author-00",
+              "ms": 4.752292,
+              "prediction_years": 77.83505249023438
+            },
+            {
+              "round": 1,
+              "input": "author-01",
+              "ms": 4.636375,
+              "prediction_years": 81.22261047363281
+            },
+            {
+              "round": 1,
+              "input": "author-02",
+              "ms": 4.929792,
+              "prediction_years": 84.05177307128906
+            },
+            {
+              "round": 1,
+              "input": "author-03",
+              "ms": 4.614375,
+              "prediction_years": 23.25370979309082
+            },
+            {
+              "round": 1,
+              "input": "author-04",
+              "ms": 4.698209,
+              "prediction_years": 17.198068618774414
+            },
+            {
+              "round": 1,
+              "input": "author-05",
+              "ms": 4.357208,
+              "prediction_years": 23.800643920898438
+            },
+            {
+              "round": 1,
+              "input": "author-06",
+              "ms": 4.425792,
+              "prediction_years": 23.696006774902344
+            },
+            {
+              "round": 1,
+              "input": "author-07",
+              "ms": 4.418334,
+              "prediction_years": 86.9441146850586
+            },
+            {
+              "round": 1,
+              "input": "author-08",
+              "ms": 4.351167,
+              "prediction_years": 77.53466796875
+            },
+            {
+              "round": 1,
+              "input": "author-09",
+              "ms": 4.463042,
+              "prediction_years": 27.171955108642578
+            },
+            {
+              "round": 1,
+              "input": "author-10",
+              "ms": 4.482833,
+              "prediction_years": 18.793001174926758
+            },
+            {
+              "round": 1,
+              "input": "author-11",
+              "ms": 4.985208,
+              "prediction_years": 36.24941635131836
+            },
+            {
+              "round": 1,
+              "input": "author-12",
+              "ms": 4.647917,
+              "prediction_years": 23.028488159179688
+            },
+            {
+              "round": 1,
+              "input": "author-13",
+              "ms": 4.458541,
+              "prediction_years": 82.44606018066406
+            },
+            {
+              "round": 1,
+              "input": "author-14",
+              "ms": 4.472041,
+              "prediction_years": 13.665474891662598
+            },
+            {
+              "round": 1,
+              "input": "author-15",
+              "ms": 4.594375,
+              "prediction_years": 19.399293899536133
+            },
+            {
+              "round": 1,
+              "input": "author-16",
+              "ms": 4.521667,
+              "prediction_years": 21.75580596923828
+            },
+            {
+              "round": 1,
+              "input": "author-17",
+              "ms": 4.440292,
+              "prediction_years": 16.275501251220703
+            },
+            {
+              "round": 1,
+              "input": "author-18",
+              "ms": 4.737625,
+              "prediction_years": 77.29083251953125
+            },
+            {
+              "round": 1,
+              "input": "author-19",
+              "ms": 4.569875,
+              "prediction_years": 39.624778747558594
+            },
+            {
+              "round": 1,
+              "input": "author-20",
+              "ms": 4.580917,
+              "prediction_years": 16.77339744567871
+            },
+            {
+              "round": 1,
+              "input": "author-21",
+              "ms": 4.490709,
+              "prediction_years": 90.60213470458984
+            },
+            {
+              "round": 1,
+              "input": "gradient",
+              "ms": 4.58975,
+              "prediction_years": 5.346165657043457
+            },
+            {
+              "round": 2,
+              "input": "author-00",
+              "ms": 4.48275,
+              "prediction_years": 77.83505249023438
+            },
+            {
+              "round": 2,
+              "input": "author-01",
+              "ms": 4.48925,
+              "prediction_years": 81.22261047363281
+            },
+            {
+              "round": 2,
+              "input": "author-02",
+              "ms": 4.44725,
+              "prediction_years": 84.05177307128906
+            },
+            {
+              "round": 2,
+              "input": "author-03",
+              "ms": 4.701875,
+              "prediction_years": 23.25370979309082
+            },
+            {
+              "round": 2,
+              "input": "author-04",
+              "ms": 4.729291,
+              "prediction_years": 17.198068618774414
+            },
+            {
+              "round": 2,
+              "input": "author-05",
+              "ms": 4.874375,
+              "prediction_years": 23.800643920898438
+            },
+            {
+              "round": 2,
+              "input": "author-06",
+              "ms": 4.744541,
+              "prediction_years": 23.696006774902344
+            },
+            {
+              "round": 2,
+              "input": "author-07",
+              "ms": 4.79625,
+              "prediction_years": 86.9441146850586
+            },
+            {
+              "round": 2,
+              "input": "author-08",
+              "ms": 4.478458,
+              "prediction_years": 77.53466796875
+            },
+            {
+              "round": 2,
+              "input": "author-09",
+              "ms": 4.705083,
+              "prediction_years": 27.171955108642578
+            },
+            {
+              "round": 2,
+              "input": "author-10",
+              "ms": 4.464208,
+              "prediction_years": 18.793001174926758
+            },
+            {
+              "round": 2,
+              "input": "author-11",
+              "ms": 4.760709,
+              "prediction_years": 36.24941635131836
+            },
+            {
+              "round": 2,
+              "input": "author-12",
+              "ms": 4.403458,
+              "prediction_years": 23.028488159179688
+            },
+            {
+              "round": 2,
+              "input": "author-13",
+              "ms": 4.594125,
+              "prediction_years": 82.44606018066406
+            },
+            {
+              "round": 2,
+              "input": "author-14",
+              "ms": 4.49975,
+              "prediction_years": 13.665474891662598
+            },
+            {
+              "round": 2,
+              "input": "author-15",
+              "ms": 4.726416,
+              "prediction_years": 19.399293899536133
+            },
+            {
+              "round": 2,
+              "input": "author-16",
+              "ms": 4.866542,
+              "prediction_years": 21.75580596923828
+            },
+            {
+              "round": 2,
+              "input": "author-17",
+              "ms": 4.565708,
+              "prediction_years": 16.275501251220703
+            },
+            {
+              "round": 2,
+              "input": "author-18",
+              "ms": 4.619041,
+              "prediction_years": 77.29083251953125
+            },
+            {
+              "round": 2,
+              "input": "author-19",
+              "ms": 5.194458,
+              "prediction_years": 39.624778747558594
+            },
+            {
+              "round": 2,
+              "input": "author-20",
+              "ms": 4.72325,
+              "prediction_years": 16.77339744567871
+            },
+            {
+              "round": 2,
+              "input": "author-21",
+              "ms": 4.910375,
+              "prediction_years": 90.60213470458984
+            },
+            {
+              "round": 2,
+              "input": "gradient",
+              "ms": 4.792375,
+              "prediction_years": 5.346165657043457
+            },
+            {
+              "round": 2,
+              "input": "gray",
+              "ms": 4.929291,
+              "prediction_years": 62.32277297973633
+            }
+          ]
+        }
+      }
+    },
+    "float16": {
+      "configuration": {
+        "weights": "float16",
+        "compute": "float16"
+      },
+      "path": "artifacts/models/quantization/coreml/FAHRFaceAge-float16.mlpackage",
+      "bytes": 171516865,
+      "files": {
+        "Data/com.apple.CoreML/model.mlmodel": {
+          "bytes": 130392,
+          "sha256": "0ae910d3f2427595199e69c5aed2ffc2352e484cb129d99fbd03cd97dcc28f64"
+        },
+        "Data/com.apple.CoreML/weights/weight.bin": {
+          "bytes": 171385856,
+          "sha256": "77f20c388c71331cb96ab9a9d8beff905aba54d1fa3f0cd2cc660355025e24fb"
+        },
+        "Manifest.json": {
+          "bytes": 617,
+          "sha256": "a92b8dac265356ffca65ff1daace018c6c27d7e7c322e89ae51d3b7ac2ba4295"
+        }
+      },
+      "specification_version": 8,
+      "opsets": [
+        "CoreML7"
+      ],
+      "operations": {
+        "add": 25,
+        "cast": 2,
+        "concat": 1,
+        "const": 415,
+        "conv": 1,
+        "gelu": 12,
+        "layer_norm": 25,
+        "linear": 73,
+        "matmul": 24,
+        "mul": 14,
+        "reshape": 50,
+        "slice_by_index": 1,
+        "softmax": 12,
+        "squeeze": 1,
+        "sub": 1,
+        "transpose": 50
+      },
+      "compute_units": {
+        "CPU_ONLY": {
+          "load_ms": 394.021041,
+          "count": 72,
+          "median_ms": 5.5827915,
+          "mean_ms": 5.578561333333334,
+          "p90_ms": 5.7413295,
+          "p95_ms": 5.7806311,
+          "minimum_ms": 5.265833,
+          "maximum_ms": 5.835708,
+          "samples": [
+            {
+              "round": 0,
+              "input": "gradient",
+              "ms": 5.747917,
+              "prediction_years": 5.37109375
+            },
+            {
+              "round": 0,
+              "input": "gray",
+              "ms": 5.498041,
+              "prediction_years": 62.34375
+            },
+            {
+              "round": 0,
+              "input": "author-00",
+              "ms": 5.530125,
+              "prediction_years": 78.1875
+            },
+            {
+              "round": 0,
+              "input": "author-01",
+              "ms": 5.743417,
+              "prediction_years": 81.375
+            },
+            {
+              "round": 0,
+              "input": "author-02",
+              "ms": 5.553792,
+              "prediction_years": 84.0
+            },
+            {
+              "round": 0,
+              "input": "author-03",
+              "ms": 5.549042,
+              "prediction_years": 23.171875
+            },
+            {
+              "round": 0,
+              "input": "author-04",
+              "ms": 5.746,
+              "prediction_years": 17.21875
+            },
+            {
+              "round": 0,
+              "input": "author-05",
+              "ms": 5.642,
+              "prediction_years": 23.859375
+            },
+            {
+              "round": 0,
+              "input": "author-06",
+              "ms": 5.799583,
+              "prediction_years": 23.6875
+            },
+            {
+              "round": 0,
+              "input": "author-07",
+              "ms": 5.581125,
+              "prediction_years": 86.8125
+            },
+            {
+              "round": 0,
+              "input": "author-08",
+              "ms": 5.58075,
+              "prediction_years": 77.25
+            },
+            {
+              "round": 0,
+              "input": "author-09",
+              "ms": 5.802,
+              "prediction_years": 27.140625
+            },
+            {
+              "round": 0,
+              "input": "author-10",
+              "ms": 5.835708,
+              "prediction_years": 18.796875
+            },
+            {
+              "round": 0,
+              "input": "author-11",
+              "ms": 5.5755,
+              "prediction_years": 36.375
+            },
+            {
+              "round": 0,
+              "input": "author-12",
+              "ms": 5.5645,
+              "prediction_years": 22.984375
+            },
+            {
+              "round": 0,
+              "input": "author-13",
+              "ms": 5.722542,
+              "prediction_years": 82.9375
+            },
+            {
+              "round": 0,
+              "input": "author-14",
+              "ms": 5.610666,
+              "prediction_years": 13.6796875
+            },
+            {
+              "round": 0,
+              "input": "author-15",
+              "ms": 5.493417,
+              "prediction_years": 19.40625
+            },
+            {
+              "round": 0,
+              "input": "author-16",
+              "ms": 5.476833,
+              "prediction_years": 21.671875
+            },
+            {
+              "round": 0,
+              "input": "author-17",
+              "ms": 5.6345,
+              "prediction_years": 16.28125
+            },
+            {
+              "round": 0,
+              "input": "author-18",
+              "ms": 5.64975,
+              "prediction_years": 77.5625
+            },
+            {
+              "round": 0,
+              "input": "author-19",
+              "ms": 5.534542,
+              "prediction_years": 39.65625
+            },
+            {
+              "round": 0,
+              "input": "author-20",
+              "ms": 5.525333,
+              "prediction_years": 16.78125
+            },
+            {
+              "round": 0,
+              "input": "author-21",
+              "ms": 5.59425,
+              "prediction_years": 90.5625
+            },
+            {
+              "round": 1,
+              "input": "gray",
+              "ms": 5.584875,
+              "prediction_years": 62.34375
+            },
+            {
+              "round": 1,
+              "input": "author-00",
+              "ms": 5.651041,
+              "prediction_years": 78.1875
+            },
+            {
+              "round": 1,
+              "input": "author-01",
+              "ms": 5.585208,
+              "prediction_years": 81.375
+            },
+            {
+              "round": 1,
+              "input": "author-02",
+              "ms": 5.694667,
+              "prediction_years": 84.0
+            },
+            {
+              "round": 1,
+              "input": "author-03",
+              "ms": 5.652125,
+              "prediction_years": 23.171875
+            },
+            {
+              "round": 1,
+              "input": "author-04",
+              "ms": 5.591583,
+              "prediction_years": 17.21875
+            },
+            {
+              "round": 1,
+              "input": "author-05",
+              "ms": 5.558792,
+              "prediction_years": 23.859375
+            },
+            {
+              "round": 1,
+              "input": "author-06",
+              "ms": 5.632792,
+              "prediction_years": 23.6875
+            },
+            {
+              "round": 1,
+              "input": "author-07",
+              "ms": 5.521792,
+              "prediction_years": 86.8125
+            },
+            {
+              "round": 1,
+              "input": "author-08",
+              "ms": 5.60725,
+              "prediction_years": 77.25
+            },
+            {
+              "round": 1,
+              "input": "author-09",
+              "ms": 5.652875,
+              "prediction_years": 27.140625
+            },
+            {
+              "round": 1,
+              "input": "author-10",
+              "ms": 5.494375,
+              "prediction_years": 18.796875
+            },
+            {
+              "round": 1,
+              "input": "author-11",
+              "ms": 5.535625,
+              "prediction_years": 36.375
+            },
+            {
+              "round": 1,
+              "input": "author-12",
+              "ms": 5.56075,
+              "prediction_years": 22.984375
+            },
+            {
+              "round": 1,
+              "input": "author-13",
+              "ms": 5.765125,
+              "prediction_years": 82.9375
+            },
+            {
+              "round": 1,
+              "input": "author-14",
+              "ms": 5.685,
+              "prediction_years": 13.6796875
+            },
+            {
+              "round": 1,
+              "input": "author-15",
+              "ms": 5.670833,
+              "prediction_years": 19.40625
+            },
+            {
+              "round": 1,
+              "input": "author-16",
+              "ms": 5.376833,
+              "prediction_years": 21.671875
+            },
+            {
+              "round": 1,
+              "input": "author-17",
+              "ms": 5.520833,
+              "prediction_years": 16.28125
+            },
+            {
+              "round": 1,
+              "input": "author-18",
+              "ms": 5.621375,
+              "prediction_years": 77.5625
+            },
+            {
+              "round": 1,
+              "input": "author-19",
+              "ms": 5.435708,
+              "prediction_years": 39.65625
+            },
+            {
+              "round": 1,
+              "input": "author-20",
+              "ms": 5.653208,
+              "prediction_years": 16.78125
+            },
+            {
+              "round": 1,
+              "input": "author-21",
+              "ms": 5.689083,
+              "prediction_years": 90.5625
+            },
+            {
+              "round": 1,
+              "input": "gradient",
+              "ms": 5.347459,
+              "prediction_years": 5.37109375
+            },
+            {
+              "round": 2,
+              "input": "author-00",
+              "ms": 5.4485,
+              "prediction_years": 78.1875
+            },
+            {
+              "round": 2,
+              "input": "author-01",
+              "ms": 5.820875,
+              "prediction_years": 81.375
+            },
+            {
+              "round": 2,
+              "input": "author-02",
+              "ms": 5.344542,
+              "prediction_years": 84.0
+            },
+            {
+              "round": 2,
+              "input": "author-03",
+              "ms": 5.635541,
+              "prediction_years": 23.171875
+            },
+            {
+              "round": 2,
+              "input": "author-04",
+              "ms": 5.629583,
+              "prediction_years": 17.21875
+            },
+            {
+              "round": 2,
+              "input": "author-05",
+              "ms": 5.265833,
+              "prediction_years": 23.859375
+            },
+            {
+              "round": 2,
+              "input": "author-06",
+              "ms": 5.350083,
+              "prediction_years": 23.6875
+            },
+            {
+              "round": 2,
+              "input": "author-07",
+              "ms": 5.425708,
+              "prediction_years": 86.8125
+            },
+            {
+              "round": 2,
+              "input": "author-08",
+              "ms": 5.422417,
+              "prediction_years": 77.25
+            },
+            {
+              "round": 2,
+              "input": "author-09",
+              "ms": 5.559,
+              "prediction_years": 27.140625
+            },
+            {
+              "round": 2,
+              "input": "author-10",
+              "ms": 5.497208,
+              "prediction_years": 18.796875
+            },
+            {
+              "round": 2,
+              "input": "author-11",
+              "ms": 5.351167,
+              "prediction_years": 36.375
+            },
+            {
+              "round": 2,
+              "input": "author-12",
+              "ms": 5.543792,
+              "prediction_years": 22.984375
+            },
+            {
+              "round": 2,
+              "input": "author-13",
+              "ms": 5.590666,
+              "prediction_years": 82.9375
+            },
+            {
+              "round": 2,
+              "input": "author-14",
+              "ms": 5.693709,
+              "prediction_years": 13.6796875
+            },
+            {
+              "round": 2,
+              "input": "author-15",
+              "ms": 5.546042,
+              "prediction_years": 19.40625
+            },
+            {
+              "round": 2,
+              "input": "author-16",
+              "ms": 5.664709,
+              "prediction_years": 21.671875
+            },
+            {
+              "round": 2,
+              "input": "author-17",
+              "ms": 5.506667,
+              "prediction_years": 16.28125
+            },
+            {
+              "round": 2,
+              "input": "author-18",
+              "ms": 5.587709,
+              "prediction_years": 77.5625
+            },
+            {
+              "round": 2,
+              "input": "author-19",
+              "ms": 5.517167,
+              "prediction_years": 39.65625
+            },
+            {
+              "round": 2,
+              "input": "author-20",
+              "ms": 5.722458,
+              "prediction_years": 16.78125
+            },
+            {
+              "round": 2,
+              "input": "author-21",
+              "ms": 5.584458,
+              "prediction_years": 90.5625
+            },
+            {
+              "round": 2,
+              "input": "gradient",
+              "ms": 5.482917,
+              "prediction_years": 5.37109375
+            },
+            {
+              "round": 2,
+              "input": "gray",
+              "ms": 5.385125,
+              "prediction_years": 62.34375
+            }
+          ]
+        },
+        "ALL": {
+          "load_ms": 751.031917,
+          "count": 72,
+          "median_ms": 4.5699995,
+          "mean_ms": 4.546335638888889,
+          "p90_ms": 4.8755541,
+          "p95_ms": 5.10991875,
+          "minimum_ms": 4.083958,
+          "maximum_ms": 5.411666,
+          "samples": [
+            {
+              "round": 0,
+              "input": "gradient",
+              "ms": 4.783459,
+              "prediction_years": 5.34375
+            },
+            {
+              "round": 0,
+              "input": "gray",
+              "ms": 5.054625,
+              "prediction_years": 62.34375
+            },
+            {
+              "round": 0,
+              "input": "author-00",
+              "ms": 4.594375,
+              "prediction_years": 77.8125
+            },
+            {
+              "round": 0,
+              "input": "author-01",
+              "ms": 5.337041,
+              "prediction_years": 81.1875
+            },
+            {
+              "round": 0,
+              "input": "author-02",
+              "ms": 4.68675,
+              "prediction_years": 84.0625
+            },
+            {
+              "round": 0,
+              "input": "author-03",
+              "ms": 4.484625,
+              "prediction_years": 23.25
+            },
+            {
+              "round": 0,
+              "input": "author-04",
+              "ms": 4.487584,
+              "prediction_years": 17.203125
+            },
+            {
+              "round": 0,
+              "input": "author-05",
+              "ms": 4.986959,
+              "prediction_years": 23.8125
+            },
+            {
+              "round": 0,
+              "input": "author-06",
+              "ms": 5.411666,
+              "prediction_years": 23.703125
+            },
+            {
+              "round": 0,
+              "input": "author-07",
+              "ms": 4.789083,
+              "prediction_years": 86.9375
+            },
+            {
+              "round": 0,
+              "input": "author-08",
+              "ms": 4.876125,
+              "prediction_years": 77.5625
+            },
+            {
+              "round": 0,
+              "input": "author-09",
+              "ms": 4.602041,
+              "prediction_years": 27.171875
+            },
+            {
+              "round": 0,
+              "input": "author-10",
+              "ms": 4.429083,
+              "prediction_years": 18.796875
+            },
+            {
+              "round": 0,
+              "input": "author-11",
+              "ms": 4.715875,
+              "prediction_years": 36.25
+            },
+            {
+              "round": 0,
+              "input": "author-12",
+              "ms": 4.576375,
+              "prediction_years": 23.03125
+            },
+            {
+              "round": 0,
+              "input": "author-13",
+              "ms": 4.870416,
+              "prediction_years": 82.4375
+            },
+            {
+              "round": 0,
+              "input": "author-14",
+              "ms": 4.574458,
+              "prediction_years": 13.6640625
+            },
+            {
+              "round": 0,
+              "input": "author-15",
+              "ms": 4.811209,
+              "prediction_years": 19.40625
+            },
+            {
+              "round": 0,
+              "input": "author-16",
+              "ms": 4.532833,
+              "prediction_years": 21.75
+            },
+            {
+              "round": 0,
+              "input": "author-17",
+              "ms": 4.5785,
+              "prediction_years": 16.28125
+            },
+            {
+              "round": 0,
+              "input": "author-18",
+              "ms": 4.666041,
+              "prediction_years": 77.25
+            },
+            {
+              "round": 0,
+              "input": "author-19",
+              "ms": 4.744917,
+              "prediction_years": 39.625
+            },
+            {
+              "round": 0,
+              "input": "author-20",
+              "ms": 4.812209,
+              "prediction_years": 16.765625
+            },
+            {
+              "round": 0,
+              "input": "author-21",
+              "ms": 4.786709,
+              "prediction_years": 90.5625
+            },
+            {
+              "round": 1,
+              "input": "gray",
+              "ms": 4.725834,
+              "prediction_years": 62.34375
+            },
+            {
+              "round": 1,
+              "input": "author-00",
+              "ms": 4.601791,
+              "prediction_years": 77.8125
+            },
+            {
+              "round": 1,
+              "input": "author-01",
+              "ms": 4.903209,
+              "prediction_years": 81.1875
+            },
+            {
+              "round": 1,
+              "input": "author-02",
+              "ms": 4.620666,
+              "prediction_years": 84.0625
+            },
+            {
+              "round": 1,
+              "input": "author-03",
+              "ms": 4.320917,
+              "prediction_years": 23.25
+            },
+            {
+              "round": 1,
+              "input": "author-04",
+              "ms": 4.525375,
+              "prediction_years": 17.203125
+            },
+            {
+              "round": 1,
+              "input": "author-05",
+              "ms": 4.597833,
+              "prediction_years": 23.8125
+            },
+            {
+              "round": 1,
+              "input": "author-06",
+              "ms": 4.749125,
+              "prediction_years": 23.703125
+            },
+            {
+              "round": 1,
+              "input": "author-07",
+              "ms": 4.513417,
+              "prediction_years": 86.9375
+            },
+            {
+              "round": 1,
+              "input": "author-08",
+              "ms": 5.1775,
+              "prediction_years": 77.5625
+            },
+            {
+              "round": 1,
+              "input": "author-09",
+              "ms": 4.625375,
+              "prediction_years": 27.171875
+            },
+            {
+              "round": 1,
+              "input": "author-10",
+              "ms": 4.747083,
+              "prediction_years": 18.796875
+            },
+            {
+              "round": 1,
+              "input": "author-11",
+              "ms": 4.611792,
+              "prediction_years": 36.25
+            },
+            {
+              "round": 1,
+              "input": "author-12",
+              "ms": 4.596958,
+              "prediction_years": 23.03125
+            },
+            {
+              "round": 1,
+              "input": "author-13",
+              "ms": 4.491875,
+              "prediction_years": 82.4375
+            },
+            {
+              "round": 1,
+              "input": "author-14",
+              "ms": 4.534834,
+              "prediction_years": 13.6640625
+            },
+            {
+              "round": 1,
+              "input": "author-15",
+              "ms": 5.393375,
+              "prediction_years": 19.40625
+            },
+            {
+              "round": 1,
+              "input": "author-16",
+              "ms": 4.52025,
+              "prediction_years": 21.75
+            },
+            {
+              "round": 1,
+              "input": "author-17",
+              "ms": 4.792,
+              "prediction_years": 16.28125
+            },
+            {
+              "round": 1,
+              "input": "author-18",
+              "ms": 4.581917,
+              "prediction_years": 77.25
+            },
+            {
+              "round": 1,
+              "input": "author-19",
+              "ms": 4.467333,
+              "prediction_years": 39.625
+            },
+            {
+              "round": 1,
+              "input": "author-20",
+              "ms": 4.823083,
+              "prediction_years": 16.765625
+            },
+            {
+              "round": 1,
+              "input": "author-21",
+              "ms": 4.565541,
+              "prediction_years": 90.5625
+            },
+            {
+              "round": 1,
+              "input": "gradient",
+              "ms": 4.378917,
+              "prediction_years": 5.34375
+            },
+            {
+              "round": 2,
+              "input": "author-00",
+              "ms": 4.474292,
+              "prediction_years": 77.8125
+            },
+            {
+              "round": 2,
+              "input": "author-01",
+              "ms": 4.384917,
+              "prediction_years": 81.1875
+            },
+            {
+              "round": 2,
+              "input": "author-02",
+              "ms": 4.613958,
+              "prediction_years": 84.0625
+            },
+            {
+              "round": 2,
+              "input": "author-03",
+              "ms": 4.208125,
+              "prediction_years": 23.25
+            },
+            {
+              "round": 2,
+              "input": "author-04",
+              "ms": 4.165,
+              "prediction_years": 17.203125
+            },
+            {
+              "round": 2,
+              "input": "author-05",
+              "ms": 4.217208,
+              "prediction_years": 23.8125
+            },
+            {
+              "round": 2,
+              "input": "author-06",
+              "ms": 4.312041,
+              "prediction_years": 23.703125
+            },
+            {
+              "round": 2,
+              "input": "author-07",
+              "ms": 4.282458,
+              "prediction_years": 86.9375
+            },
+            {
+              "round": 2,
+              "input": "author-08",
+              "ms": 4.102458,
+              "prediction_years": 77.5625
+            },
+            {
+              "round": 2,
+              "input": "author-09",
+              "ms": 4.083958,
+              "prediction_years": 27.171875
+            },
+            {
+              "round": 2,
+              "input": "author-10",
+              "ms": 4.153791,
+              "prediction_years": 18.796875
+            },
+            {
+              "round": 2,
+              "input": "author-11",
+              "ms": 4.103667,
+              "prediction_years": 36.25
+            },
+            {
+              "round": 2,
+              "input": "author-12",
+              "ms": 4.116041,
+              "prediction_years": 23.03125
+            },
+            {
+              "round": 2,
+              "input": "author-13",
+              "ms": 4.137417,
+              "prediction_years": 82.4375
+            },
+            {
+              "round": 2,
+              "input": "author-14",
+              "ms": 4.20725,
+              "prediction_years": 13.6640625
+            },
+            {
+              "round": 2,
+              "input": "author-15",
+              "ms": 4.101,
+              "prediction_years": 19.40625
+            },
+            {
+              "round": 2,
+              "input": "author-16",
+              "ms": 4.123042,
+              "prediction_years": 21.75
+            },
+            {
+              "round": 2,
+              "input": "author-17",
+              "ms": 4.202416,
+              "prediction_years": 16.28125
+            },
+            {
+              "round": 2,
+              "input": "author-18",
+              "ms": 4.133917,
+              "prediction_years": 77.25
+            },
+            {
+              "round": 2,
+              "input": "author-19",
+              "ms": 4.286667,
+              "prediction_years": 39.625
+            },
+            {
+              "round": 2,
+              "input": "author-20",
+              "ms": 4.168709,
+              "prediction_years": 16.765625
+            },
+            {
+              "round": 2,
+              "input": "author-21",
+              "ms": 4.211792,
+              "prediction_years": 90.5625
+            },
+            {
+              "round": 2,
+              "input": "gradient",
+              "ms": 4.358792,
+              "prediction_years": 5.34375
+            },
+            {
+              "round": 2,
+              "input": "gray",
+              "ms": 4.128292,
+              "prediction_years": 62.34375
+            }
+          ]
+        }
+      },
+      "measured_package_files": {
+        "Data/com.apple.CoreML/model.mlmodel": {
+          "bytes": 130392,
+          "sha256": "dd97e6df61f7279645302b6ab58630afd813b934d5f0b04c75e805020300da4c"
+        },
+        "Data/com.apple.CoreML/weights/weight.bin": {
+          "bytes": 171385856,
+          "sha256": "77f20c388c71331cb96ab9a9d8beff905aba54d1fa3f0cd2cc660355025e24fb"
+        },
+        "Manifest.json": {
+          "bytes": 617,
+          "sha256": "2ea06cfe821fb3d5cc8860caae0686538aea70dea8257c457f71fa5629e4cad8"
+        }
+      },
+      "packaging_normalization": "Post-measurement UUIDv5 manifest IDs and deterministic protobuf serialization only; graph values and weights unchanged."
+    },
+    "int8": {
+      "configuration": {
+        "weights": "int8",
+        "compute": "float16",
+        "mode": "linear_symmetric",
+        "granularity": "per_channel",
+        "weight_threshold": 2048
+      },
+      "path": "artifacts/models/quantization/coreml/FAHRFaceAge-int8.mlpackage",
+      "bytes": 86146492,
+      "files": {
+        "Data/com.apple.CoreML/model.mlmodel": {
+          "bytes": 146835,
+          "sha256": "9488d4e0ed20c9825033c678159d9d17b6e7896d34114e384a79f8fe7a2a444c"
+        },
+        "Data/com.apple.CoreML/weights/weight.bin": {
+          "bytes": 85999040,
+          "sha256": "bd13ec8959ba6d5f7ef0b20dfa82911cd1a4256797b19d07e95ba764f89fd7ff"
+        },
+        "Manifest.json": {
+          "bytes": 617,
+          "sha256": "638a5180f0879aed7078eaa51d877cda4adcb020c2e0034b6d7eac579bed2936"
+        }
+      },
+      "specification_version": 8,
+      "opsets": [
+        "CoreML7"
+      ],
+      "operations": {
+        "add": 25,
+        "cast": 2,
+        "concat": 1,
+        "const": 341,
+        "constexpr_affine_dequantize": 74,
+        "conv": 1,
+        "gelu": 12,
+        "layer_norm": 25,
+        "linear": 73,
+        "matmul": 24,
+        "mul": 14,
+        "reshape": 50,
+        "slice_by_index": 1,
+        "softmax": 12,
+        "squeeze": 1,
+        "sub": 1,
+        "transpose": 50
+      },
+      "compute_units": {
+        "CPU_ONLY": {
+          "load_ms": 349.842166,
+          "count": 72,
+          "median_ms": 5.3309795,
+          "mean_ms": 5.353069486111111,
+          "p90_ms": 5.6300833,
+          "p95_ms": 5.6760082999999995,
+          "minimum_ms": 5.071709,
+          "maximum_ms": 5.91825,
+          "samples": [
+            {
+              "round": 0,
+              "input": "gradient",
+              "ms": 5.269625,
+              "prediction_years": 5.359375
+            },
+            {
+              "round": 0,
+              "input": "gray",
+              "ms": 5.223625,
+              "prediction_years": 62.3125
+            },
+            {
+              "round": 0,
+              "input": "author-00",
+              "ms": 5.161541,
+              "prediction_years": 78.25
+            },
+            {
+              "round": 0,
+              "input": "author-01",
+              "ms": 5.142583,
+              "prediction_years": 81.375
+            },
+            {
+              "round": 0,
+              "input": "author-02",
+              "ms": 5.108292,
+              "prediction_years": 84.0
+            },
+            {
+              "round": 0,
+              "input": "author-03",
+              "ms": 5.34925,
+              "prediction_years": 23.328125
+            },
+            {
+              "round": 0,
+              "input": "author-04",
+              "ms": 5.541625,
+              "prediction_years": 17.265625
+            },
+            {
+              "round": 0,
+              "input": "author-05",
+              "ms": 5.308167,
+              "prediction_years": 23.71875
+            },
+            {
+              "round": 0,
+              "input": "author-06",
+              "ms": 5.157791,
+              "prediction_years": 23.609375
+            },
+            {
+              "round": 0,
+              "input": "author-07",
+              "ms": 5.111625,
+              "prediction_years": 86.8125
+            },
+            {
+              "round": 0,
+              "input": "author-08",
+              "ms": 5.103583,
+              "prediction_years": 77.25
+            },
+            {
+              "round": 0,
+              "input": "author-09",
+              "ms": 5.457375,
+              "prediction_years": 27.109375
+            },
+            {
+              "round": 0,
+              "input": "author-10",
+              "ms": 5.763166,
+              "prediction_years": 18.828125
+            },
+            {
+              "round": 0,
+              "input": "author-11",
+              "ms": 5.356667,
+              "prediction_years": 36.375
+            },
+            {
+              "round": 0,
+              "input": "author-12",
+              "ms": 5.322542,
+              "prediction_years": 23.0625
+            },
+            {
+              "round": 0,
+              "input": "author-13",
+              "ms": 5.262834,
+              "prediction_years": 82.9375
+            },
+            {
+              "round": 0,
+              "input": "author-14",
+              "ms": 5.261292,
+              "prediction_years": 13.703125
+            },
+            {
+              "round": 0,
+              "input": "author-15",
+              "ms": 5.331417,
+              "prediction_years": 19.453125
+            },
+            {
+              "round": 0,
+              "input": "author-16",
+              "ms": 5.654334,
+              "prediction_years": 21.734375
+            },
+            {
+              "round": 0,
+              "input": "author-17",
+              "ms": 5.337625,
+              "prediction_years": 16.265625
+            },
+            {
+              "round": 0,
+              "input": "author-18",
+              "ms": 5.279,
+              "prediction_years": 77.5
+            },
+            {
+              "round": 0,
+              "input": "author-19",
+              "ms": 5.355959,
+              "prediction_years": 39.65625
+            },
+            {
+              "round": 0,
+              "input": "author-20",
+              "ms": 5.411542,
+              "prediction_years": 16.8125
+            },
+            {
+              "round": 0,
+              "input": "author-21",
+              "ms": 5.508125,
+              "prediction_years": 90.6875
+            },
+            {
+              "round": 1,
+              "input": "gray",
+              "ms": 5.692417,
+              "prediction_years": 62.3125
+            },
+            {
+              "round": 1,
+              "input": "author-00",
+              "ms": 5.520083,
+              "prediction_years": 78.25
+            },
+            {
+              "round": 1,
+              "input": "author-01",
+              "ms": 5.383291,
+              "prediction_years": 81.375
+            },
+            {
+              "round": 1,
+              "input": "author-02",
+              "ms": 5.396958,
+              "prediction_years": 84.0
+            },
+            {
+              "round": 1,
+              "input": "author-03",
+              "ms": 5.262875,
+              "prediction_years": 23.328125
+            },
+            {
+              "round": 1,
+              "input": "author-04",
+              "ms": 5.386292,
+              "prediction_years": 17.265625
+            },
+            {
+              "round": 1,
+              "input": "author-05",
+              "ms": 5.578542,
+              "prediction_years": 23.71875
+            },
+            {
+              "round": 1,
+              "input": "author-06",
+              "ms": 5.344416,
+              "prediction_years": 23.609375
+            },
+            {
+              "round": 1,
+              "input": "author-07",
+              "ms": 5.292959,
+              "prediction_years": 86.8125
+            },
+            {
+              "round": 1,
+              "input": "author-08",
+              "ms": 5.256958,
+              "prediction_years": 77.25
+            },
+            {
+              "round": 1,
+              "input": "author-09",
+              "ms": 5.152666,
+              "prediction_years": 27.109375
+            },
+            {
+              "round": 1,
+              "input": "author-10",
+              "ms": 5.108042,
+              "prediction_years": 18.828125
+            },
+            {
+              "round": 1,
+              "input": "author-11",
+              "ms": 5.278667,
+              "prediction_years": 36.375
+            },
+            {
+              "round": 1,
+              "input": "author-12",
+              "ms": 5.539083,
+              "prediction_years": 23.0625
+            },
+            {
+              "round": 1,
+              "input": "author-13",
+              "ms": 5.291917,
+              "prediction_years": 82.9375
+            },
+            {
+              "round": 1,
+              "input": "author-14",
+              "ms": 5.15975,
+              "prediction_years": 13.703125
+            },
+            {
+              "round": 1,
+              "input": "author-15",
+              "ms": 5.089583,
+              "prediction_years": 19.453125
+            },
+            {
+              "round": 1,
+              "input": "author-16",
+              "ms": 5.071709,
+              "prediction_years": 21.734375
+            },
+            {
+              "round": 1,
+              "input": "author-17",
+              "ms": 5.124833,
+              "prediction_years": 16.265625
+            },
+            {
+              "round": 1,
+              "input": "author-18",
+              "ms": 5.662583,
+              "prediction_years": 77.5
+            },
+            {
+              "round": 1,
+              "input": "author-19",
+              "ms": 5.226542,
+              "prediction_years": 39.65625
+            },
+            {
+              "round": 1,
+              "input": "author-20",
+              "ms": 5.233791,
+              "prediction_years": 16.8125
+            },
+            {
+              "round": 1,
+              "input": "author-21",
+              "ms": 5.223792,
+              "prediction_years": 90.6875
+            },
+            {
+              "round": 1,
+              "input": "gradient",
+              "ms": 5.336541,
+              "prediction_years": 5.359375
+            },
+            {
+              "round": 2,
+              "input": "author-00",
+              "ms": 5.602292,
+              "prediction_years": 78.25
+            },
+            {
+              "round": 2,
+              "input": "author-01",
+              "ms": 5.91825,
+              "prediction_years": 81.375
+            },
+            {
+              "round": 2,
+              "input": "author-02",
+              "ms": 5.428584,
+              "prediction_years": 84.0
+            },
+            {
+              "round": 2,
+              "input": "author-03",
+              "ms": 5.41575,
+              "prediction_years": 23.328125
+            },
+            {
+              "round": 2,
+              "input": "author-04",
+              "ms": 5.305125,
+              "prediction_years": 17.265625
+            },
+            {
+              "round": 2,
+              "input": "author-05",
+              "ms": 5.308625,
+              "prediction_years": 23.71875
+            },
+            {
+              "round": 2,
+              "input": "author-06",
+              "ms": 5.383417,
+              "prediction_years": 23.609375
+            },
+            {
+              "round": 2,
+              "input": "author-07",
+              "ms": 5.731708,
+              "prediction_years": 86.8125
+            },
+            {
+              "round": 2,
+              "input": "author-08",
+              "ms": 5.485042,
+              "prediction_years": 77.25
+            },
+            {
+              "round": 2,
+              "input": "author-09",
+              "ms": 5.286041,
+              "prediction_years": 27.109375
+            },
+            {
+              "round": 2,
+              "input": "author-10",
+              "ms": 5.359167,
+              "prediction_years": 18.828125
+            },
+            {
+              "round": 2,
+              "input": "author-11",
+              "ms": 5.251959,
+              "prediction_years": 36.375
+            },
+            {
+              "round": 2,
+              "input": "author-12",
+              "ms": 5.632625,
+              "prediction_years": 23.0625
+            },
+            {
+              "round": 2,
+              "input": "author-13",
+              "ms": 5.633875,
+              "prediction_years": 82.9375
+            },
+            {
+              "round": 2,
+              "input": "author-14",
+              "ms": 5.607208,
+              "prediction_years": 13.703125
+            },
+            {
+              "round": 2,
+              "input": "author-15",
+              "ms": 5.336167,
+              "prediction_years": 19.453125
+            },
+            {
+              "round": 2,
+              "input": "author-16",
+              "ms": 5.330542,
+              "prediction_years": 21.734375
+            },
+            {
+              "round": 2,
+              "input": "author-17",
+              "ms": 5.368833,
+              "prediction_years": 16.265625
+            },
+            {
+              "round": 2,
+              "input": "author-18",
+              "ms": 5.242416,
+              "prediction_years": 77.5
+            },
+            {
+              "round": 2,
+              "input": "author-19",
+              "ms": 5.366584,
+              "prediction_years": 39.65625
+            },
+            {
+              "round": 2,
+              "input": "author-20",
+              "ms": 5.552959,
+              "prediction_years": 16.8125
+            },
+            {
+              "round": 2,
+              "input": "author-21",
+              "ms": 5.199209,
+              "prediction_years": 90.6875
+            },
+            {
+              "round": 2,
+              "input": "gradient",
+              "ms": 5.143042,
+              "prediction_years": 5.359375
+            },
+            {
+              "round": 2,
+              "input": "gray",
+              "ms": 5.137708,
+              "prediction_years": 62.3125
+            }
+          ]
+        },
+        "ALL": {
+          "load_ms": 646.623917,
+          "count": 72,
+          "median_ms": 17.881813,
+          "mean_ms": 18.028723916666667,
+          "p90_ms": 18.877445299999998,
+          "p95_ms": 19.045277300000002,
+          "minimum_ms": 17.375041,
+          "maximum_ms": 19.702541,
+          "samples": [
+            {
+              "round": 0,
+              "input": "gradient",
+              "ms": 18.07125,
+              "prediction_years": 5.3203125
+            },
+            {
+              "round": 0,
+              "input": "gray",
+              "ms": 18.218042,
+              "prediction_years": 62.25
+            },
+            {
+              "round": 0,
+              "input": "author-00",
+              "ms": 18.352209,
+              "prediction_years": 77.9375
+            },
+            {
+              "round": 0,
+              "input": "author-01",
+              "ms": 18.155917,
+              "prediction_years": 81.3125
+            },
+            {
+              "round": 0,
+              "input": "author-02",
+              "ms": 17.748709,
+              "prediction_years": 84.0625
+            },
+            {
+              "round": 0,
+              "input": "author-03",
+              "ms": 17.62,
+              "prediction_years": 23.3125
+            },
+            {
+              "round": 0,
+              "input": "author-04",
+              "ms": 17.575125,
+              "prediction_years": 17.21875
+            },
+            {
+              "round": 0,
+              "input": "author-05",
+              "ms": 18.0415,
+              "prediction_years": 23.6875
+            },
+            {
+              "round": 0,
+              "input": "author-06",
+              "ms": 17.839583,
+              "prediction_years": 23.734375
+            },
+            {
+              "round": 0,
+              "input": "author-07",
+              "ms": 17.557125,
+              "prediction_years": 86.9375
+            },
+            {
+              "round": 0,
+              "input": "author-08",
+              "ms": 17.523125,
+              "prediction_years": 77.5625
+            },
+            {
+              "round": 0,
+              "input": "author-09",
+              "ms": 17.559291,
+              "prediction_years": 27.171875
+            },
+            {
+              "round": 0,
+              "input": "author-10",
+              "ms": 17.657792,
+              "prediction_years": 18.828125
+            },
+            {
+              "round": 0,
+              "input": "author-11",
+              "ms": 17.651958,
+              "prediction_years": 36.28125
+            },
+            {
+              "round": 0,
+              "input": "author-12",
+              "ms": 17.738958,
+              "prediction_years": 23.0625
+            },
+            {
+              "round": 0,
+              "input": "author-13",
+              "ms": 17.580708,
+              "prediction_years": 82.4375
+            },
+            {
+              "round": 0,
+              "input": "author-14",
+              "ms": 17.652166,
+              "prediction_years": 13.71875
+            },
+            {
+              "round": 0,
+              "input": "author-15",
+              "ms": 17.483333,
+              "prediction_years": 19.421875
+            },
+            {
+              "round": 0,
+              "input": "author-16",
+              "ms": 17.464083,
+              "prediction_years": 21.765625
+            },
+            {
+              "round": 0,
+              "input": "author-17",
+              "ms": 17.503416,
+              "prediction_years": 16.3125
+            },
+            {
+              "round": 0,
+              "input": "author-18",
+              "ms": 17.521959,
+              "prediction_years": 77.125
+            },
+            {
+              "round": 0,
+              "input": "author-19",
+              "ms": 17.434792,
+              "prediction_years": 39.65625
+            },
+            {
+              "round": 0,
+              "input": "author-20",
+              "ms": 17.39575,
+              "prediction_years": 16.796875
+            },
+            {
+              "round": 0,
+              "input": "author-21",
+              "ms": 17.480042,
+              "prediction_years": 90.625
+            },
+            {
+              "round": 1,
+              "input": "gray",
+              "ms": 17.477666,
+              "prediction_years": 62.25
+            },
+            {
+              "round": 1,
+              "input": "author-00",
+              "ms": 17.45625,
+              "prediction_years": 77.9375
+            },
+            {
+              "round": 1,
+              "input": "author-01",
+              "ms": 17.451,
+              "prediction_years": 81.3125
+            },
+            {
+              "round": 1,
+              "input": "author-02",
+              "ms": 17.375041,
+              "prediction_years": 84.0625
+            },
+            {
+              "round": 1,
+              "input": "author-03",
+              "ms": 17.748,
+              "prediction_years": 23.3125
+            },
+            {
+              "round": 1,
+              "input": "author-04",
+              "ms": 18.626416,
+              "prediction_years": 17.21875
+            },
+            {
+              "round": 1,
+              "input": "author-05",
+              "ms": 18.735125,
+              "prediction_years": 23.6875
+            },
+            {
+              "round": 1,
+              "input": "author-06",
+              "ms": 18.798959,
+              "prediction_years": 23.734375
+            },
+            {
+              "round": 1,
+              "input": "author-07",
+              "ms": 18.886166,
+              "prediction_years": 86.9375
+            },
+            {
+              "round": 1,
+              "input": "author-08",
+              "ms": 19.702541,
+              "prediction_years": 77.5625
+            },
+            {
+              "round": 1,
+              "input": "author-09",
+              "ms": 19.036334,
+              "prediction_years": 27.171875
+            },
+            {
+              "round": 1,
+              "input": "author-10",
+              "ms": 18.977333,
+              "prediction_years": 18.828125
+            },
+            {
+              "round": 1,
+              "input": "author-11",
+              "ms": 18.999583,
+              "prediction_years": 36.28125
+            },
+            {
+              "round": 1,
+              "input": "author-12",
+              "ms": 19.056208,
+              "prediction_years": 23.0625
+            },
+            {
+              "round": 1,
+              "input": "author-13",
+              "ms": 19.074875,
+              "prediction_years": 82.4375
+            },
+            {
+              "round": 1,
+              "input": "author-14",
+              "ms": 18.750458,
+              "prediction_years": 13.71875
+            },
+            {
+              "round": 1,
+              "input": "author-15",
+              "ms": 19.400292,
+              "prediction_years": 19.421875
+            },
+            {
+              "round": 1,
+              "input": "author-16",
+              "ms": 18.391625,
+              "prediction_years": 21.765625
+            },
+            {
+              "round": 1,
+              "input": "author-17",
+              "ms": 18.170708,
+              "prediction_years": 16.3125
+            },
+            {
+              "round": 1,
+              "input": "author-18",
+              "ms": 17.708375,
+              "prediction_years": 77.125
+            },
+            {
+              "round": 1,
+              "input": "author-19",
+              "ms": 17.700667,
+              "prediction_years": 39.65625
+            },
+            {
+              "round": 1,
+              "input": "author-20",
+              "ms": 17.879667,
+              "prediction_years": 16.796875
+            },
+            {
+              "round": 1,
+              "input": "author-21",
+              "ms": 17.582916,
+              "prediction_years": 90.625
+            },
+            {
+              "round": 1,
+              "input": "gradient",
+              "ms": 17.704542,
+              "prediction_years": 5.3203125
+            },
+            {
+              "round": 2,
+              "input": "author-00",
+              "ms": 17.723,
+              "prediction_years": 77.9375
+            },
+            {
+              "round": 2,
+              "input": "author-01",
+              "ms": 17.608791,
+              "prediction_years": 81.3125
+            },
+            {
+              "round": 2,
+              "input": "author-02",
+              "ms": 18.052542,
+              "prediction_years": 84.0625
+            },
+            {
+              "round": 2,
+              "input": "author-03",
+              "ms": 18.026875,
+              "prediction_years": 23.3125
+            },
+            {
+              "round": 2,
+              "input": "author-04",
+              "ms": 17.732125,
+              "prediction_years": 17.21875
+            },
+            {
+              "round": 2,
+              "input": "author-05",
+              "ms": 17.763917,
+              "prediction_years": 23.6875
+            },
+            {
+              "round": 2,
+              "input": "author-06",
+              "ms": 18.401542,
+              "prediction_years": 23.734375
+            },
+            {
+              "round": 2,
+              "input": "author-07",
+              "ms": 18.037708,
+              "prediction_years": 86.9375
+            },
+            {
+              "round": 2,
+              "input": "author-08",
+              "ms": 18.546958,
+              "prediction_years": 77.5625
+            },
+            {
+              "round": 2,
+              "input": "author-09",
+              "ms": 18.438542,
+              "prediction_years": 27.171875
+            },
+            {
+              "round": 2,
+              "input": "author-10",
+              "ms": 17.883959,
+              "prediction_years": 18.828125
+            },
+            {
+              "round": 2,
+              "input": "author-11",
+              "ms": 18.026958,
+              "prediction_years": 36.28125
+            },
+            {
+              "round": 2,
+              "input": "author-12",
+              "ms": 18.252375,
+              "prediction_years": 23.0625
+            },
+            {
+              "round": 2,
+              "input": "author-13",
+              "ms": 18.476,
+              "prediction_years": 82.4375
+            },
+            {
+              "round": 2,
+              "input": "author-14",
+              "ms": 18.533333,
+              "prediction_years": 13.71875
+            },
+            {
+              "round": 2,
+              "input": "author-15",
+              "ms": 17.933416,
+              "prediction_years": 19.421875
+            },
+            {
+              "round": 2,
+              "input": "author-16",
+              "ms": 18.218291,
+              "prediction_years": 21.765625
+            },
+            {
+              "round": 2,
+              "input": "author-17",
+              "ms": 18.412084,
+              "prediction_years": 16.3125
+            },
+            {
+              "round": 2,
+              "input": "author-18",
+              "ms": 17.901833,
+              "prediction_years": 77.125
+            },
+            {
+              "round": 2,
+              "input": "author-19",
+              "ms": 17.641292,
+              "prediction_years": 39.65625
+            },
+            {
+              "round": 2,
+              "input": "author-20",
+              "ms": 17.505,
+              "prediction_years": 16.796875
+            },
+            {
+              "round": 2,
+              "input": "author-21",
+              "ms": 17.466584,
+              "prediction_years": 90.625
+            },
+            {
+              "round": 2,
+              "input": "gradient",
+              "ms": 18.022042,
+              "prediction_years": 5.3203125
+            },
+            {
+              "round": 2,
+              "input": "gray",
+              "ms": 17.945375,
+              "prediction_years": 62.25
+            }
+          ]
+        }
+      },
+      "measured_package_files": {
+        "Data/com.apple.CoreML/model.mlmodel": {
+          "bytes": 146835,
+          "sha256": "a3cc63f176c555ebad8d96b5e0441b580553b4a9bace82028efe17ae819e4b5d"
+        },
+        "Data/com.apple.CoreML/weights/weight.bin": {
+          "bytes": 85999040,
+          "sha256": "bd13ec8959ba6d5f7ef0b20dfa82911cd1a4256797b19d07e95ba764f89fd7ff"
+        },
+        "Manifest.json": {
+          "bytes": 617,
+          "sha256": "091361bb6d0d9e717b59c879f86b6db99e305a312914623c079101d20ce1c833"
+        }
+      },
+      "packaging_normalization": "Post-measurement UUIDv5 manifest IDs and deterministic protobuf serialization only; graph values and weights unchanged."
+    },
+    "palette4": {
+      "configuration": {
+        "weights": "4-bit scalar palette",
+        "compute": "float16",
+        "mode": "kmeans",
+        "granularity": "per_tensor",
+        "weight_threshold": 2048,
+        "seed": 0
+      },
+      "path": "artifacts/models/quantization/coreml/FAHRFaceAge-palette4.mlpackage",
+      "bytes": 43193274,
+      "files": {
+        "Data/com.apple.CoreML/model.mlmodel": {
+          "bytes": 141649,
+          "sha256": "ef96d6ca31942b1aaa27c21f33f9bfd09f293a43c4904688e10c17776e92228a"
+        },
+        "Data/com.apple.CoreML/weights/weight.bin": {
+          "bytes": 43051008,
+          "sha256": "1a1371779d2a50ad23d12b1d2e5e5390a3ee0114d3073d31e1007e4d97b92019"
+        },
+        "Manifest.json": {
+          "bytes": 617,
+          "sha256": "fe026c3c7fe7667c317337801216371d07202698aa09658149cfaedb7261c2be"
+        }
+      },
+      "specification_version": 8,
+      "opsets": [
+        "CoreML7"
+      ],
+      "operations": {
+        "add": 25,
+        "cast": 2,
+        "concat": 1,
+        "const": 341,
+        "constexpr_lut_to_dense": 74,
+        "conv": 1,
+        "gelu": 12,
+        "layer_norm": 25,
+        "linear": 73,
+        "matmul": 24,
+        "mul": 14,
+        "reshape": 50,
+        "slice_by_index": 1,
+        "softmax": 12,
+        "squeeze": 1,
+        "sub": 1,
+        "transpose": 50
+      },
+      "compute_units": {
+        "CPU_ONLY": {
+          "load_ms": 346.931292,
+          "count": 72,
+          "median_ms": 5.068625000000001,
+          "mean_ms": 5.048704916666667,
+          "p90_ms": 5.2002798,
+          "p95_ms": 5.21768995,
+          "minimum_ms": 4.756625,
+          "maximum_ms": 5.317916,
+          "samples": [
+            {
+              "round": 0,
+              "input": "gradient",
+              "ms": 4.859833,
+              "prediction_years": 6.671875
+            },
+            {
+              "round": 0,
+              "input": "gray",
+              "ms": 5.100792,
+              "prediction_years": 63.0
+            },
+            {
+              "round": 0,
+              "input": "author-00",
+              "ms": 4.953083,
+              "prediction_years": 77.75
+            },
+            {
+              "round": 0,
+              "input": "author-01",
+              "ms": 4.762208,
+              "prediction_years": 81.9375
+            },
+            {
+              "round": 0,
+              "input": "author-02",
+              "ms": 4.756625,
+              "prediction_years": 82.25
+            },
+            {
+              "round": 0,
+              "input": "author-03",
+              "ms": 4.769667,
+              "prediction_years": 23.359375
+            },
+            {
+              "round": 0,
+              "input": "author-04",
+              "ms": 4.984666,
+              "prediction_years": 17.09375
+            },
+            {
+              "round": 0,
+              "input": "author-05",
+              "ms": 4.995875,
+              "prediction_years": 25.390625
+            },
+            {
+              "round": 0,
+              "input": "author-06",
+              "ms": 5.155834,
+              "prediction_years": 23.34375
+            },
+            {
+              "round": 0,
+              "input": "author-07",
+              "ms": 4.982458,
+              "prediction_years": 86.9375
+            },
+            {
+              "round": 0,
+              "input": "author-08",
+              "ms": 4.938708,
+              "prediction_years": 77.3125
+            },
+            {
+              "round": 0,
+              "input": "author-09",
+              "ms": 5.082417,
+              "prediction_years": 28.796875
+            },
+            {
+              "round": 0,
+              "input": "author-10",
+              "ms": 4.948625,
+              "prediction_years": 18.875
+            },
+            {
+              "round": 0,
+              "input": "author-11",
+              "ms": 5.130167,
+              "prediction_years": 36.6875
+            },
+            {
+              "round": 0,
+              "input": "author-12",
+              "ms": 4.910834,
+              "prediction_years": 22.734375
+            },
+            {
+              "round": 0,
+              "input": "author-13",
+              "ms": 4.984291,
+              "prediction_years": 82.625
+            },
+            {
+              "round": 0,
+              "input": "author-14",
+              "ms": 5.189292,
+              "prediction_years": 13.9609375
+            },
+            {
+              "round": 0,
+              "input": "author-15",
+              "ms": 4.796,
+              "prediction_years": 19.40625
+            },
+            {
+              "round": 0,
+              "input": "author-16",
+              "ms": 5.212083,
+              "prediction_years": 21.84375
+            },
+            {
+              "round": 0,
+              "input": "author-17",
+              "ms": 5.124,
+              "prediction_years": 16.0625
+            },
+            {
+              "round": 0,
+              "input": "author-18",
+              "ms": 5.110375,
+              "prediction_years": 77.625
+            },
+            {
+              "round": 0,
+              "input": "author-19",
+              "ms": 5.101666,
+              "prediction_years": 40.03125
+            },
+            {
+              "round": 0,
+              "input": "author-20",
+              "ms": 5.006875,
+              "prediction_years": 16.96875
+            },
+            {
+              "round": 0,
+              "input": "author-21",
+              "ms": 5.235583,
+              "prediction_years": 89.3125
+            },
+            {
+              "round": 1,
+              "input": "gray",
+              "ms": 5.129,
+              "prediction_years": 63.0
+            },
+            {
+              "round": 1,
+              "input": "author-00",
+              "ms": 4.980833,
+              "prediction_years": 77.75
+            },
+            {
+              "round": 1,
+              "input": "author-01",
+              "ms": 5.115375,
+              "prediction_years": 81.9375
+            },
+            {
+              "round": 1,
+              "input": "author-02",
+              "ms": 5.018959,
+              "prediction_years": 82.25
+            },
+            {
+              "round": 1,
+              "input": "author-03",
+              "ms": 5.079083,
+              "prediction_years": 23.359375
+            },
+            {
+              "round": 1,
+              "input": "author-04",
+              "ms": 5.184709,
+              "prediction_years": 17.09375
+            },
+            {
+              "round": 1,
+              "input": "author-05",
+              "ms": 4.931292,
+              "prediction_years": 25.390625
+            },
+            {
+              "round": 1,
+              "input": "author-06",
+              "ms": 5.048833,
+              "prediction_years": 23.34375
+            },
+            {
+              "round": 1,
+              "input": "author-07",
+              "ms": 5.029666,
+              "prediction_years": 86.9375
+            },
+            {
+              "round": 1,
+              "input": "author-08",
+              "ms": 5.111417,
+              "prediction_years": 77.3125
+            },
+            {
+              "round": 1,
+              "input": "author-09",
+              "ms": 5.222333,
+              "prediction_years": 28.796875
+            },
+            {
+              "round": 1,
+              "input": "author-10",
+              "ms": 5.083958,
+              "prediction_years": 18.875
+            },
+            {
+              "round": 1,
+              "input": "author-11",
+              "ms": 5.084708,
+              "prediction_years": 36.6875
+            },
+            {
+              "round": 1,
+              "input": "author-12",
+              "ms": 5.056,
+              "prediction_years": 22.734375
+            },
+            {
+              "round": 1,
+              "input": "author-13",
+              "ms": 5.073959,
+              "prediction_years": 82.625
+            },
+            {
+              "round": 1,
+              "input": "author-14",
+              "ms": 5.122334,
+              "prediction_years": 13.9609375
+            },
+            {
+              "round": 1,
+              "input": "author-15",
+              "ms": 4.962916,
+              "prediction_years": 19.40625
+            },
+            {
+              "round": 1,
+              "input": "author-16",
+              "ms": 5.158042,
+              "prediction_years": 21.84375
+            },
+            {
+              "round": 1,
+              "input": "author-17",
+              "ms": 5.089834,
+              "prediction_years": 16.0625
+            },
+            {
+              "round": 1,
+              "input": "author-18",
+              "ms": 4.992417,
+              "prediction_years": 77.625
+            },
+            {
+              "round": 1,
+              "input": "author-19",
+              "ms": 5.218125,
+              "prediction_years": 40.03125
+            },
+            {
+              "round": 1,
+              "input": "author-20",
+              "ms": 5.039959,
+              "prediction_years": 16.96875
+            },
+            {
+              "round": 1,
+              "input": "author-21",
+              "ms": 5.199792,
+              "prediction_years": 89.3125
+            },
+            {
+              "round": 1,
+              "input": "gradient",
+              "ms": 5.105625,
+              "prediction_years": 6.671875
+            },
+            {
+              "round": 2,
+              "input": "author-00",
+              "ms": 5.210875,
+              "prediction_years": 77.75
+            },
+            {
+              "round": 2,
+              "input": "author-01",
+              "ms": 5.217334,
+              "prediction_years": 81.9375
+            },
+            {
+              "round": 2,
+              "input": "author-02",
+              "ms": 5.095958,
+              "prediction_years": 82.25
+            },
+            {
+              "round": 2,
+              "input": "author-03",
+              "ms": 4.935584,
+              "prediction_years": 23.359375
+            },
+            {
+              "round": 2,
+              "input": "author-04",
+              "ms": 5.200334,
+              "prediction_years": 17.09375
+            },
+            {
+              "round": 2,
+              "input": "author-05",
+              "ms": 5.133375,
+              "prediction_years": 25.390625
+            },
+            {
+              "round": 2,
+              "input": "author-06",
+              "ms": 5.198042,
+              "prediction_years": 23.34375
+            },
+            {
+              "round": 2,
+              "input": "author-07",
+              "ms": 5.101333,
+              "prediction_years": 86.9375
+            },
+            {
+              "round": 2,
+              "input": "author-08",
+              "ms": 5.035084,
+              "prediction_years": 77.3125
+            },
+            {
+              "round": 2,
+              "input": "author-09",
+              "ms": 5.155959,
+              "prediction_years": 28.796875
+            },
+            {
+              "round": 2,
+              "input": "author-10",
+              "ms": 4.958875,
+              "prediction_years": 18.875
+            },
+            {
+              "round": 2,
+              "input": "author-11",
+              "ms": 5.027584,
+              "prediction_years": 36.6875
+            },
+            {
+              "round": 2,
+              "input": "author-12",
+              "ms": 4.929209,
+              "prediction_years": 22.734375
+            },
+            {
+              "round": 2,
+              "input": "author-13",
+              "ms": 4.91125,
+              "prediction_years": 82.625
+            },
+            {
+              "round": 2,
+              "input": "author-14",
+              "ms": 5.114166,
+              "prediction_years": 13.9609375
+            },
+            {
+              "round": 2,
+              "input": "author-15",
+              "ms": 4.848083,
+              "prediction_years": 19.40625
+            },
+            {
+              "round": 2,
+              "input": "author-16",
+              "ms": 5.012583,
+              "prediction_years": 21.84375
+            },
+            {
+              "round": 2,
+              "input": "author-17",
+              "ms": 4.893,
+              "prediction_years": 16.0625
+            },
+            {
+              "round": 2,
+              "input": "author-18",
+              "ms": 4.921417,
+              "prediction_years": 77.625
+            },
+            {
+              "round": 2,
+              "input": "author-19",
+              "ms": 5.194167,
+              "prediction_years": 40.03125
+            },
+            {
+              "round": 2,
+              "input": "author-20",
+              "ms": 4.947375,
+              "prediction_years": 16.96875
+            },
+            {
+              "round": 2,
+              "input": "author-21",
+              "ms": 5.063291,
+              "prediction_years": 89.3125
+            },
+            {
+              "round": 2,
+              "input": "gradient",
+              "ms": 5.317916,
+              "prediction_years": 6.671875
+            },
+            {
+              "round": 2,
+              "input": "gray",
+              "ms": 4.952834,
+              "prediction_years": 63.0
+            }
+          ]
+        },
+        "ALL": {
+          "load_ms": 1014.347208,
+          "count": 72,
+          "median_ms": 4.418604,
+          "mean_ms": 4.447855375,
+          "p90_ms": 4.7065375,
+          "p95_ms": 4.8209938999999995,
+          "minimum_ms": 4.150084,
+          "maximum_ms": 4.962042,
+          "samples": [
+            {
+              "round": 0,
+              "input": "gradient",
+              "ms": 4.417542,
+              "prediction_years": 6.6015625
+            },
+            {
+              "round": 0,
+              "input": "gray",
+              "ms": 4.264458,
+              "prediction_years": 62.96875
+            },
+            {
+              "round": 0,
+              "input": "author-00",
+              "ms": 4.497916,
+              "prediction_years": 77.6875
+            },
+            {
+              "round": 0,
+              "input": "author-01",
+              "ms": 4.962042,
+              "prediction_years": 82.0625
+            },
+            {
+              "round": 0,
+              "input": "author-02",
+              "ms": 4.337667,
+              "prediction_years": 82.6875
+            },
+            {
+              "round": 0,
+              "input": "author-03",
+              "ms": 4.409625,
+              "prediction_years": 23.3125
+            },
+            {
+              "round": 0,
+              "input": "author-04",
+              "ms": 4.426792,
+              "prediction_years": 17.078125
+            },
+            {
+              "round": 0,
+              "input": "author-05",
+              "ms": 4.237167,
+              "prediction_years": 25.4375
+            },
+            {
+              "round": 0,
+              "input": "author-06",
+              "ms": 4.150084,
+              "prediction_years": 23.375
+            },
+            {
+              "round": 0,
+              "input": "author-07",
+              "ms": 4.305375,
+              "prediction_years": 87.125
+            },
+            {
+              "round": 0,
+              "input": "author-08",
+              "ms": 4.404084,
+              "prediction_years": 77.9375
+            },
+            {
+              "round": 0,
+              "input": "author-09",
+              "ms": 4.407792,
+              "prediction_years": 28.765625
+            },
+            {
+              "round": 0,
+              "input": "author-10",
+              "ms": 4.224083,
+              "prediction_years": 18.90625
+            },
+            {
+              "round": 0,
+              "input": "author-11",
+              "ms": 4.301667,
+              "prediction_years": 36.8125
+            },
+            {
+              "round": 0,
+              "input": "author-12",
+              "ms": 4.313084,
+              "prediction_years": 22.734375
+            },
+            {
+              "round": 0,
+              "input": "author-13",
+              "ms": 4.570083,
+              "prediction_years": 82.3125
+            },
+            {
+              "round": 0,
+              "input": "author-14",
+              "ms": 4.229291,
+              "prediction_years": 13.9609375
+            },
+            {
+              "round": 0,
+              "input": "author-15",
+              "ms": 4.385792,
+              "prediction_years": 19.3125
+            },
+            {
+              "round": 0,
+              "input": "author-16",
+              "ms": 4.154458,
+              "prediction_years": 21.90625
+            },
+            {
+              "round": 0,
+              "input": "author-17",
+              "ms": 4.272625,
+              "prediction_years": 16.046875
+            },
+            {
+              "round": 0,
+              "input": "author-18",
+              "ms": 4.315375,
+              "prediction_years": 77.25
+            },
+            {
+              "round": 0,
+              "input": "author-19",
+              "ms": 4.426167,
+              "prediction_years": 39.875
+            },
+            {
+              "round": 0,
+              "input": "author-20",
+              "ms": 4.319542,
+              "prediction_years": 17.0
+            },
+            {
+              "round": 0,
+              "input": "author-21",
+              "ms": 4.321125,
+              "prediction_years": 89.6875
+            },
+            {
+              "round": 1,
+              "input": "gray",
+              "ms": 4.41325,
+              "prediction_years": 62.96875
+            },
+            {
+              "round": 1,
+              "input": "author-00",
+              "ms": 4.327917,
+              "prediction_years": 77.6875
+            },
+            {
+              "round": 1,
+              "input": "author-01",
+              "ms": 4.182375,
+              "prediction_years": 82.0625
+            },
+            {
+              "round": 1,
+              "input": "author-02",
+              "ms": 4.3015,
+              "prediction_years": 82.6875
+            },
+            {
+              "round": 1,
+              "input": "author-03",
+              "ms": 4.8095,
+              "prediction_years": 23.3125
+            },
+            {
+              "round": 1,
+              "input": "author-04",
+              "ms": 4.536667,
+              "prediction_years": 17.078125
+            },
+            {
+              "round": 1,
+              "input": "author-05",
+              "ms": 4.386375,
+              "prediction_years": 25.4375
+            },
+            {
+              "round": 1,
+              "input": "author-06",
+              "ms": 4.53475,
+              "prediction_years": 23.375
+            },
+            {
+              "round": 1,
+              "input": "author-07",
+              "ms": 4.417792,
+              "prediction_years": 87.125
+            },
+            {
+              "round": 1,
+              "input": "author-08",
+              "ms": 4.419416,
+              "prediction_years": 77.9375
+            },
+            {
+              "round": 1,
+              "input": "author-09",
+              "ms": 4.71525,
+              "prediction_years": 28.765625
+            },
+            {
+              "round": 1,
+              "input": "author-10",
+              "ms": 4.523583,
+              "prediction_years": 18.90625
+            },
+            {
+              "round": 1,
+              "input": "author-11",
+              "ms": 4.926958,
+              "prediction_years": 36.8125
+            },
+            {
+              "round": 1,
+              "input": "author-12",
+              "ms": 4.432583,
+              "prediction_years": 22.734375
+            },
+            {
+              "round": 1,
+              "input": "author-13",
+              "ms": 4.332709,
+              "prediction_years": 82.3125
+            },
+            {
+              "round": 1,
+              "input": "author-14",
+              "ms": 4.453,
+              "prediction_years": 13.9609375
+            },
+            {
+              "round": 1,
+              "input": "author-15",
+              "ms": 4.622875,
+              "prediction_years": 19.3125
+            },
+            {
+              "round": 1,
+              "input": "author-16",
+              "ms": 4.363083,
+              "prediction_years": 21.90625
+            },
+            {
+              "round": 1,
+              "input": "author-17",
+              "ms": 4.590833,
+              "prediction_years": 16.046875
+            },
+            {
+              "round": 1,
+              "input": "author-18",
+              "ms": 4.343583,
+              "prediction_years": 77.25
+            },
+            {
+              "round": 1,
+              "input": "author-19",
+              "ms": 4.444,
+              "prediction_years": 39.875
+            },
+            {
+              "round": 1,
+              "input": "author-20",
+              "ms": 4.504834,
+              "prediction_years": 17.0
+            },
+            {
+              "round": 1,
+              "input": "author-21",
+              "ms": 4.459209,
+              "prediction_years": 89.6875
+            },
+            {
+              "round": 1,
+              "input": "gradient",
+              "ms": 4.70125,
+              "prediction_years": 6.6015625
+            },
+            {
+              "round": 2,
+              "input": "author-00",
+              "ms": 4.707125,
+              "prediction_years": 77.6875
+            },
+            {
+              "round": 2,
+              "input": "author-01",
+              "ms": 4.726042,
+              "prediction_years": 82.0625
+            },
+            {
+              "round": 2,
+              "input": "author-02",
+              "ms": 4.6855,
+              "prediction_years": 82.6875
+            },
+            {
+              "round": 2,
+              "input": "author-03",
+              "ms": 4.473458,
+              "prediction_years": 23.3125
+            },
+            {
+              "round": 2,
+              "input": "author-04",
+              "ms": 4.835042,
+              "prediction_years": 17.078125
+            },
+            {
+              "round": 2,
+              "input": "author-05",
+              "ms": 4.454291,
+              "prediction_years": 25.4375
+            },
+            {
+              "round": 2,
+              "input": "author-06",
+              "ms": 4.536041,
+              "prediction_years": 23.375
+            },
+            {
+              "round": 2,
+              "input": "author-07",
+              "ms": 4.502,
+              "prediction_years": 87.125
+            },
+            {
+              "round": 2,
+              "input": "author-08",
+              "ms": 4.608209,
+              "prediction_years": 77.9375
+            },
+            {
+              "round": 2,
+              "input": "author-09",
+              "ms": 4.427375,
+              "prediction_years": 28.765625
+            },
+            {
+              "round": 2,
+              "input": "author-10",
+              "ms": 4.875583,
+              "prediction_years": 18.90625
+            },
+            {
+              "round": 2,
+              "input": "author-11",
+              "ms": 4.601584,
+              "prediction_years": 36.8125
+            },
+            {
+              "round": 2,
+              "input": "author-12",
+              "ms": 4.548959,
+              "prediction_years": 22.734375
+            },
+            {
+              "round": 2,
+              "input": "author-13",
+              "ms": 4.3975,
+              "prediction_years": 82.3125
+            },
+            {
+              "round": 2,
+              "input": "author-14",
+              "ms": 4.472375,
+              "prediction_years": 13.9609375
+            },
+            {
+              "round": 2,
+              "input": "author-15",
+              "ms": 4.5475,
+              "prediction_years": 19.3125
+            },
+            {
+              "round": 2,
+              "input": "author-16",
+              "ms": 4.194458,
+              "prediction_years": 21.90625
+            },
+            {
+              "round": 2,
+              "input": "author-17",
+              "ms": 4.374458,
+              "prediction_years": 16.046875
+            },
+            {
+              "round": 2,
+              "input": "author-18",
+              "ms": 4.209333,
+              "prediction_years": 77.25
+            },
+            {
+              "round": 2,
+              "input": "author-19",
+              "ms": 4.363792,
+              "prediction_years": 39.875
+            },
+            {
+              "round": 2,
+              "input": "author-20",
+              "ms": 4.226792,
+              "prediction_years": 17.0
+            },
+            {
+              "round": 2,
+              "input": "author-21",
+              "ms": 4.28225,
+              "prediction_years": 89.6875
+            },
+            {
+              "round": 2,
+              "input": "gradient",
+              "ms": 4.238959,
+              "prediction_years": 6.6015625
+            },
+            {
+              "round": 2,
+              "input": "gray",
+              "ms": 4.559833,
+              "prediction_years": 62.96875
+            }
+          ]
+        }
+      },
+      "measured_package_files": {
+        "Data/com.apple.CoreML/model.mlmodel": {
+          "bytes": 141649,
+          "sha256": "e11988128f4431448e57b87fcf7995e631c575653d573a47abf136d9a2971f91"
+        },
+        "Data/com.apple.CoreML/weights/weight.bin": {
+          "bytes": 43051008,
+          "sha256": "1a1371779d2a50ad23d12b1d2e5e5390a3ee0114d3073d31e1007e4d97b92019"
+        },
+        "Manifest.json": {
+          "bytes": 617,
+          "sha256": "5b685e86d39502bb53c9e10fedcafb9b68ead195d1695bad4695e087109e31b2"
+        }
+      },
+      "packaging_normalization": "Post-measurement UUIDv5 manifest IDs and deterministic protobuf serialization only; graph values and weights unchanged."
+    },
+    "int8-float32": {
+      "configuration": {
+        "weights": "int8",
+        "compute": "float32",
+        "mode": "linear_symmetric",
+        "granularity": "per_channel",
+        "weight_threshold": 2048
+      },
+      "path": "artifacts/models/quantization/coreml/FAHRFaceAge-int8-float32.mlpackage",
+      "bytes": 86546903,
+      "files": {
+        "Data/com.apple.CoreML/model.mlmodel": {
+          "bytes": 132526,
+          "sha256": "0214ccb5d7a39d0bb99c1a9cad5bb1c1f48a636707d61d162335bee5beef34ce"
+        },
+        "Data/com.apple.CoreML/weights/weight.bin": {
+          "bytes": 86413760,
+          "sha256": "e9a51ca8ff28e1f9f1dc3dd625f8e42617b0abf038962b30c9d27e88de778c82"
+        },
+        "Manifest.json": {
+          "bytes": 617,
+          "sha256": "c3c44c082b56003e591d73305a2fc83fe1f937f485d0525771978d24f97b769d"
+        }
+      },
+      "specification_version": 8,
+      "opsets": [
+        "CoreML7"
+      ],
+      "operations": {
+        "add": 25,
+        "concat": 1,
+        "const": 339,
+        "constexpr_affine_dequantize": 74,
+        "conv": 1,
+        "gelu": 12,
+        "layer_norm": 25,
+        "linear": 73,
+        "matmul": 24,
+        "mul": 14,
+        "reshape": 50,
+        "slice_by_index": 1,
+        "softmax": 12,
+        "squeeze": 1,
+        "sub": 1,
+        "transpose": 50
+      },
+      "compute_units": {
+        "CPU_ONLY": {
+          "load_ms": 383.696541,
+          "count": 72,
+          "median_ms": 9.1114785,
+          "mean_ms": 9.287475694444446,
+          "p90_ms": 9.4438087,
+          "p95_ms": 9.6982564,
+          "minimum_ms": 8.741084,
+          "maximum_ms": 13.738083,
+          "samples": [
+            {
+              "round": 0,
+              "input": "gradient",
+              "ms": 9.05575,
+              "prediction_years": 5.345829010009766
+            },
+            {
+              "round": 0,
+              "input": "gray",
+              "ms": 9.036208,
+              "prediction_years": 62.27206039428711
+            },
+            {
+              "round": 0,
+              "input": "author-00",
+              "ms": 9.017708,
+              "prediction_years": 77.94896697998047
+            },
+            {
+              "round": 0,
+              "input": "author-01",
+              "ms": 9.078625,
+              "prediction_years": 81.3473892211914
+            },
+            {
+              "round": 0,
+              "input": "author-02",
+              "ms": 9.062625,
+              "prediction_years": 84.05870819091797
+            },
+            {
+              "round": 0,
+              "input": "author-03",
+              "ms": 9.064083,
+              "prediction_years": 23.302501678466797
+            },
+            {
+              "round": 0,
+              "input": "author-04",
+              "ms": 8.98625,
+              "prediction_years": 17.219715118408203
+            },
+            {
+              "round": 0,
+              "input": "author-05",
+              "ms": 9.377542,
+              "prediction_years": 23.709732055664062
+            },
+            {
+              "round": 0,
+              "input": "author-06",
+              "ms": 9.053875,
+              "prediction_years": 23.737863540649414
+            },
+            {
+              "round": 0,
+              "input": "author-07",
+              "ms": 9.29175,
+              "prediction_years": 86.99056243896484
+            },
+            {
+              "round": 0,
+              "input": "author-08",
+              "ms": 9.024792,
+              "prediction_years": 77.56954193115234
+            },
+            {
+              "round": 0,
+              "input": "author-09",
+              "ms": 9.1435,
+              "prediction_years": 27.172388076782227
+            },
+            {
+              "round": 0,
+              "input": "author-10",
+              "ms": 9.268584,
+              "prediction_years": 18.83985710144043
+            },
+            {
+              "round": 0,
+              "input": "author-11",
+              "ms": 9.278542,
+              "prediction_years": 36.293418884277344
+            },
+            {
+              "round": 0,
+              "input": "author-12",
+              "ms": 9.281417,
+              "prediction_years": 23.078237533569336
+            },
+            {
+              "round": 0,
+              "input": "author-13",
+              "ms": 9.218292,
+              "prediction_years": 82.46139526367188
+            },
+            {
+              "round": 0,
+              "input": "author-14",
+              "ms": 9.295375,
+              "prediction_years": 13.713541984558105
+            },
+            {
+              "round": 0,
+              "input": "author-15",
+              "ms": 9.01975,
+              "prediction_years": 19.421449661254883
+            },
+            {
+              "round": 0,
+              "input": "author-16",
+              "ms": 9.463541,
+              "prediction_years": 21.79353141784668
+            },
+            {
+              "round": 0,
+              "input": "author-17",
+              "ms": 11.698333,
+              "prediction_years": 16.320219039916992
+            },
+            {
+              "round": 0,
+              "input": "author-18",
+              "ms": 13.738083,
+              "prediction_years": 77.13993072509766
+            },
+            {
+              "round": 0,
+              "input": "author-19",
+              "ms": 12.73425,
+              "prediction_years": 39.66472244262695
+            },
+            {
+              "round": 0,
+              "input": "author-20",
+              "ms": 9.469542,
+              "prediction_years": 16.794979095458984
+            },
+            {
+              "round": 0,
+              "input": "author-21",
+              "ms": 9.20525,
+              "prediction_years": 90.6094741821289
+            },
+            {
+              "round": 1,
+              "input": "gray",
+              "ms": 9.385,
+              "prediction_years": 62.27206039428711
+            },
+            {
+              "round": 1,
+              "input": "author-00",
+              "ms": 9.449542,
+              "prediction_years": 77.94896697998047
+            },
+            {
+              "round": 1,
+              "input": "author-01",
+              "ms": 9.163667,
+              "prediction_years": 81.3473892211914
+            },
+            {
+              "round": 1,
+              "input": "author-02",
+              "ms": 9.358291,
+              "prediction_years": 84.05870819091797
+            },
+            {
+              "round": 1,
+              "input": "author-03",
+              "ms": 9.664375,
+              "prediction_years": 23.302501678466797
+            },
+            {
+              "round": 1,
+              "input": "author-04",
+              "ms": 9.392209,
+              "prediction_years": 17.219715118408203
+            },
+            {
+              "round": 1,
+              "input": "author-05",
+              "ms": 9.2775,
+              "prediction_years": 23.709732055664062
+            },
+            {
+              "round": 1,
+              "input": "author-06",
+              "ms": 9.308792,
+              "prediction_years": 23.737863540649414
+            },
+            {
+              "round": 1,
+              "input": "author-07",
+              "ms": 9.310666,
+              "prediction_years": 86.99056243896484
+            },
+            {
+              "round": 1,
+              "input": "author-08",
+              "ms": 9.105458,
+              "prediction_years": 77.56954193115234
+            },
+            {
+              "round": 1,
+              "input": "author-09",
+              "ms": 9.302583,
+              "prediction_years": 27.172388076782227
+            },
+            {
+              "round": 1,
+              "input": "author-10",
+              "ms": 9.739667,
+              "prediction_years": 18.83985710144043
+            },
+            {
+              "round": 1,
+              "input": "author-11",
+              "ms": 9.17025,
+              "prediction_years": 36.293418884277344
+            },
+            {
+              "round": 1,
+              "input": "author-12",
+              "ms": 9.314917,
+              "prediction_years": 23.078237533569336
+            },
+            {
+              "round": 1,
+              "input": "author-13",
+              "ms": 9.172958,
+              "prediction_years": 82.46139526367188
+            },
+            {
+              "round": 1,
+              "input": "author-14",
+              "ms": 9.2325,
+              "prediction_years": 13.713541984558105
+            },
+            {
+              "round": 1,
+              "input": "author-15",
+              "ms": 9.072459,
+              "prediction_years": 19.421449661254883
+            },
+            {
+              "round": 1,
+              "input": "author-16",
+              "ms": 9.075208,
+              "prediction_years": 21.79353141784668
+            },
+            {
+              "round": 1,
+              "input": "author-17",
+              "ms": 9.16775,
+              "prediction_years": 16.320219039916992
+            },
+            {
+              "round": 1,
+              "input": "author-18",
+              "ms": 9.112291,
+              "prediction_years": 77.13993072509766
+            },
+            {
+              "round": 1,
+              "input": "author-19",
+              "ms": 9.110666,
+              "prediction_years": 39.66472244262695
+            },
+            {
+              "round": 1,
+              "input": "author-20",
+              "ms": 8.979083,
+              "prediction_years": 16.794979095458984
+            },
+            {
+              "round": 1,
+              "input": "author-21",
+              "ms": 9.320792,
+              "prediction_years": 90.6094741821289
+            },
+            {
+              "round": 1,
+              "input": "gradient",
+              "ms": 9.023,
+              "prediction_years": 5.345829010009766
+            },
+            {
+              "round": 2,
+              "input": "author-00",
+              "ms": 8.993583,
+              "prediction_years": 77.94896697998047
+            },
+            {
+              "round": 2,
+              "input": "author-01",
+              "ms": 9.295375,
+              "prediction_years": 81.3473892211914
+            },
+            {
+              "round": 2,
+              "input": "author-02",
+              "ms": 9.143875,
+              "prediction_years": 84.05870819091797
+            },
+            {
+              "round": 2,
+              "input": "author-03",
+              "ms": 9.01625,
+              "prediction_years": 23.302501678466797
+            },
+            {
+              "round": 2,
+              "input": "author-04",
+              "ms": 9.025916,
+              "prediction_years": 17.219715118408203
+            },
+            {
+              "round": 2,
+              "input": "author-05",
+              "ms": 9.370417,
+              "prediction_years": 23.709732055664062
+            },
+            {
+              "round": 2,
+              "input": "author-06",
+              "ms": 9.033875,
+              "prediction_years": 23.737863540649414
+            },
+            {
+              "round": 2,
+              "input": "author-07",
+              "ms": 8.943541,
+              "prediction_years": 86.99056243896484
+            },
+            {
+              "round": 2,
+              "input": "author-08",
+              "ms": 8.906209,
+              "prediction_years": 77.56954193115234
+            },
+            {
+              "round": 2,
+              "input": "author-09",
+              "ms": 9.049834,
+              "prediction_years": 27.172388076782227
+            },
+            {
+              "round": 2,
+              "input": "author-10",
+              "ms": 9.079,
+              "prediction_years": 18.83985710144043
+            },
+            {
+              "round": 2,
+              "input": "author-11",
+              "ms": 8.947375,
+              "prediction_years": 36.293418884277344
+            },
+            {
+              "round": 2,
+              "input": "author-12",
+              "ms": 8.993625,
+              "prediction_years": 23.078237533569336
+            },
+            {
+              "round": 2,
+              "input": "author-13",
+              "ms": 8.924583,
+              "prediction_years": 82.46139526367188
+            },
+            {
+              "round": 2,
+              "input": "author-14",
+              "ms": 8.901875,
+              "prediction_years": 13.713541984558105
+            },
+            {
+              "round": 2,
+              "input": "author-15",
+              "ms": 8.869417,
+              "prediction_years": 19.421449661254883
+            },
+            {
+              "round": 2,
+              "input": "author-16",
+              "ms": 9.013625,
+              "prediction_years": 21.79353141784668
+            },
+            {
+              "round": 2,
+              "input": "author-17",
+              "ms": 9.141833,
+              "prediction_years": 16.320219039916992
+            },
+            {
+              "round": 2,
+              "input": "author-18",
+              "ms": 8.79775,
+              "prediction_years": 77.13993072509766
+            },
+            {
+              "round": 2,
+              "input": "author-19",
+              "ms": 8.76325,
+              "prediction_years": 39.66472244262695
+            },
+            {
+              "round": 2,
+              "input": "author-20",
+              "ms": 8.804916,
+              "prediction_years": 16.794979095458984
+            },
+            {
+              "round": 2,
+              "input": "author-21",
+              "ms": 8.986084,
+              "prediction_years": 90.6094741821289
+            },
+            {
+              "round": 2,
+              "input": "gradient",
+              "ms": 8.741084,
+              "prediction_years": 5.345829010009766
+            },
+            {
+              "round": 2,
+              "input": "gray",
+              "ms": 8.881667,
+              "prediction_years": 62.27206039428711
+            }
+          ]
+        },
+        "ALL": {
+          "load_ms": 403.065875,
+          "count": 72,
+          "median_ms": 4.731604000000001,
+          "mean_ms": 4.751305527777778,
+          "p90_ms": 4.9371872,
+          "p95_ms": 4.9727163,
+          "minimum_ms": 4.511667,
+          "maximum_ms": 5.134875,
+          "samples": [
+            {
+              "round": 0,
+              "input": "gradient",
+              "ms": 4.78825,
+              "prediction_years": 5.345825672149658
+            },
+            {
+              "round": 0,
+              "input": "gray",
+              "ms": 4.937833,
+              "prediction_years": 62.27198791503906
+            },
+            {
+              "round": 0,
+              "input": "author-00",
+              "ms": 4.698041,
+              "prediction_years": 77.94896697998047
+            },
+            {
+              "round": 0,
+              "input": "author-01",
+              "ms": 4.772875,
+              "prediction_years": 81.34737396240234
+            },
+            {
+              "round": 0,
+              "input": "author-02",
+              "ms": 4.975375,
+              "prediction_years": 84.05863952636719
+            },
+            {
+              "round": 0,
+              "input": "author-03",
+              "ms": 4.949541,
+              "prediction_years": 23.302509307861328
+            },
+            {
+              "round": 0,
+              "input": "author-04",
+              "ms": 5.134875,
+              "prediction_years": 17.21971893310547
+            },
+            {
+              "round": 0,
+              "input": "author-05",
+              "ms": 4.879042,
+              "prediction_years": 23.70974349975586
+            },
+            {
+              "round": 0,
+              "input": "author-06",
+              "ms": 4.927709,
+              "prediction_years": 23.737863540649414
+            },
+            {
+              "round": 0,
+              "input": "author-07",
+              "ms": 4.970541,
+              "prediction_years": 86.99056243896484
+            },
+            {
+              "round": 0,
+              "input": "author-08",
+              "ms": 4.894125,
+              "prediction_years": 77.56954956054688
+            },
+            {
+              "round": 0,
+              "input": "author-09",
+              "ms": 5.003417,
+              "prediction_years": 27.172399520874023
+            },
+            {
+              "round": 0,
+              "input": "author-10",
+              "ms": 4.699208,
+              "prediction_years": 18.839839935302734
+            },
+            {
+              "round": 0,
+              "input": "author-11",
+              "ms": 4.931375,
+              "prediction_years": 36.29340362548828
+            },
+            {
+              "round": 0,
+              "input": "author-12",
+              "ms": 4.88375,
+              "prediction_years": 23.078262329101562
+            },
+            {
+              "round": 0,
+              "input": "author-13",
+              "ms": 4.758875,
+              "prediction_years": 82.46143341064453
+            },
+            {
+              "round": 0,
+              "input": "author-14",
+              "ms": 4.745709,
+              "prediction_years": 13.713557243347168
+            },
+            {
+              "round": 0,
+              "input": "author-15",
+              "ms": 4.720791,
+              "prediction_years": 19.42144012451172
+            },
+            {
+              "round": 0,
+              "input": "author-16",
+              "ms": 4.736875,
+              "prediction_years": 21.793533325195312
+            },
+            {
+              "round": 0,
+              "input": "author-17",
+              "ms": 4.627708,
+              "prediction_years": 16.320213317871094
+            },
+            {
+              "round": 0,
+              "input": "author-18",
+              "ms": 4.87575,
+              "prediction_years": 77.1399154663086
+            },
+            {
+              "round": 0,
+              "input": "author-19",
+              "ms": 4.816625,
+              "prediction_years": 39.664695739746094
+            },
+            {
+              "round": 0,
+              "input": "author-20",
+              "ms": 4.791083,
+              "prediction_years": 16.79497528076172
+            },
+            {
+              "round": 0,
+              "input": "author-21",
+              "ms": 4.914417,
+              "prediction_years": 90.60948944091797
+            },
+            {
+              "round": 1,
+              "input": "gray",
+              "ms": 4.861375,
+              "prediction_years": 62.27198791503906
+            },
+            {
+              "round": 1,
+              "input": "author-00",
+              "ms": 4.675083,
+              "prediction_years": 77.94896697998047
+            },
+            {
+              "round": 1,
+              "input": "author-01",
+              "ms": 4.815625,
+              "prediction_years": 81.34737396240234
+            },
+            {
+              "round": 1,
+              "input": "author-02",
+              "ms": 4.762667,
+              "prediction_years": 84.05863952636719
+            },
+            {
+              "round": 1,
+              "input": "author-03",
+              "ms": 4.843792,
+              "prediction_years": 23.302509307861328
+            },
+            {
+              "round": 1,
+              "input": "author-04",
+              "ms": 4.726333,
+              "prediction_years": 17.21971893310547
+            },
+            {
+              "round": 1,
+              "input": "author-05",
+              "ms": 4.76675,
+              "prediction_years": 23.70974349975586
+            },
+            {
+              "round": 1,
+              "input": "author-06",
+              "ms": 4.66125,
+              "prediction_years": 23.737863540649414
+            },
+            {
+              "round": 1,
+              "input": "author-07",
+              "ms": 4.994375,
+              "prediction_years": 86.99056243896484
+            },
+            {
+              "round": 1,
+              "input": "author-08",
+              "ms": 4.518,
+              "prediction_years": 77.56954956054688
+            },
+            {
+              "round": 1,
+              "input": "author-09",
+              "ms": 4.764334,
+              "prediction_years": 27.172399520874023
+            },
+            {
+              "round": 1,
+              "input": "author-10",
+              "ms": 4.713125,
+              "prediction_years": 18.839839935302734
+            },
+            {
+              "round": 1,
+              "input": "author-11",
+              "ms": 4.721833,
+              "prediction_years": 36.29340362548828
+            },
+            {
+              "round": 1,
+              "input": "author-12",
+              "ms": 4.915958,
+              "prediction_years": 23.078262329101562
+            },
+            {
+              "round": 1,
+              "input": "author-13",
+              "ms": 4.610583,
+              "prediction_years": 82.46143341064453
+            },
+            {
+              "round": 1,
+              "input": "author-14",
+              "ms": 4.827166,
+              "prediction_years": 13.713557243347168
+            },
+            {
+              "round": 1,
+              "input": "author-15",
+              "ms": 4.638042,
+              "prediction_years": 19.42144012451172
+            },
+            {
+              "round": 1,
+              "input": "author-16",
+              "ms": 4.873625,
+              "prediction_years": 21.793533325195312
+            },
+            {
+              "round": 1,
+              "input": "author-17",
+              "ms": 4.970333,
+              "prediction_years": 16.320213317871094
+            },
+            {
+              "round": 1,
+              "input": "author-18",
+              "ms": 4.801125,
+              "prediction_years": 77.1399154663086
+            },
+            {
+              "round": 1,
+              "input": "author-19",
+              "ms": 4.710917,
+              "prediction_years": 39.664695739746094
+            },
+            {
+              "round": 1,
+              "input": "author-20",
+              "ms": 4.592083,
+              "prediction_years": 16.79497528076172
+            },
+            {
+              "round": 1,
+              "input": "author-21",
+              "ms": 4.547958,
+              "prediction_years": 90.60948944091797
+            },
+            {
+              "round": 1,
+              "input": "gradient",
+              "ms": 4.609792,
+              "prediction_years": 5.345825672149658
+            },
+            {
+              "round": 2,
+              "input": "author-00",
+              "ms": 4.671959,
+              "prediction_years": 77.94896697998047
+            },
+            {
+              "round": 2,
+              "input": "author-01",
+              "ms": 4.631584,
+              "prediction_years": 81.34737396240234
+            },
+            {
+              "round": 2,
+              "input": "author-02",
+              "ms": 4.624542,
+              "prediction_years": 84.05863952636719
+            },
+            {
+              "round": 2,
+              "input": "author-03",
+              "ms": 4.640459,
+              "prediction_years": 23.302509307861328
+            },
+            {
+              "round": 2,
+              "input": "author-04",
+              "ms": 4.607959,
+              "prediction_years": 17.21971893310547
+            },
+            {
+              "round": 2,
+              "input": "author-05",
+              "ms": 4.646417,
+              "prediction_years": 23.70974349975586
+            },
+            {
+              "round": 2,
+              "input": "author-06",
+              "ms": 4.645833,
+              "prediction_years": 23.737863540649414
+            },
+            {
+              "round": 2,
+              "input": "author-07",
+              "ms": 4.644125,
+              "prediction_years": 86.99056243896484
+            },
+            {
+              "round": 2,
+              "input": "author-08",
+              "ms": 4.570167,
+              "prediction_years": 77.56954956054688
+            },
+            {
+              "round": 2,
+              "input": "author-09",
+              "ms": 4.723291,
+              "prediction_years": 27.172399520874023
+            },
+            {
+              "round": 2,
+              "input": "author-10",
+              "ms": 4.633333,
+              "prediction_years": 18.839839935302734
+            },
+            {
+              "round": 2,
+              "input": "author-11",
+              "ms": 4.5735,
+              "prediction_years": 36.29340362548828
+            },
+            {
+              "round": 2,
+              "input": "author-12",
+              "ms": 4.568,
+              "prediction_years": 23.078262329101562
+            },
+            {
+              "round": 2,
+              "input": "author-13",
+              "ms": 4.605583,
+              "prediction_years": 82.46143341064453
+            },
+            {
+              "round": 2,
+              "input": "author-14",
+              "ms": 4.675375,
+              "prediction_years": 13.713557243347168
+            },
+            {
+              "round": 2,
+              "input": "author-15",
+              "ms": 4.511667,
+              "prediction_years": 19.42144012451172
+            },
+            {
+              "round": 2,
+              "input": "author-16",
+              "ms": 4.806458,
+              "prediction_years": 21.793533325195312
+            },
+            {
+              "round": 2,
+              "input": "author-17",
+              "ms": 4.718541,
+              "prediction_years": 16.320213317871094
+            },
+            {
+              "round": 2,
+              "input": "author-18",
+              "ms": 4.741542,
+              "prediction_years": 77.1399154663086
+            },
+            {
+              "round": 2,
+              "input": "author-19",
+              "ms": 4.845458,
+              "prediction_years": 39.664695739746094
+            },
+            {
+              "round": 2,
+              "input": "author-20",
+              "ms": 4.704625,
+              "prediction_years": 16.79497528076172
+            },
+            {
+              "round": 2,
+              "input": "author-21",
+              "ms": 4.754791,
+              "prediction_years": 90.60948944091797
+            },
+            {
+              "round": 2,
+              "input": "gradient",
+              "ms": 4.514833,
+              "prediction_years": 5.345825672149658
+            },
+            {
+              "round": 2,
+              "input": "gray",
+              "ms": 4.678042,
+              "prediction_years": 62.27198791503906
+            }
+          ]
+        }
+      },
+      "measured_package_files": {
+        "Data/com.apple.CoreML/model.mlmodel": {
+          "bytes": 132526,
+          "sha256": "205ef548c801758074f57288884c6b8d33f7d9fa7535e00089c7f40f1860296d"
+        },
+        "Data/com.apple.CoreML/weights/weight.bin": {
+          "bytes": 86413760,
+          "sha256": "e9a51ca8ff28e1f9f1dc3dd625f8e42617b0abf038962b30c9d27e88de778c82"
+        },
+        "Manifest.json": {
+          "bytes": 617,
+          "sha256": "1af304f018054f5d0ce4e08756c9b23c0b8019a8212021901b366cfb0dff316a"
+        }
+      },
+      "packaging_normalization": "Post-measurement UUIDv5 manifest IDs and deterministic protobuf serialization only; graph values and weights unchanged."
+    }
+  },
+  "method": {
+    "warmup_predictions": 12,
+    "timed_rounds": 3,
+    "inputs_per_round": 24,
+    "clock": "time.perf_counter_ns",
+    "scope": "synchronous Python MLModel.predict including input/output bridge; excludes detection, resizing and load",
+    "ordering": "serial by compute-unit and variant; input order rotates one place per round",
+    "phone_performance": false,
+    "load": "package load/compile, with pre-existing compiler caches; descriptive only, not cold-start benchmark"
+  }
+}
