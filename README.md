@@ -95,6 +95,10 @@ without local paths or photo bytes. Android backup is disabled; iOS captures are
 excluded from backup. Saved photos and metadata persist until deleted in the app
 or the app is removed. Photo deletions are journaled before cleanup; failed
 deletions can be retried in Settings and are retried on the next launch.
+iOS stores photo references relative to its private capture folder, so moving the
+app's data container during an update or reinstall does not break previews or
+cleanup. Existing absolute references resolve against the current container on
+load and become relative on the next successful save; no data reset is needed.
 
 ## Model integration is the next boundary
 

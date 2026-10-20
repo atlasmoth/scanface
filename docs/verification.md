@@ -6,10 +6,11 @@ appearance preferences, metadata sharing and deletion. Real photos remain in
 
 | Check | Result |
 | --- | --- |
-| Shared JVM suite | 39 passed: 30 state/storage tests and 9 Ktor manifest tests |
+| Shared JVM suite | 47 passed: 30 state/storage, 9 Ktor manifest and 8 photo-reference tests |
 | Android connected suite | 3 passed on Pixel 10 Pro Fold, API 37 |
 | Android debug build and lint | Build passed; lint reported no issues |
-| iOS simulator suite | 8 passed: 5 native storage/image tests and 3 UI flows |
+| iOS native simulator suite | 10 passed, including 5 photo-reference regressions |
+| iOS UI suite | 3 flows passed in the initial verification; follow-ups checked manually |
 | iOS simulator and unsigned device builds | Both passed with Xcode 27.1 |
 | iOS deployment target | Compiled app binaries report minimum iOS 17.0 |
 
@@ -46,11 +47,19 @@ all four destinations plus camera dismissal. Android debug, iOS simulator and
 unsigned iOS device builds passed after the change; the device binary still
 reports minimum iOS 17.0.
 
-Separate issue found during the reinstall used for this check: iOS can relocate
-the app's data container while stored photo paths still contain its old absolute
-location. The JPEG remains in the current private Captures folder, but its preview
-can be blank. Relative-path resolution and migration for display and deletion
-remain to be fixed; this is independent of navigation placement.
+The photo-reference follow-up fixes iOS container relocation without resetting
+data. Saved scans, pending captures and cleanup entries are stored as relative
+capture references and resolved together to current absolute paths on load.
+Legacy absolute paths are supported and become relative on the next successful
+write. The recovery snapshot remains untouched. Five new native tests cover real
+JPEG loading, relative storage, relocated paths, legacy defaults migration and
+idempotent deletion, including preserving unrelated files with the same name.
+Eight shared regression tests also verify relocation, mixed path aliases,
+ownership-safe startup cleanup, failed writes, invalid references and recovery
+data preservation. The previously broken imported image was confirmed visible in
+the running app, then saved with a relative reference and confirmed after relaunch.
+All four existing records were retained. Android debug and unsigned iOS device
+builds passed; the iOS minimum remains 17.0.
 
 The shared suite verifies failed writes, corrupt/unreadable storage, analysis
 cancellation, invalid model output, explicit sample labeling, CSV escaping and
