@@ -3,6 +3,7 @@ package com.scanface.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -11,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.scanface.core.*
@@ -235,7 +237,8 @@ fun SettingsScreen(state: AppState, onTheme: (ThemeMode) -> Unit, onAge: (Int?) 
             ScanCard {
                 Text("Appearance", style = MaterialTheme.typography.titleLarge)
                 ThemeMode.entries.forEach { theme ->
-                    Surface(onClick = { onTheme(theme) }, shape = RoundedCornerShape(12.dp),
+                    Surface(modifier = Modifier.selectable(selected = state.theme == theme, role = Role.RadioButton, onClick = { onTheme(theme) }),
+                        shape = RoundedCornerShape(12.dp),
                         color = if (state.theme == theme) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface) {
                         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(14.dp)) {
