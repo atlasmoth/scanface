@@ -41,6 +41,37 @@ struct CameraLens: Identifiable, Equatable {
     let title: String
 }
 
+/// Pinch scale is relative to the beginning of a gesture, not its last event.
+struct CameraZoomState {
+    private(set) var factor: CGFloat = 1
+    private(set) var minimum: CGFloat = 1
+    private(set) var maximum: CGFloat = 1
+    private var pinchOrigin: CGFloat = 1
+
+    mutating func reset(deviceMinimum: CGFloat, deviceMaximum: CGFloat, appliedFactor: CGFloat) {
+        minimum = deviceMinimum.isFinite ? max(1, deviceMinimum) : 1
+        maximum = deviceMaximum.isFinite ? max(minimum, min(4, deviceMaximum)) : minimum
+        factor = appliedFactor.isFinite ? max(minimum, min(maximum, appliedFactor)) : minimum
+        pinchOrigin = factor
+    }
+
+    mutating func beginPinch() { pinchOrigin = factor }
+
+    mutating func pinch(scale: CGFloat) {
+        guard scale.isFinite, scale > 0 else { return }
+        setFactor(pinchOrigin * scale)
+    }
+
+    mutating func setFactor(_ value: CGFloat) {
+        guard value.isFinite else { return }
+        factor = max(minimum, min(maximum, value))
+    }
+
+    static func captureDescription(lens: String, factor: CGFloat) -> String {
+        "\(lens) · \(String(format: "%.2f", Double(factor)))×"
+    }
+}
+
 /// All capture-session mutation is serialized; only published UI state is written
 /// on the main queue. The capture owns one private JPEG and never uploads it.
 final class CaptureSessionModel: NSObject, ObservableObject {
@@ -53,9 +84,8 @@ final class CaptureSessionModel: NSObject, ObservableObject {
     @Published private(set) var availableFlashModes: [CaptureFlash] = [.off]
     @Published private(set) var lenses: [CameraLens] = []
     @Published private(set) var selectedLensID = ""
-    @Published private(set) var zoomFactors: [CGFloat] = [1]
-    @Published private(set) var zoomFactor: CGFloat = 1
-    @Published private(set) var isAdjustingZoom = false
+    @Published private(set) var zoom = CameraZoomState()
+    @Published private(set) var showingZoom = false
     @Published private(set) var illuminating = false
     @Published var flash: CaptureFlash = .off
     @Published var errorMessage: String?
@@ -68,11 +98,16 @@ final class CaptureSessionModel: NSObject, ObservableObject {
     private var rotationCoordinator: AVCaptureDevice.RotationCoordinator?
     private var rotationObservation: NSKeyValueObservation?
     private var notifications: [NSObjectProtocol] = []
-    private var captureLens = "Wide"
+    private var captureDescriptions: [Int64: String] = [:]
     private var active = false
     private weak var captureScreen: UIScreen?
     private var brightnessBeforeFlash: CGFloat?
     private var flashRestorationID = UUID()
+    private var pendingZoomFactor: CGFloat?
+    private var zoomUpdateInFlight = false
+    private var zoomGeneration = 0
+    private var zoomReadoutDismissal: DispatchWorkItem?
+    private var pinching = false
     private let onCaptured: (CapturedPhoto) -> Void
 
     init(onCaptured: @escaping (CapturedPhoto) -> Void) {
@@ -83,6 +118,7 @@ final class CaptureSessionModel: NSObject, ObservableObject {
             forName: AVCaptureSession.wasInterruptedNotification, object: session, queue: .main
         ) { [weak self] _ in
             self?.availability = .interrupted
+            self?.invalidateZoomUpdates()
             self?.endScreenFlash()
             // Keep an in-flight capture busy until its AVFoundation completion.
         })
@@ -96,6 +132,7 @@ final class CaptureSessionModel: NSObject, ObservableObject {
             forName: AVCaptureSession.runtimeErrorNotification, object: session, queue: .main
         ) { [weak self] _ in
             guard let self, self.active else { return }
+            self.invalidateZoomUpdates()
             switch AVCaptureDevice.authorizationStatus(for: .video) {
             case .denied, .restricted:
                 self.availability = .denied
@@ -154,6 +191,7 @@ final class CaptureSessionModel: NSObject, ObservableObject {
 
     func stop() {
         active = false
+        invalidateZoomUpdates()
         endScreenFlash()
         queue.async { [weak self] in
             guard let self else { return }
@@ -163,6 +201,7 @@ final class CaptureSessionModel: NSObject, ObservableObject {
 
     private func stopSessionForBackground() {
         availability = .interrupted
+        invalidateZoomUpdates()
         endScreenFlash()
         queue.async { [weak self] in
             guard let self else { return }
@@ -171,44 +210,106 @@ final class CaptureSessionModel: NSObject, ObservableObject {
     }
 
     func flipCamera() {
-        guard availability == .ready, !isCapturing, !isAdjustingZoom, canFlip else { return }
+        guard availability == .ready, !isCapturing, canFlip else { return }
         availability = .preparing
         flash = .off
         configure(position: frontFacing ? .back : .front)
     }
 
     func selectLens(_ id: String) {
-        guard availability == .ready, !isCapturing, !isAdjustingZoom, id != selectedLensID else { return }
+        guard availability == .ready, !isCapturing, id != selectedLensID else { return }
         availability = .preparing
         flash = .off
         configure(position: frontFacing ? .front : .back, preferredID: id)
     }
 
-    func selectZoom(_ factor: CGFloat) {
-        guard availability == .ready, !isCapturing, !isAdjustingZoom,
-              zoomFactors.contains(factor), factor != zoomFactor else { return }
-        isAdjustingZoom = true
+    func beginPinch() -> Int? {
+        guard availability == .ready, !isCapturing else { return nil }
+        zoom.beginPinch()
+        pinching = true
+        showZoomReadout()
+        return zoomGeneration
+    }
+
+    func updatePinch(scale: CGFloat, generation: Int) {
+        guard availability == .ready, !isCapturing, generation == zoomGeneration else { return }
+        var updated = zoom
+        updated.pinch(scale: scale)
+        requestZoomUpdate(updated)
+    }
+
+    func endPinch(generation: Int) {
+        guard generation == zoomGeneration else { return }
+        pinching = false
+        showZoomReadout()
+    }
+
+    func adjustAccessibleZoom(increasing: Bool) {
+        guard availability == .ready, !isCapturing else { return }
+        var updated = zoom
+        updated.setFactor(zoom.factor + (increasing ? 0.25 : -0.25))
+        requestZoomUpdate(updated)
+    }
+
+    private func showZoomReadout() {
+        zoomReadoutDismissal?.cancel()
+        if !showingZoom { showingZoom = true }
+        guard !pinching else { return }
+        let dismissal = DispatchWorkItem { [weak self] in self?.showingZoom = false }
+        zoomReadoutDismissal = dismissal
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: dismissal)
+    }
+
+    private func requestZoomUpdate(_ updated: CameraZoomState) {
+        showZoomReadout()
+        guard abs(updated.factor - zoom.factor) >= 0.001 else { return }
+        zoom = updated
+        pendingZoomFactor = zoom.factor
+        applyPendingZoom()
+    }
+
+    private func invalidateZoomUpdates() {
+        zoomGeneration += 1
+        pendingZoomFactor = nil
+        zoomUpdateInFlight = false
+        zoomReadoutDismissal?.cancel()
+        pinching = false
+        if showingZoom { showingZoom = false }
+    }
+
+    /// Keep one device update in flight and replace its pending successor with
+    /// the newest gesture value, rather than building a queue of stale scales.
+    private func applyPendingZoom() {
+        guard !zoomUpdateInFlight, let factor = pendingZoomFactor, let device = activeDevice else { return }
+        pendingZoomFactor = nil
+        zoomUpdateInFlight = true
+        let generation = zoomGeneration
         queue.async { [weak self] in
-            guard let self, let device = self.input?.device else {
-                DispatchQueue.main.async { self?.isAdjustingZoom = false }
-                return
-            }
+            guard let self else { return }
+            var succeeded = false
             do {
-                try device.lockForConfiguration()
-                device.videoZoomFactor = min(device.maxAvailableVideoZoomFactor, max(device.minAvailableVideoZoomFactor, factor))
-                device.unlockForConfiguration()
-                let applied = device.videoZoomFactor
-                DispatchQueue.main.async {
-                    self.zoomFactor = applied
-                    self.isAdjustingZoom = false
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    self.isAdjustingZoom = false
-                    self.errorMessage = "This zoom is unavailable. Try another setting."
+                try Self.applyZoom(factor, to: device)
+                succeeded = true
+            } catch { }
+            let applied = device.videoZoomFactor
+            DispatchQueue.main.async {
+                guard generation == self.zoomGeneration else { return }
+                self.zoomUpdateInFlight = false
+                if succeeded {
+                    self.applyPendingZoom()
+                } else {
+                    self.pendingZoomFactor = nil
+                    self.zoom.setFactor(applied)
+                    self.errorMessage = "Couldn't adjust zoom. Please try again."
                 }
             }
         }
+    }
+
+    private static func applyZoom(_ factor: CGFloat, to device: AVCaptureDevice) throws {
+        try device.lockForConfiguration()
+        defer { device.unlockForConfiguration() }
+        device.videoZoomFactor = min(device.maxAvailableVideoZoomFactor, max(device.minAvailableVideoZoomFactor, min(4, factor)))
     }
 
     private func discover(position: AVCaptureDevice.Position) -> [AVCaptureDevice] {
@@ -220,6 +321,7 @@ final class CaptureSessionModel: NSObject, ObservableObject {
     }
 
     private func configure(position: AVCaptureDevice.Position, preferredID: String? = nil) {
+        invalidateZoomUpdates()
         queue.async { [weak self] in
             guard let self else { return }
             var candidates = self.discover(position: position)
@@ -292,12 +394,9 @@ final class CaptureSessionModel: NSObject, ObservableObject {
                     self.selectedLensID = device.uniqueID
                     self.supportsFlash = flashModes.count > 1
                     self.availableFlashModes = flashModes
-                    self.zoomFactor = device.videoZoomFactor
-                    self.zoomFactors = [1, 1.5, 2].filter {
-                        $0 >= device.minAvailableVideoZoomFactor && $0 <= device.maxAvailableVideoZoomFactor
-                    }
-                    if self.zoomFactors.isEmpty { self.zoomFactors = [device.videoZoomFactor] }
-                    self.isAdjustingZoom = false
+                    self.zoom.reset(deviceMinimum: device.minAvailableVideoZoomFactor,
+                                    deviceMaximum: device.maxAvailableVideoZoomFactor,
+                                    appliedFactor: device.videoZoomFactor)
                     self.updateRotation(for: device)
                     self.availability = .ready
                 }
@@ -311,7 +410,7 @@ final class CaptureSessionModel: NSObject, ObservableObject {
         switch device.deviceType {
         case .builtInTelephotoCamera: return "Telephoto"
         case .builtInTrueDepthCamera: return "TrueDepth"
-        default: return device.position == .front ? "Front wide" : "Wide · 1×"
+        default: return device.position == .front ? "Front wide" : "Wide"
         }
     }
 
@@ -334,11 +433,12 @@ final class CaptureSessionModel: NSObject, ObservableObject {
     }
 
     func capture() {
-        guard availability == .ready, !isCapturing, !isAdjustingZoom else { return }
+        guard availability == .ready, !isCapturing else { return }
         isCapturing = true
+        let requestedZoom = zoom.factor
+        invalidateZoomUpdates()
         let angle = rotationCoordinator?.videoRotationAngleForHorizonLevelCapture ?? 90
         let requestedFlash = supportsFlash ? flash.avMode : .off
-        captureLens = lenses.first { $0.id == selectedLensID }?.title ?? "Wide"
         if frontFacing && flash == .screen {
             let restorationID = UUID()
             flashRestorationID = restorationID
@@ -359,16 +459,34 @@ final class CaptureSessionModel: NSObject, ObservableObject {
                     self.isCapturing = false
                     return
                 }
-                self.performCapture(angle: angle, requestedFlash: requestedFlash)
+                self.performCapture(angle: angle, requestedFlash: requestedFlash, requestedZoom: requestedZoom)
             }
         } else {
-            performCapture(angle: angle, requestedFlash: requestedFlash)
+            performCapture(angle: angle, requestedFlash: requestedFlash, requestedZoom: requestedZoom)
         }
     }
 
-    private func performCapture(angle: CGFloat, requestedFlash: AVCaptureDevice.FlashMode) {
+    private func performCapture(angle: CGFloat, requestedFlash: AVCaptureDevice.FlashMode, requestedZoom: CGFloat) {
         queue.async { [weak self] in
             guard let self else { return }
+            var captureDescription = "Camera"
+            do {
+                if let device = self.input?.device {
+                    // Settle the newest gesture target before exposure and record
+                    // the actual device factor, including any hardware clamping.
+                    try Self.applyZoom(requestedZoom, to: device)
+                    captureDescription = CameraZoomState.captureDescription(
+                        lens: Self.lensTitle(device), factor: device.videoZoomFactor
+                    )
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.isCapturing = false
+                    self.endScreenFlash()
+                    self.errorMessage = "Couldn't adjust zoom for this photo. Please try again."
+                }
+                return
+            }
             let settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
             settings.photoQualityPrioritization = .quality
             if self.photoOutput.supportedFlashModes.contains(requestedFlash) {
@@ -382,6 +500,7 @@ final class CaptureSessionModel: NSObject, ObservableObject {
                     connection.isVideoMirrored = false
                 }
             }
+            self.captureDescriptions[settings.uniqueID] = captureDescription
             self.photoOutput.capturePhoto(with: settings, delegate: self)
         }
     }
@@ -447,13 +566,17 @@ extension CaptureSessionModel: AVCapturePhotoCaptureDelegate {
     ) {
         DispatchQueue.main.async { self.endScreenFlash() }
         guard error == nil, let data = photo.fileDataRepresentation(), let image = UIImage(data: data) else {
+            queue.async { self.captureDescriptions.removeValue(forKey: photo.resolvedSettings.uniqueID) }
             DispatchQueue.main.async {
                 self.isCapturing = false
                 self.errorMessage = "The photo couldn't be captured. Please try again."
             }
             return
         }
-        persist(image, lens: captureLens)
+        queue.async {
+            let description = self.captureDescriptions.removeValue(forKey: photo.resolvedSettings.uniqueID) ?? "Camera"
+            self.persist(image, lens: description)
+        }
     }
 }
 
@@ -508,7 +631,7 @@ private struct CaptureScreen: View {
     private var canvas: Color { Color(hex: dark ? 0x101A16 : 0xF6F7F2) }
     private var ink: Color { Color(hex: dark ? 0xF0F4EE : 0x16251F) }
     private var action: Color { Color(hex: dark ? 0xAED7BA : 0x245C45) }
-    private var ready: Bool { model.availability == .ready && !model.isCapturing && !model.isAdjustingZoom }
+    private var ready: Bool { model.availability == .ready && !model.isCapturing }
 
     var body: some View {
         GeometryReader { geometry in
@@ -714,31 +837,17 @@ private struct CaptureScreen: View {
         }
     }
 
-    private var zoomControl: some View {
-        HStack(spacing: 2) {
-            ForEach(model.zoomFactors, id: \.self) { factor in
-                let selected = abs(model.zoomFactor - factor) < 0.01
-                Button {
-                    CameraFeedback.selection()
-                    model.selectZoom(factor)
-                } label: {
-                    Text(zoomLabel(factor))
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .foregroundStyle(selected ? Color.black : Color.white)
-                        .frame(width: 44, height: 44)
-                        .background(selected ? Color.white : Color.clear, in: Circle())
-                        .frame(width: 48, height: 48)
-                        .contentShape(Circle())
-                }
-                .disabled(!ready)
-                .accessibilityLabel("\(zoomLabel(factor)) zoom")
-                .accessibilityAddTraits(selected ? .isSelected : [])
-            }
+    @ViewBuilder private var zoomControl: some View {
+        if model.showingZoom {
+            Text(String(format: "%.1f×", Double(model.zoom.factor)))
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(.black.opacity(0.4), in: Capsule())
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
-        .padding(3)
-        .background(.black.opacity(0.40), in: Capsule())
-        .opacity(model.availability == .ready ? 1 : 0.4)
-        .accessibilityIdentifier("camera.zoom")
     }
 
     private var shutterControls: some View {
@@ -817,9 +926,7 @@ private struct CaptureScreen: View {
         .multilineTextAlignment(.center)
     }
 
-    private func zoomLabel(_ factor: CGFloat) -> String {
-        factor == factor.rounded() ? "\(Int(factor))×" : "\(factor)×"
-    }
+
 }
 
 private struct CameraShutterStyle: ButtonStyle {
@@ -840,8 +947,46 @@ private enum CameraFeedback {
 
 private final class PreviewView: UIView {
     var screenChanged: ((UIScreen?) -> Void)?
+    var pinchStarted: (() -> Int?)?
+    var pinchChanged: ((CGFloat, Int) -> Void)?
+    var pinchEnded: ((Int) -> Void)?
+    var accessibleZoomChanged: ((Bool) -> Void)?
+    private var pinchGeneration: Int?
     override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
     var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        let pinch = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
+        pinch.cancelsTouchesInView = false
+        addGestureRecognizer(pinch)
+        isAccessibilityElement = true
+        accessibilityLabel = "Camera zoom"
+        accessibilityHint = "Swipe up or down to adjust zoom."
+        accessibilityIdentifier = "camera.zoom"
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    @objc private func handlePinch(_ gesture: UIPinchGestureRecognizer) {
+        switch gesture.state {
+        case .began:
+            pinchGeneration = pinchStarted?()
+        case .changed, .ended:
+            if let pinchGeneration { pinchChanged?(gesture.scale, pinchGeneration) }
+            if gesture.state == .ended {
+                if let pinchGeneration { pinchEnded?(pinchGeneration) }
+                pinchGeneration = nil
+            }
+        default:
+            if let pinchGeneration { pinchEnded?(pinchGeneration) }
+            pinchGeneration = nil
+        }
+    }
+
+    override func accessibilityIncrement() { accessibleZoomChanged?(true) }
+    override func accessibilityDecrement() { accessibleZoomChanged?(false) }
+
     override func didMoveToWindow() {
         super.didMoveToWindow()
         let screen = window?.windowScene?.screen
@@ -855,14 +1000,21 @@ private final class PreviewView: UIView {
 }
 
 private struct CameraPreview: UIViewRepresentable {
-    let model: CaptureSessionModel
+    @ObservedObject var model: CaptureSessionModel
     func makeUIView(context: Context) -> PreviewView {
         let view = PreviewView()
         view.screenChanged = { [weak model] in model?.attachScreen($0) }
+        view.pinchStarted = { [weak model] in model?.beginPinch() }
+        view.pinchChanged = { [weak model] scale, generation in model?.updatePinch(scale: scale, generation: generation) }
+        view.pinchEnded = { [weak model] generation in model?.endPinch(generation: generation) }
+        view.accessibleZoomChanged = { [weak model] increasing in model?.adjustAccessibleZoom(increasing: increasing) }
         model.attachPreview(view.previewLayer)
         return view
     }
-    func updateUIView(_ uiView: PreviewView, context: Context) {}
+    func updateUIView(_ uiView: PreviewView, context: Context) {
+        uiView.accessibilityValue = String(format: "%.1f times, from %.1f to %.1f", Double(model.zoom.factor), Double(model.zoom.minimum), Double(model.zoom.maximum))
+        uiView.accessibilityTraits = model.availability == .ready && !model.isCapturing ? [.adjustable] : [.notEnabled]
+    }
 }
 
 private struct PhotoPicker: UIViewControllerRepresentable {

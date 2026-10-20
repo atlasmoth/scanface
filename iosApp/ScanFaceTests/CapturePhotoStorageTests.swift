@@ -51,3 +51,59 @@ final class CapturePhotoStorageTests: XCTestCase {
         XCTAssertEqual(normalized.cgImage?.height, 300)
     }
 }
+
+final class CameraZoomTests: XCTestCase {
+    func testPinchUsesGestureOriginAndNextGestureStartsAtCurrentFactor() {
+        var zoom = CameraZoomState()
+        zoom.reset(deviceMinimum: 1, deviceMaximum: 8, appliedFactor: 1)
+        zoom.beginPinch()
+        zoom.pinch(scale: 1.5)
+        zoom.pinch(scale: 2)
+        XCTAssertEqual(zoom.factor, 2, "Recognizer scale is cumulative, so updates must not compound.")
+        zoom.beginPinch()
+        zoom.pinch(scale: 1.5)
+        XCTAssertEqual(zoom.factor, 3)
+        zoom.pinch(scale: 0.5)
+        XCTAssertEqual(zoom.factor, 1)
+    }
+
+    func testZoomClampsToFourTimesOrLowerHardwareMaximum() {
+        var zoom = CameraZoomState()
+        zoom.reset(deviceMinimum: 1, deviceMaximum: 12, appliedFactor: 1)
+        zoom.beginPinch()
+        zoom.pinch(scale: 20)
+        XCTAssertEqual(zoom.factor, 4)
+        zoom.pinch(scale: 0.1)
+        XCTAssertEqual(zoom.factor, 1)
+        zoom.reset(deviceMinimum: 1, deviceMaximum: 2.5, appliedFactor: 1)
+        zoom.beginPinch()
+        zoom.pinch(scale: 20)
+        XCTAssertEqual(zoom.factor, 2.5)
+    }
+
+    func testLensResetUsesHardwareMinimumAndAppliedBaseline() {
+        var zoom = CameraZoomState()
+        zoom.reset(deviceMinimum: 1, deviceMaximum: 8, appliedFactor: 3)
+        zoom.beginPinch()
+        zoom.pinch(scale: 1.2)
+        zoom.reset(deviceMinimum: 1.2, deviceMaximum: 3, appliedFactor: 1.4)
+        XCTAssertEqual(zoom.factor, 1.4)
+        zoom.beginPinch()
+        zoom.pinch(scale: 2)
+        XCTAssertEqual(zoom.factor, 2.8, accuracy: 0.001)
+        zoom.pinch(scale: 0.1)
+        XCTAssertEqual(zoom.factor, 1.2)
+    }
+
+    func testInvalidGestureInputDoesNotCorruptZoom() {
+        var zoom = CameraZoomState()
+        zoom.reset(deviceMinimum: 1, deviceMaximum: 6, appliedFactor: 2)
+        zoom.beginPinch()
+        for scale: CGFloat in [.nan, .infinity, -.infinity, 0, -1] {
+            zoom.pinch(scale: scale)
+            XCTAssertEqual(zoom.factor, 2)
+        }
+        zoom.setFactor(.nan)
+        XCTAssertEqual(zoom.factor, 2)
+    }
+}
