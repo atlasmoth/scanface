@@ -7,6 +7,7 @@ import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.Settings
+import android.view.View
 import android.view.ViewTreeObserver
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
@@ -24,6 +25,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
@@ -133,6 +135,7 @@ actual fun PlatformThemeEffect(darkTheme: Boolean) {
     val window = LocalContext.current.findActivity()?.window ?: return
     val view = LocalView.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val configuration = LocalConfiguration.current
     val currentDarkTheme by rememberUpdatedState(darkTheme)
     fun updateSystemBars() {
         WindowCompat.getInsetsController(window, window.decorView).apply {
@@ -141,12 +144,12 @@ actual fun PlatformThemeEffect(darkTheme: Boolean) {
         }
     }
     SideEffect { updateSystemBars() }
-    DisposableEffect(window, view, lifecycleOwner) {
+    DisposableEffect(window, view, lifecycleOwner, configuration) {
         val update = Runnable { updateSystemBars() }
         fun scheduleUpdate() {
             view.removeCallbacks(update)
-            // Apply after the returning picker/dialog has finished its focus
-            // dispatch, even when the app's Compose theme did not change.
+            // Reapply after Android's focus/configuration dispatch, which can
+            // restore system defaults even when the app theme did not change.
             view.post(update)
         }
         val lifecycleObserver = LifecycleEventObserver { _, event ->
@@ -155,11 +158,17 @@ actual fun PlatformThemeEffect(darkTheme: Boolean) {
         val focusObserver = ViewTreeObserver.OnWindowFocusChangeListener { focused ->
             if (focused) scheduleUpdate()
         }
+        val layoutObserver = View.OnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+            if (left != oldLeft || top != oldTop || right != oldRight || bottom != oldBottom) scheduleUpdate()
+        }
         val treeObserver = view.viewTreeObserver
         lifecycleOwner.lifecycle.addObserver(lifecycleObserver)
         treeObserver.addOnWindowFocusChangeListener(focusObserver)
+        view.addOnLayoutChangeListener(layoutObserver)
+        scheduleUpdate()
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(lifecycleObserver)
+            view.removeOnLayoutChangeListener(layoutObserver)
             view.removeCallbacks(update)
             val activeObserver = if (treeObserver.isAlive) treeObserver else view.viewTreeObserver
             if (activeObserver.isAlive) activeObserver.removeOnWindowFocusChangeListener(focusObserver)
