@@ -46,6 +46,12 @@ all four destinations plus camera dismissal. Android debug, iOS simulator and
 unsigned iOS device builds passed after the change; the device binary still
 reports minimum iOS 17.0.
 
+Separate issue found during the reinstall used for this check: iOS can relocate
+the app's data container while stored photo paths still contain its old absolute
+location. The JPEG remains in the current private Captures folder, but its preview
+can be blank. Relative-path resolution and migration for display and deletion
+remain to be fixed; this is independent of navigation placement.
+
 The shared suite verifies failed writes, corrupt/unreadable storage, analysis
 cancellation, invalid model output, explicit sample labeling, CSV escaping and
 durable photo-deletion retries. Deletion requests are persisted before removing
