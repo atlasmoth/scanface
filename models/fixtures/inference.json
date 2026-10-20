@@ -1,0 +1,23 @@
+{
+  "source_checkpoint_sha256": "980ad2f134c5d82e9aca39a738f88a5b10aaf15ca9a5462bf95599be023cdbba",
+  "shape": [
+    1,
+    112,
+    112,
+    3
+  ],
+  "dtype": "float32",
+  "range": [
+    0,
+    255
+  ],
+  "gradient_formula": [
+    "(3*x+y)%256",
+    "(x+2*y)%256",
+    "(7*x+5*y)%256"
+  ],
+  "gradient_age": 5.346164703369141,
+  "gray_127_age": 62.322818756103516,
+  "absolute_tolerance_years": 0.02,
+  "purpose": "Numerical regression only: these patterns are not valid face inputs."
+}
