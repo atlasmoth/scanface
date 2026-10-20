@@ -1,3 +1,6 @@
+import groovy.json.JsonSlurper
+import java.security.MessageDigest
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -48,8 +51,29 @@ val verifyBundledFaceAgeModel = tasks.register("verifyBundledFaceAgeModel") {
             "The bundled FaceAge model or its notices are missing: " +
                 missing.joinToString { it.name } +
                 ". Prepare them before building with: " +
-                "conda run -n dl python scripts/models/prepare_models.py --runtime litert --install"
+                "conda run -n dl python scripts/models/install_quantized_models.py --runtime litert"
         }
+        val selectionFile = rootProject.file("models/selected-models.json")
+        check(selectionFile.isFile) { "The checked-in model selection lock is missing." }
+        val selection = JsonSlurper().parse(selectionFile) as Map<*, *>
+        val locked = (selection["runtimes"] as Map<*, *>)["litert"] as Map<*, *>
+        val metadata = JsonSlurper().parse(modelDirectory.file("conversion.json").asFile) as Map<*, *>
+        check(locked["model_id"] == "fahr-faceage-1fbb84e-litert-int8w-native-v1" &&
+            listOf("model_id", "candidate", "sha256").all { metadata[it] == locked[it] }) {
+            "The bundled model metadata differs from the selected LiteRT profile. " +
+                "Run conda run -n dl python scripts/models/install_quantized_models.py --runtime litert"
+        }
+        val digest = MessageDigest.getInstance("SHA-256")
+        modelDirectory.file("fahr_faceage.tflite").asFile.inputStream().buffered().use { stream ->
+            val buffer = ByteArray(64 * 1024)
+            while (true) {
+                val count = stream.read(buffer)
+                if (count < 0) break
+                digest.update(buffer, 0, count)
+            }
+        }
+        val actual = digest.digest().joinToString("") { "%02x".format(it) }
+        check(actual == locked["sha256"]) { "The bundled LiteRT model differs from the checked-in selection hash." }
     }
 }
 tasks.named("preBuild") { dependsOn(verifyBundledFaceAgeModel) }

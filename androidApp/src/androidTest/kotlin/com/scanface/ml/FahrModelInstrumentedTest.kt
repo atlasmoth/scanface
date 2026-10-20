@@ -32,7 +32,12 @@ class FahrModelInstrumentedTest {
 
     @Test
     fun realBundledModelMatchesReferenceTensors() {
-        val reference = JSONObject(fixture("inference.json").decodeToString())
+        val metadata = context.assets.open("models/conversion.json").bufferedReader().use {
+            JSONObject(it.readText())
+        }
+        assertEquals(LiteRtAgeModel.MODEL_ID, metadata.getString("model_id"))
+        assertEquals("int8-weight", metadata.getString("candidate"))
+        val reference = metadata.getJSONObject("predictions_years")
         val gradient = FloatArray(112 * 112 * 3)
         for (y in 0 until 112) for (x in 0 until 112) {
             val offset = (y * 112 + x) * 3
@@ -41,9 +46,10 @@ class FahrModelInstrumentedTest {
             gradient[offset + 2] = ((7 * x + 5 * y) % 256).toFloat()
         }
         LiteRtAgeModel(context).use { model ->
-            val tolerance = reference.getDouble("absolute_tolerance_years")
-            assertEquals(reference.getDouble("gradient_age"), model.estimate(gradient), tolerance)
-            assertEquals(reference.getDouble("gray_127_age"), model.estimate(FloatArray(gradient.size) { 127f }), tolerance)
+            // Runtime parity is against this exact selected artifact. Drift from
+            // original float32 weights is independently gated by the installer.
+            assertEquals(reference.getDouble("gradient"), model.estimate(gradient), .02)
+            assertEquals(reference.getDouble("gray"), model.estimate(FloatArray(gradient.size) { 127f }), .02)
         }
     }
 

@@ -6,6 +6,7 @@ import com.google.ai.edge.litert.CompiledModel
 import com.google.ai.edge.litert.TensorBuffer
 import com.google.ai.edge.litert.TensorType
 import java.io.FileNotFoundException
+import org.json.JSONObject
 
 internal interface AgeModel : AutoCloseable {
     fun estimate(pixels: FloatArray): Double
@@ -39,6 +40,10 @@ internal class LiteRtAgeModel(
     private fun load(): CompiledModel {
         try {
             context.assets.open(assetName).use { /* Confirm packaging before loading JNI. */ }
+            val metadata = context.assets.open("models/conversion.json").bufferedReader().use {
+                JSONObject(it.readText())
+            }
+            check(metadata.getString("model_id") == MODEL_ID) { "Unexpected bundled model profile" }
         } catch (_: FileNotFoundException) {
             throw MissingAgeModelException()
         }
@@ -83,6 +88,6 @@ internal class LiteRtAgeModel(
     companion object {
         const val ASSET_NAME = "models/fahr_faceage.tflite"
         const val SIGNATURE = "serving_default"
-        const val MODEL_ID = "fahr-faceage-1fbb84e-litert-native-v1"
+        const val MODEL_ID = "fahr-faceage-1fbb84e-litert-int8w-native-v1"
     }
 }
