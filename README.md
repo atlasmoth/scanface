@@ -37,6 +37,9 @@ your own signing team in Xcode.
 
 ## Verify
 
+See [verification results](docs/verification.md) for the tested devices, completed
+checks and remaining physical-camera validation.
+
 ```sh
 ./gradlew :shared:desktopTest :androidApp:assembleDebug
 # With an Android emulator or device connected:
