@@ -53,10 +53,11 @@ fun updateNavigationRegion(region: NavigationRegion?) {
 @Composable
 actual fun PlatformNavigationRegion(): NavigationRegion? = navigationRegion.value
 
-fun MainViewController(cameraFactory: CameraControllerFactory): UIViewController {
+fun MainViewController(cameraFactory: CameraControllerFactory, analyzer: NativeFaceAnalyzer): UIViewController {
     com.scanface.platform.cameraFactory = cameraFactory
     updateNavigationRegion(null)
-    return ComposeUIViewController { App(createPlatformServices()) }
+    val faceAnalyzer = IosFaceAnalyzer(analyzer)
+    return ComposeUIViewController { App(createPlatformServices(), faceAnalyzer) }
 }
 
 @Composable

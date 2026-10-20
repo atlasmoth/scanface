@@ -26,7 +26,7 @@ struct ScanFaceApp: App {
 
 private struct SharedApplication: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
-        let shared = IosPlatformKt.MainViewController(cameraFactory: NativeCameraFactory())
+        let shared = IosPlatformKt.MainViewController(cameraFactory: NativeCameraFactory(), analyzer: CoreMLFaceAnalyzer())
         return ComposeHostController(content: shared)
     }
 

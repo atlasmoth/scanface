@@ -27,6 +27,9 @@ targets:
     platform: iOS
     sources:
       - path: ScanFace
+      - path: ../models/licenses
+        type: folder
+        buildPhase: resources
     info:
       path: ScanFace/Info.plist
       properties:
@@ -59,6 +62,10 @@ targets:
         script: |
           set -e
           cd "$SRCROOT/.."
+          if [ ! -d iosApp/ScanFace/Models/FAHRFaceAge.mlpackage ] || [ ! -f iosApp/ScanFace/Models/conversion.json ]; then
+            echo "error: Prepare the on-device model first: conda run -n dl python scripts/models/prepare_models.py --runtime coreml --install"
+            exit 1
+          fi
           if [ -n "$JAVA_HOME" ]; then
             export JAVA_HOME
           else
@@ -68,7 +75,13 @@ targets:
   ScanFaceTests:
     type: bundle.unit-test
     platform: iOS
-    sources: [ScanFaceTests]
+    sources:
+      - path: ScanFaceTests
+      - path: ../models/fixtures
+        buildPhase: resources
+      - path: ../artifacts/models/ios-smoke/author-portrait.jpg
+        buildPhase: resources
+        optional: true
     dependencies:
       - target: ScanFace
     settings:
