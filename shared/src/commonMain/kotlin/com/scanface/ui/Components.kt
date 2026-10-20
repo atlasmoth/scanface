@@ -1,10 +1,8 @@
 package com.scanface.ui
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -13,12 +11,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
+import com.scanface.platform.AppHaptic
+import com.scanface.platform.LocalAppHaptics
 import com.scanface.core.AnalysisStatus
 import com.scanface.core.ScanRecord
 import com.scanface.platform.PhotoImage
@@ -36,27 +38,20 @@ fun dateLabel(epoch: Long, full: Boolean = false): String {
 fun ageLabel(age: Double): String = if (age == age.toInt().toDouble()) age.toInt().toString() else ((age * 10).roundToInt() / 10.0).toString()
 
 @Composable
-fun ScanCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Surface(modifier, shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
-        Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(16.dp), content = content)
-    }
-}
-
-@Composable
 fun Badge(text: String, modifier: Modifier = Modifier) {
-    Surface(modifier, color = MaterialTheme.colorScheme.secondaryContainer, shape = RoundedCornerShape(8.dp)) {
-        Text(text, Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Canvas(Modifier.size(5.dp)) { drawCircle(Color(0xFF729981)) }
+        Text(text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
 fun PrimaryButton(text: String, icon: AppIcon? = null, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
-    Button(onClick, modifier.heightIn(min = 52.dp), enabled = enabled, shape = RoundedCornerShape(14.dp),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp)) {
+    val haptics = LocalAppHaptics.current
+    Button({ haptics.perform(AppHaptic.Light); onClick() }, modifier.heightIn(min = 54.dp), enabled = enabled,
+        shape = RoundedCornerShape(28.dp), contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp)) {
         if (icon != null) {
-            Glyph(icon, tint = MaterialTheme.colorScheme.onPrimary)
+            Glyph(icon, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onPrimary)
             Spacer(Modifier.width(10.dp))
         }
         Text(text)
@@ -65,9 +60,10 @@ fun PrimaryButton(text: String, icon: AppIcon? = null, modifier: Modifier = Modi
 
 @Composable
 fun SectionTitle(title: String, action: String? = null, onAction: () -> Unit = {}) {
+    val haptics = LocalAppHaptics.current
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-        if (action != null) TextButton(onAction) { Text(action) }
+        if (action != null) TextButton({ haptics.perform(AppHaptic.Light); onAction() }) { Text(action) }
     }
 }
 
@@ -81,10 +77,12 @@ fun PhotoThumbnail(record: ScanRecord, modifier: Modifier = Modifier) {
 
 @Composable
 fun RecordRow(record: ScanRecord, selected: Boolean = false, onClick: () -> Unit) {
-    Surface(onClick, shape = RoundedCornerShape(14.dp),
-        color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface) {
-        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            PhotoThumbnail(record, Modifier.size(52.dp))
+    val haptics = LocalAppHaptics.current
+    Surface({ haptics.perform(AppHaptic.Selection); onClick() }, shape = RoundedCornerShape(16.dp),
+        color = if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            PhotoThumbnail(record, Modifier.size(56.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(dateLabel(record.createdAtMillis, true), style = MaterialTheme.typography.labelLarge)
                 Text(when (record.status) {
@@ -94,17 +92,8 @@ fun RecordRow(record: ScanRecord, selected: Boolean = false, onClick: () -> Unit
                 }, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (record.age != null) Text(ageLabel(record.age), style = MaterialTheme.typography.titleLarge)
-            Glyph(AppIcon.Chevron, Modifier.size(18.dp), MaterialTheme.colorScheme.onSurfaceVariant)
+            Glyph(AppIcon.Chevron, Modifier.size(16.dp), MaterialTheme.colorScheme.onSurfaceVariant)
         }
-    }
-}
-
-@Composable
-fun PrivacyNote(modifier: Modifier = Modifier) {
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
-        Glyph(AppIcon.Lock, Modifier.size(16.dp), MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("Photos stay on this device. You control what you save and share.",
-            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -155,14 +144,35 @@ fun AgeChart(records: List<ScanRecord>, modifier: Modifier = Modifier) {
     }
 }
 
+/** A light, decorative viewfinder mark; no container competing with the action. */
+@Composable
+fun ScanMark(modifier: Modifier = Modifier) {
+    val ink = MaterialTheme.colorScheme.primary
+    Canvas(modifier.size(92.dp)) {
+        val unit = size.minDimension / 92f
+        val stroke = Stroke(1.6.dp.toPx(), cap = StrokeCap.Round)
+        val corners = Path().apply {
+            moveTo(22 * unit, 4 * unit); lineTo(12 * unit, 4 * unit); quadraticTo(4 * unit, 4 * unit, 4 * unit, 12 * unit); lineTo(4 * unit, 22 * unit)
+            moveTo(70 * unit, 4 * unit); lineTo(80 * unit, 4 * unit); quadraticTo(88 * unit, 4 * unit, 88 * unit, 12 * unit); lineTo(88 * unit, 22 * unit)
+            moveTo(4 * unit, 70 * unit); lineTo(4 * unit, 80 * unit); quadraticTo(4 * unit, 88 * unit, 12 * unit, 88 * unit); lineTo(22 * unit, 88 * unit)
+            moveTo(88 * unit, 70 * unit); lineTo(88 * unit, 80 * unit); quadraticTo(88 * unit, 88 * unit, 80 * unit, 88 * unit); lineTo(70 * unit, 88 * unit)
+        }
+        drawPath(corners, ink.copy(alpha = .55f), style = stroke)
+        drawOval(ink, Offset(28 * unit, 20 * unit), Size(36 * unit, 49 * unit), style = stroke)
+        drawLine(ink.copy(alpha = .35f), Offset(17 * unit, 46 * unit), Offset(75 * unit, 46 * unit), stroke.width, StrokeCap.Round)
+    }
+}
+
 @Composable
 fun EmptyState(title: String, body: String, action: String, onAction: () -> Unit) {
-    ScanCard(Modifier.fillMaxWidth()) {
-        Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = CircleShape) {
-            Glyph(AppIcon.Face, Modifier.padding(24.dp).size(48.dp), MaterialTheme.colorScheme.primary)
+    Column(Modifier.widthIn(max = 400.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(title, style = MaterialTheme.typography.headlineLarge, textAlign = TextAlign.Center)
+        if (body.isNotBlank()) {
+            Spacer(Modifier.height(12.dp))
+            Text(body, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center)
         }
-        Text(title, style = MaterialTheme.typography.headlineMedium)
-        Text(body, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        PrimaryButton(action, AppIcon.Scan, Modifier.fillMaxWidth(), onClick = onAction)
+        Spacer(Modifier.height(28.dp))
+        PrimaryButton(action, onClick = onAction)
     }
 }

@@ -1,6 +1,5 @@
 package com.scanface.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,91 +13,73 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.scanface.core.*
+import com.scanface.platform.AppHaptic
+import com.scanface.platform.LocalAppHaptics
 
 @Composable
 fun OverviewScreen(state: AppState, wide: Boolean, now: Long, onScan: () -> Unit,
                    onHistory: () -> Unit, onRecord: (ScanRecord) -> Unit) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Your face. Your perspective.", style = MaterialTheme.typography.headlineLarge)
-            Text("Facial-age research, on your device.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        if (state.records.isEmpty()) {
-            Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                Column(Modifier.weight(1f)) {
-                    EmptyState("Start with a face scan",
-                        "Capture one clear face for a research facial-age estimate. Analysis runs on your device, and your photos stay here.",
-                        "Take your first scan", onScan)
-                }
-                if (wide) Column(Modifier.weight(1f)) { HowItWorks() }
+    if (state.records.isEmpty()) {
+        BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+            val topSpace = (maxHeight * .17f).coerceIn(56.dp, 144.dp)
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                .padding(horizontal = 28.dp).padding(top = topSpace, bottom = 40.dp),
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                ScanMark()
+                Spacer(Modifier.height(36.dp))
+                EmptyState("Start with a face scan", "See your estimated facial age.", "Take your first scan", onScan)
             }
-            if (!wide) HowItWorks()
-        } else {
-            val latest = state.latest!!
-            Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                    ScanCard {
+        }
+        return
+    }
+    val latest = state.latest!!
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier.widthIn(max = 1100.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(40.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(56.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(28.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
                         SectionTitle("Latest scan", "View") { onRecord(latest) }
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                            PhotoThumbnail(latest, Modifier.size(84.dp))
-                            Column(Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                            PhotoThumbnail(latest, Modifier.size(if (wide) 132.dp else 104.dp))
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 if (latest.age != null) {
-                                    Row(verticalAlignment = Alignment.Bottom) {
-                                        Text(ageLabel(latest.age), style = MaterialTheme.typography.displayLarge)
-                                        Text(" years", Modifier.padding(bottom = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                    Text("Estimated facial age", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(ageLabel(latest.age), style = MaterialTheme.typography.displayLarge)
+                                    Text("Estimated facial age", style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 } else {
                                     Text("No estimate", style = MaterialTheme.typography.headlineMedium)
-                                    Text(if (latest.status == AnalysisStatus.FAILED) "Analysis unavailable" else "Model unavailable",
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
+                                Text(dateLabel(latest.createdAtMillis, true), style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
-                        Text(dateLabel(latest.createdAtMillis, true), style = MaterialTheme.typography.bodyMedium)
-                        PrimaryButton("New face scan", AppIcon.Scan, Modifier.fillMaxWidth(), onClick = onScan)
+                        PrimaryButton("New face scan", AppIcon.Scan, onClick = onScan)
                     }
                     if (wide) RecentScans(state.records, onHistory, onRecord)
                 }
-                if (wide) Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                    HistoryChart(state.records, now)
-                    HowItWorks()
-                }
+                if (wide) Column(Modifier.weight(1f).padding(top = 8.dp)) { HistoryChart(state.records, now) }
             }
             if (!wide) {
                 HistoryChart(state.records, now)
                 RecentScans(state.records, onHistory, onRecord)
             }
         }
-        PrivacyNote()
     }
 }
 
 @Composable
 private fun RecentScans(records: List<ScanRecord>, onHistory: () -> Unit, onRecord: (ScanRecord) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column {
         SectionTitle("Recent scans", "View all", onHistory)
-        records.take(3).forEach { record -> RecordRow(record) { onRecord(record) } }
-    }
-}
-
-@Composable
-private fun HowItWorks() {
-    ScanCard(Modifier.fillMaxWidth()) {
-        Text("Make room for perspective", style = MaterialTheme.typography.titleLarge)
-        Text("Use even lighting, face the camera and keep a natural expression. Changes between photos can reflect lighting or pose, even when your appearance has not changed.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Glyph(AppIcon.Info, Modifier.size(20.dp), MaterialTheme.colorScheme.primary)
-            Text("Facial age is an estimate, not a diagnosis or a measure of your health.",
-                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        records.take(3).forEachIndexed { index, record ->
+            RecordRow(record) { onRecord(record) }
+            if (index < records.take(3).lastIndex) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f))
         }
     }
 }
@@ -106,47 +87,62 @@ private fun HowItWorks() {
 @Composable
 private fun HistoryChart(records: List<ScanRecord>, now: Long) {
     var range by rememberSaveable { mutableStateOf("Month") }
+    val haptics = LocalAppHaptics.current
     val rangeMillis = if (range == "Month") 30L * 86_400_000 else 365L * 86_400_000
     val filtered = records.filter { it.createdAtMillis >= now - rangeMillis }
-    ScanCard(Modifier.fillMaxWidth()) {
-        Text("Over time", style = MaterialTheme.typography.titleMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Month", "Year").forEach {
-                FilterChip(selected = range == it, onClick = { range = it }, label = { Text(it) })
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Over time", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+            listOf("Month", "Year").forEach { option ->
+                Box(Modifier.heightIn(min = 48.dp)
+                    .selectable(selected = range == option, role = Role.RadioButton,
+                        onClick = { if (range != option) { haptics.perform(AppHaptic.Selection); range = option } })
+                    .padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                    Text(option, style = MaterialTheme.typography.labelMedium,
+                        color = if (range == option) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
         AgeChart(filtered)
-        Text("Facial-age estimates in years", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Facial-age estimates in years", style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
 fun HistoryScreen(records: List<ScanRecord>, selectedId: String?, wide: Boolean, now: Long, onSelect: (ScanRecord) -> Unit,
                   onScan: () -> Unit, onShare: (ScanRecord?) -> Unit, onDelete: (ScanRecord) -> Unit) {
+    val haptics = LocalAppHaptics.current
     if (records.isEmpty()) {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {
-            EmptyState("A fresh start", "Your saved scans will live here, ready to revisit whenever you like.",
-                "New face scan", onScan)
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val topSpace = (maxHeight * .25f).coerceIn(96.dp, 200.dp)
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                .padding(horizontal = 28.dp).padding(top = topSpace, bottom = 40.dp),
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                EmptyState("No scans yet", "", "New face scan", onScan)
+            }
         }
         return
     }
     val selected = records.firstOrNull { it.id == selectedId } ?: records.first()
     Row(Modifier.fillMaxSize()) {
-        LazyColumn(Modifier.weight(if (wide) 0.42f else 1f).fillMaxHeight(), contentPadding = PaddingValues(24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item { HistoryChart(records, now) }
+        LazyColumn(Modifier.weight(if (wide) .42f else 1f).fillMaxHeight(), contentPadding = PaddingValues(24.dp)) {
+            item { HistoryChart(records, now); Spacer(Modifier.height(32.dp)) }
             item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("${records.size} saved ${if (records.size == 1) "scan" else "scans"}", Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                IconButton({ onShare(null) }) { Glyph(AppIcon.Share, description = "Export scan history") }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("${records.size} saved ${if (records.size == 1) "scan" else "scans"}", Modifier.weight(1f),
+                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    IconButton({ haptics.perform(AppHaptic.Light); onShare(null) }) { Glyph(AppIcon.Share, description = "Export scan history") }
+                }
             }
+            items(records, key = { it.id }) { record ->
+                RecordRow(record, wide && selected.id == record.id) { onSelect(record) }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f))
             }
-            items(records, key = { it.id }) { record -> RecordRow(record, wide && selected.id == record.id) { onSelect(record) } }
-            item { PrivacyNote(Modifier.padding(top = 16.dp)) }
         }
         if (wide) {
-            VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Column(Modifier.weight(0.58f).fillMaxHeight().background(MaterialTheme.colorScheme.surfaceContainer)) {
+            VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f))
+            Box(Modifier.weight(.58f).fillMaxHeight()) {
                 ResultScreen(selected, false, false, {}, {}, { onShare(selected) }, { onDelete(selected) })
             }
         }
@@ -156,81 +152,104 @@ fun HistoryScreen(records: List<ScanRecord>, selectedId: String?, wide: Boolean,
 @Composable
 fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
                  onSave: () -> Unit, onRetake: () -> Unit, onShare: () -> Unit, onDelete: () -> Unit) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Column(Modifier.widthIn(max = 620.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(if (pending) "Your scan" else dateLabel(record.createdAtMillis, true), style = MaterialTheme.typography.headlineMedium)
-                Text("Stored privately on this device", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            ScanCard(Modifier.fillMaxWidth()) {
-                val photoAspect = if (record.width > 0 && record.height > 0) record.width.toFloat() / record.height else 1f
-                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    PhotoThumbnail(record, Modifier.heightIn(max = 220.dp).aspectRatio(photoAspect))
-                }
-                if (analyzing) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        CircularProgressIndicator(Modifier.size(24.dp))
-                        Text("Analyzing on this device…", style = MaterialTheme.typography.titleLarge)
-                    }
-                } else if (record.age != null && record.status == AnalysisStatus.COMPLETE) {
-                    Badge("Research estimate")
-                    Text("Estimated facial age", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(ageLabel(record.age), style = MaterialTheme.typography.displayLarge)
-                        Text(" years", Modifier.padding(bottom = 8.dp), style = MaterialTheme.typography.titleMedium)
-                    }
-                    if (record.enteredAge != null) {
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Column {
-                                Text("Entered age", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text("${record.enteredAge} years", style = MaterialTheme.typography.titleMedium)
-                            }
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text("Difference", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                val difference = record.ageDifference!!
-                                Text("${if (difference > 0) "+" else ""}${ageLabel(difference)} years", style = MaterialTheme.typography.titleMedium)
-                            }
-                        }
+    val haptics = LocalAppHaptics.current
+    var detailsExpanded by rememberSaveable(record.id) { mutableStateOf(false) }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 28.dp, vertical = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier.widthIn(max = 720.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(28.dp)) {
+            Text(if (pending) "Your scan" else dateLabel(record.createdAtMillis, true), style = MaterialTheme.typography.headlineMedium)
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                if (maxWidth >= 560.dp) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(36.dp)) {
+                        PhotoThumbnail(record, Modifier.weight(.45f).aspectRatio(.85f))
+                        Column(Modifier.weight(.55f)) { ScanEstimate(record, analyzing) }
                     }
                 } else {
-                    Badge(if (record.status == AnalysisStatus.FAILED) "Analysis unavailable" else "Model unavailable")
-                    Text("No estimate was produced", style = MaterialTheme.typography.headlineMedium)
-                    Text(record.analysisMessage ?: "This photo could not be analyzed on this device. You can keep the capture or take another photo.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(28.dp)) {
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            PhotoThumbnail(record, Modifier.widthIn(max = 300.dp).fillMaxWidth().aspectRatio(1.15f))
+                        }
+                        ScanEstimate(record, analyzing)
+                    }
                 }
             }
             if (pending) {
-                PrimaryButton("Save scan", AppIcon.Check, Modifier.fillMaxWidth(), !analyzing, onSave)
-                OutlinedButton(onRetake, Modifier.fillMaxWidth().heightIn(min = 48.dp), shape = RoundedCornerShape(14.dp)) { Text("Retake photo") }
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    PrimaryButton("Save scan", AppIcon.Check, Modifier.fillMaxWidth(), !analyzing, onSave)
+                    Spacer(Modifier.height(8.dp))
+                    TextButton({ haptics.perform(AppHaptic.Warning); onRetake() }, Modifier.heightIn(min = 48.dp)) { Text("Retake photo") }
+                }
             } else {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(onShare, Modifier.weight(1f).heightIn(min = 48.dp), shape = RoundedCornerShape(14.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    TextButton({ haptics.perform(AppHaptic.Light); onShare() }, Modifier.heightIn(min = 48.dp)) {
                         Glyph(AppIcon.Share, Modifier.size(20.dp), MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.width(8.dp)); Text("Share summary")
+                        Spacer(Modifier.width(10.dp)); Text("Share summary")
                     }
-                    IconButton(onDelete, Modifier.size(48.dp)) { Glyph(AppIcon.Delete, tint = MaterialTheme.colorScheme.error, description = "Delete scan") }
+                    IconButton({ haptics.perform(AppHaptic.Warning); onDelete() }, Modifier.size(48.dp)) {
+                        Glyph(AppIcon.Delete, tint = MaterialTheme.colorScheme.error, description = "Delete scan")
+                    }
                 }
             }
-            ScanCard {
-                Text("About this scan", style = MaterialTheme.typography.titleMedium)
-                Text("Photos are processed and stored on this device. Sharing a summary includes scan details, never your photo.",
-                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (record.lens != null && record.width > 0 && record.height > 0) {
-                    Text("${record.lens} · ${record.width} × ${record.height}", style = MaterialTheme.typography.labelMedium)
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f))
+                TextButton({ haptics.perform(AppHaptic.Selection); detailsExpanded = !detailsExpanded },
+                    Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 8.dp)) {
+                    Text("About this scan", Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface)
+                    Glyph(AppIcon.Chevron, Modifier.size(16.dp).rotate(if (detailsExpanded) 90f else 0f), MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                if (record.status == AnalysisStatus.COMPLETE) {
-                    record.modelId?.takeIf { it.isNotBlank() }?.let {
-                        Text("Model: $it", style = MaterialTheme.typography.labelMedium)
+                if (detailsExpanded) {
+                    if (record.lens != null && record.width > 0 && record.height > 0) {
+                        Text("${record.lens} · ${record.width} × ${record.height}", style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    record.analysisMessage?.takeIf { it.isNotBlank() }?.let {
-                        Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (record.status == AnalysisStatus.COMPLETE) {
+                        record.modelId?.takeIf { it.isNotBlank() }?.let {
+                            Text("Model: $it", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        record.analysisMessage?.takeIf { it.isNotBlank() }?.let {
+                            Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
+                    Text("Facial-age estimates are for research. They are not a measure of your health or a diagnosis.",
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Text("Facial-age estimates are for research. They are not a measure of your health, a diagnosis, or a prediction of your lifespan.",
-                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        }
+    }
+}
+
+@Composable
+private fun ScanEstimate(record: ScanRecord, analyzing: Boolean) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (analyzing) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+                Text("Analyzing your scan…", style = MaterialTheme.typography.titleMedium)
+            }
+        } else if (record.age != null && record.status == AnalysisStatus.COMPLETE) {
+            Text("Estimated facial age", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(ageLabel(record.age), style = MaterialTheme.typography.displayLarge)
+                Text("years", Modifier.padding(bottom = 10.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (record.enteredAge != null) {
+                Spacer(Modifier.height(4.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(32.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Entered age", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("${record.enteredAge} years", style = MaterialTheme.typography.titleMedium)
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Difference", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        val difference = record.ageDifference!!
+                        Text("${if (difference > 0) "+" else ""}${ageLabel(difference)} years", style = MaterialTheme.typography.titleMedium)
+                    }
+                }
+            }
+        } else {
+            Badge(if (record.status == AnalysisStatus.FAILED) "Analysis unavailable" else "Model unavailable")
+            Text("No estimate this time", style = MaterialTheme.typography.headlineMedium)
+            Text(record.analysisMessage ?: "Try another clear, evenly lit photo of one face.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -240,71 +259,56 @@ fun SettingsScreen(state: AppState, onTheme: (ThemeMode) -> Unit, onAge: (Int?) 
                    onClear: () -> Unit, onRetryCleanup: () -> Unit) {
     var ageText by rememberSaveable(state.enteredAge) { mutableStateOf(state.enteredAge?.toString() ?: "") }
     var ageError by rememberSaveable { mutableStateOf(false) }
-    val uriHandler = LocalUriHandler.current
-    var linkError by remember { mutableStateOf<String?>(null) }
-    fun openLink(url: String) {
-        linkError = null
-        runCatching { uriHandler.openUri(url) }.onFailure { linkError = "This device could not open the link." }
-    }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Column(Modifier.widthIn(max = 700.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-            ScanCard {
+    val haptics = LocalAppHaptics.current
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 28.dp, vertical = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier.widthIn(max = 600.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(32.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Appearance", style = MaterialTheme.typography.titleLarge)
                 ThemeMode.entries.forEach { theme ->
-                    Surface(modifier = Modifier.selectable(selected = state.theme == theme, role = Role.RadioButton, onClick = { onTheme(theme) }),
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (state.theme == theme) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface) {
-                        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                            Glyph(when (theme) { ThemeMode.SYSTEM -> AppIcon.System; ThemeMode.LIGHT -> AppIcon.Sun; ThemeMode.DARK -> AppIcon.Moon })
-                            Text(when (theme) { ThemeMode.SYSTEM -> "Use device setting"; ThemeMode.LIGHT -> "Light"; ThemeMode.DARK -> "Dark" }, Modifier.weight(1f))
-                            RadioButton(selected = state.theme == theme, onClick = null)
-                        }
+                    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp)
+                        .selectable(selected = state.theme == theme, role = Role.RadioButton, onClick = {
+                            if (state.theme != theme) { haptics.perform(AppHaptic.Selection); onTheme(theme) }
+                        }).padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Glyph(when (theme) { ThemeMode.SYSTEM -> AppIcon.System; ThemeMode.LIGHT -> AppIcon.Sun; ThemeMode.DARK -> AppIcon.Moon },
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(when (theme) { ThemeMode.SYSTEM -> "Use device setting"; ThemeMode.LIGHT -> "Light"; ThemeMode.DARK -> "Dark" }, Modifier.weight(1f))
+                        if (state.theme == theme) Glyph(AppIcon.Check, Modifier.size(20.dp), MaterialTheme.colorScheme.primary)
                     }
                 }
             }
-            ScanCard {
-                Text("A little context", style = MaterialTheme.typography.titleLarge)
-                Text("Optionally add your age for comparison in new scans. It does not affect the model's estimate.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f))
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("Your age", style = MaterialTheme.typography.titleLarge)
+                Text("An optional comparison for new scans.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 OutlinedTextField(ageText, { ageText = it.take(3); ageError = false }, label = { Text("Your age (optional)") },
                     modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    isError = ageError, supportingText = { if (ageError) Text("Enter an age from 1 to 120, or leave blank.") })
+                    shape = RoundedCornerShape(16.dp), isError = ageError,
+                    supportingText = if (ageError) ({ Text("Enter an age from 1 to 120, or leave blank.") }) else null)
                 PrimaryButton("Save age", enabled = ageText != (state.enteredAge?.toString() ?: "")) {
                     val age = ageText.toIntOrNull()
                     ageError = ageText.isNotBlank() && (age == null || age !in 1..120)
-                    if (!ageError) onAge(age)
+                    if (ageError) haptics.perform(AppHaptic.Error) else onAge(age)
                 }
             }
-            ScanCard {
-                Text("Your data", style = MaterialTheme.typography.titleLarge)
-                PrivacyNote()
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f))
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Saved scans", style = MaterialTheme.typography.titleLarge)
                 if (state.cleanupPendingCount > 0) {
-                    Badge("Photo deletion pending")
-                    Text("${state.cleanupPendingCount} ${if (state.cleanupPendingCount == 1) "photo could" else "photos could"} not be removed. The app will retry when you reopen it, or you can try again now.",
+                    Text("${state.cleanupPendingCount} ${if (state.cleanupPendingCount == 1) "photo is" else "photos are"} waiting to be deleted.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    PrimaryButton("Retry photo deletion", AppIcon.Delete, onClick = onRetryCleanup)
+                    TextButton({ haptics.perform(AppHaptic.Light); onRetryCleanup() }) { Text("Retry photo deletion") }
                 }
-                TextButton(onClear, enabled = state.records.isNotEmpty(), colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
-                    Text("Delete all saved scans")
+                TextButton({ haptics.perform(AppHaptic.Warning); onClear() }, enabled = state.records.isNotEmpty(),
+                    contentPadding = PaddingValues(vertical = 12.dp),
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
+                    Glyph(AppIcon.Delete, Modifier.size(20.dp), if (state.records.isNotEmpty()) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurface.copy(alpha = .38f))
+                    Spacer(Modifier.width(10.dp)); Text("Delete all saved scans")
                 }
             }
-            ScanCard {
-                Badge("Research use")
-                Text("About the model", style = MaterialTheme.typography.titleLarge)
-                Text("FAHR-FaceAge · Haugg, Lee and colleagues\nThe Lancet Digital Health, 2026",
-                    style = MaterialTheme.typography.titleMedium)
-                Text("ScanFace runs facial-age estimation on this device using LiteRT on Android and Core ML on iOS. Photos are not sent to a server for analysis.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("This research model estimates age from facial appearance. Its clinical findings come from retrospective cancer studies; it has not been validated as a health assessment for individual app users. Lighting, pose and demographic differences can affect estimates.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Model weights: CC BY-NC-SA 4.0. Noncommercial use only; attribution and share-alike terms apply to redistributed adaptations. Author code: Apache 2.0. ScanFace uses converted weights and native face detection; it is not an official author release.",
-                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                TextButton({ openLink("https://doi.org/10.1016/j.landig.2026.101056") }) { Text("Read the study") }
-                TextButton({ openLink("https://github.com/AIM-Harvard/FAHR-Face") }) { Text("Author code and model source") }
-                TextButton({ openLink("https://creativecommons.org/licenses/by-nc-sa/4.0/") }) { Text("Model weight license") }
-                linkError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
-            }
+            Spacer(Modifier.height(12.dp))
         }
     }
 }
