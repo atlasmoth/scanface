@@ -15,6 +15,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.scanface.core.*
@@ -193,7 +195,9 @@ fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f))
                 TextButton({ haptics.perform(AppHaptic.Selection); detailsExpanded = !detailsExpanded },
-                    Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 8.dp)) {
+                    Modifier.fillMaxWidth().semantics {
+                        stateDescription = if (detailsExpanded) "Expanded" else "Collapsed"
+                    }, contentPadding = PaddingValues(vertical = 8.dp)) {
                     Text("About this scan", Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface)
                     Glyph(AppIcon.Chevron, Modifier.size(16.dp).rotate(if (detailsExpanded) 90f else 0f), MaterialTheme.colorScheme.onSurfaceVariant)
                 }
