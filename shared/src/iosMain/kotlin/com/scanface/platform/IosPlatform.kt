@@ -9,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.UIKitView
@@ -38,9 +39,22 @@ interface CameraControllerFactory {
 
 private var cameraFactory: CameraControllerFactory? = null
 private var currentDarkTheme = false
+private val navigationRegion = mutableStateOf<NavigationRegion?>(null)
+
+/** Coordinates are UIKit points in the full Compose controller, before safe-area padding. */
+fun updateNavigationRegion(region: NavigationRegion?) {
+    navigationRegion.value = region?.takeIf {
+        it.x.isFinite() && it.y.isFinite() && it.width.isFinite() && it.height.isFinite() &&
+            it.x >= 0f && it.y >= 0f && it.width > 0f && it.height > 0f
+    }
+}
+
+@Composable
+actual fun PlatformNavigationRegion(): NavigationRegion? = navigationRegion.value
 
 fun MainViewController(cameraFactory: CameraControllerFactory): UIViewController {
     com.scanface.platform.cameraFactory = cameraFactory
+    updateNavigationRegion(null)
     return ComposeUIViewController { App(createPlatformServices()) }
 }
 

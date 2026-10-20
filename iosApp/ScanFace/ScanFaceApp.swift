@@ -39,6 +39,7 @@ private final class ComposeHostController: UIViewController {
     private let content: UIViewController
     private var dark = false
     private var themeObserver: NSObjectProtocol?
+    private var lastNavigationRect: CGRect?
 
     init(content: UIViewController) {
         self.content = content
@@ -67,12 +68,72 @@ private final class ComposeHostController: UIViewController {
             content.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
         content.didMove(toParent: self)
+        if #available(iOS 27.1, *) {
+            registerForTraitChanges(UITraitCollection.systemTraitsAffectingVerticalBarEdge) {
+                (controller: ComposeHostController, _: UITraitCollection) in
+                controller.view.setNeedsLayout()
+            }
+        }
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        updateNavigationRegion()
+    }
+
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        view.setNeedsLayout()
+    }
+
+    /// The system bar region uses the existing edge gutter while excluding the
+    /// camera, status area, screen corners, and other reserved system regions.
+    private func updateNavigationRegion() {
+        guard #available(iOS 27.1, *), content.view.window != nil else {
+            publishNavigationRegion(nil)
+            return
+        }
+        let host = content.view!
+        let rtl = host.effectiveUserInterfaceLayoutDirection == .rightToLeft
+        let edge: UIRectEdge
+        switch host.traitCollection.verticalBarEdge {
+        case .leading: edge = rtl ? .right : .left
+        case .trailing: edge = rtl ? .left : .right
+        default:
+            publishNavigationRegion(nil)
+            return
+        }
+        let inset = edge == .right ? host.safeAreaInsets.right : host.safeAreaInsets.left
+        // During display transitions, the trait can arrive before the matching
+        // safe area. Never create a new gutter inside otherwise usable content.
+        guard inset >= 44 else {
+            publishNavigationRegion(nil)
+            return
+        }
+        // Use the space already reserved for vertical controls, not a model-specific width.
+        let barInsets = host.edgeInsets(for: .bar(onEdge: edge, extent: inset))
+        let rect = host.bounds.inset(by: barInsets).intersection(host.bounds)
+        guard !rect.isNull, !rect.isInfinite, rect.width >= 44, rect.height >= 176,
+              [rect.minX, rect.minY, rect.width, rect.height].allSatisfy(\.isFinite) else {
+            publishNavigationRegion(nil)
+            return
+        }
+        publishNavigationRegion(rect)
+    }
+
+    private func publishNavigationRegion(_ rect: CGRect?) {
+        guard rect != lastNavigationRect else { return }
+        lastNavigationRect = rect
+        IosPlatformKt.updateNavigationRegion(region: rect.map {
+            NavigationRegion(x: Float($0.minX), y: Float($0.minY), width: Float($0.width), height: Float($0.height))
+        })
     }
 
     override var preferredStatusBarStyle: UIStatusBarStyle { dark ? .lightContent : .darkContent }
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .all }
 
     deinit {
+        IosPlatformKt.updateNavigationRegion(region: nil)
         if let themeObserver { NotificationCenter.default.removeObserver(themeObserver) }
     }
 }

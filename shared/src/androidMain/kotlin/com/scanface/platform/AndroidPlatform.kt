@@ -139,6 +139,9 @@ actual fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit) {
     BackHandler(enabled, onBack)
 }
 
+@Composable
+actual fun PlatformNavigationRegion(): NavigationRegion? = null
+
 internal fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()

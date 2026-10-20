@@ -30,3 +30,9 @@ expect fun PlatformThemeEffect(darkTheme: Boolean)
 
 @Composable
 expect fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit)
+
+/** System-provided side-bar bounds in logical points, relative to the full app view. */
+data class NavigationRegion(val x: Float, val y: Float, val width: Float, val height: Float)
+
+@Composable
+expect fun PlatformNavigationRegion(): NavigationRegion?

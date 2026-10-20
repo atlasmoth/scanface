@@ -33,3 +33,4 @@ actual fun PhotoImage(path: String?, modifier: Modifier, contentDescription: Str
 
 @Composable actual fun PlatformThemeEffect(darkTheme: Boolean) = Unit
 @Composable actual fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit) = Unit
+@Composable actual fun PlatformNavigationRegion(): NavigationRegion? = null
