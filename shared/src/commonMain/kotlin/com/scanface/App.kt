@@ -37,8 +37,11 @@ fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingM
         else routeName = target.name
     }
     fun scan() {
-        returnRoute = if (route == Route.HISTORY) Route.HISTORY.name else Route.OVERVIEW.name
-        if (state.pending != null) routeName = Route.RESULT.name else routeName = Route.CAPTURE.name
+        if (state.pending != null) routeName = Route.RESULT.name
+        else {
+            returnRoute = if (route == Route.HISTORY) Route.HISTORY.name else Route.OVERVIEW.name
+            routeName = Route.CAPTURE.name
+        }
     }
     fun settings() {
         if (route == Route.OVERVIEW || route == Route.HISTORY) returnRoute = routeName

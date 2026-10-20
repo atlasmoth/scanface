@@ -136,7 +136,7 @@ fun HistoryScreen(records: List<ScanRecord>, selectedId: String?, wide: Boolean,
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             HistoryChart(records, now)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("${records.size} saved scans", Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("${records.size} saved ${if (records.size == 1) "scan" else "scans"}", Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 IconButton({ onShare(null) }) { Glyph(AppIcon.Share, description = "Export scan history") }
             }
             records.forEach { record -> RecordRow(record, wide && selected.id == record.id) { onSelect(record) } }
