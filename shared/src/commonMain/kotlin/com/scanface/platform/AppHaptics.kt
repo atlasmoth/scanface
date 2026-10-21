@@ -3,7 +3,7 @@ package com.scanface.platform
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 
-enum class AppHaptic { Selection, Light, Success, Warning, Error }
+enum class AppHaptic { Selection, Light, ScanTick, Success, Warning, Error }
 
 fun interface AppHaptics {
     fun perform(type: AppHaptic)

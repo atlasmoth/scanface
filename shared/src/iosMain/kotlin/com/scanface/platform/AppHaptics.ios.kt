@@ -4,6 +4,9 @@ package com.scanface.platform
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import platform.UIKit.UIAccessibilityIsReduceMotionEnabled
+import platform.UIKit.UIApplication
+import platform.UIKit.UIApplicationState
 import platform.UIKit.UIImpactFeedbackGenerator
 import platform.UIKit.UIImpactFeedbackStyle
 import platform.UIKit.UINotificationFeedbackGenerator
@@ -15,9 +18,12 @@ actual fun rememberAppHaptics(): AppHaptics = remember {
     object : AppHaptics {
         private val selection = UISelectionFeedbackGenerator()
         private val impact = UIImpactFeedbackGenerator(UIImpactFeedbackStyle.UIImpactFeedbackStyleLight)
+        private val scan = UIImpactFeedbackGenerator(UIImpactFeedbackStyle.UIImpactFeedbackStyleSoft)
         private val notification = UINotificationFeedbackGenerator()
 
         override fun perform(type: AppHaptic) {
+            if (UIApplication.sharedApplication.applicationState != UIApplicationState.UIApplicationStateActive) return
+            if (type == AppHaptic.ScanTick && UIAccessibilityIsReduceMotionEnabled()) return
             // UIKit chooses the device's supported feedback and handles disabled
             // system haptics. App callbacks and effects run on the main thread.
             when (type) {
@@ -28,6 +34,10 @@ actual fun rememberAppHaptics(): AppHaptics = remember {
                 AppHaptic.Light -> {
                     impact.impactOccurred()
                     impact.prepare()
+                }
+                AppHaptic.ScanTick -> {
+                    scan.impactOccurredWithIntensity(0.25)
+                    scan.prepare()
                 }
                 else -> {
                     notification.notificationOccurred(when (type) {
