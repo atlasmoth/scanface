@@ -3,6 +3,22 @@ import XCTest
 final class ScanFaceUITests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
 
+    func testColdLaunchAndResumeKeepContentAccessible() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--uitesting-reset"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["Start with a face scan"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.staticTexts["Home"].exists || app.buttons["Home"].exists)
+        expectation(for: NSPredicate(format: "isHittable == true"), evaluatedWith: element("Settings", in: app))
+        waitForExpectations(timeout: 5)
+        tap("Settings", in: app)
+        XCUIDevice.shared.press(.home)
+        app.activate()
+        XCTAssertTrue(element("Appearance", in: app).waitForExistence(timeout: 5))
+        tap("Dark", in: app)
+        XCTAssertTrue(element("Dark", in: app).isSelected, "A resumed app remains accessible and interactive.")
+    }
+
     func testApplicationLaunchesAndExposesNavigation() {
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting-reset"]
