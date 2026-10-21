@@ -89,4 +89,8 @@ dependencies {
     androidTestImplementation(libs.test.junit)
     androidTestImplementation(libs.test.runner)
     androidTestImplementation(libs.test.uiautomator)
+    // Same Android UI artifacts resolved by shared, visible only to the
+    // instrumentation harness that hosts the real ResultScreen.
+    androidTestImplementation(libs.test.compose.layout)
+    androidTestImplementation(libs.test.compose.material3)
 }
