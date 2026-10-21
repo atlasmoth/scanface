@@ -39,12 +39,24 @@ The checked-in project is generated from `project.yml`. Privacy strings,
 supported orientations, model resources and launch configuration are defined
 there; run `xcodegen generate` after changing that configuration.
 
+The static launch artwork and native animated handoff share the Home scan mark,
+window-centered placement and light/dark palette. The handoff runs while Compose
+renders and exits when its first frames are ready, without waiting for a full
+animation or model initialization. It respects Reduce Motion and does not replay
+on background return or rotation. The system-owned launch screen follows system
+appearance; the runtime handoff restores the app's saved appearance.
+
 ```sh
 # From the repository root:
 xcodebuild -project iosApp/ScanFace.xcodeproj -scheme ScanFace \
   -destination 'platform=iOS Simulator,name=iPhone Duo' \
-  -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO test
+  -derivedDataPath build/ios test
 ```
+
+Keep normal ad-hoc simulator signing enabled when testing launch appearance.
+An unsigned simulator install can run while SpringBoard rejects its launch
+storyboard and shows a black screen. `CODE_SIGNING_ALLOWED=NO` is suitable for
+device compilation checks that do not install or run the app.
 
 The SwiftUI host embeds the shared Compose application. Shared navigation opens
 the native AVFoundation capture screen through `CameraControllerFactory`.

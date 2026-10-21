@@ -11,6 +11,11 @@ Pinch to zoom continuously up to 4×, within the active camera's limits. Native
 haptics accompany navigation, selections, capture and completed save/delete
 actions, respecting the platform's feedback settings.
 
+Launch uses the same fine-line scan mark as Home, with matching light/dark
+backgrounds and a short native scan animation. The transition yields as soon as
+the app is ready; it does not wait for a timer or model warmup, and returning to
+the running app does not replay it. Reduced-motion settings are respected.
+
 Capture or import a photo and get a real **FAHR-FaceAge** research estimate on the
 device: LiteRT on Android, Core ML on iOS. Review and save the result, revisit
 history, export a metadata summary, or delete the local capture. Missing models

@@ -18,6 +18,47 @@ actionable feedback. Saved results come from captures or imported photos.
 | Model conversion | 24 pinned inputs agree with PyTorch; maximum error 0.0000687 years (LiteRT), 0.0000458 years (Core ML) |
 | Quantized installer | 8 safety tests passed, including corrupt artifacts, incomplete evidence, stale package cleanup and rollback |
 
+## Launch refinement
+
+Launch now uses Home's fine-line scan mark on the app's cream or forest canvas.
+The old launcher-icon badge is replaced with a clean viewfinder/face outline and
+one short scanning sweep. There is no loading message, startup haptic or separate
+shared splash route. Restored scans still open their existing destination.
+
+Android uses its native splash API, with animated vector artwork on Android 12+
+and a static compatibility fallback on older versions. iOS pairs static launch
+artwork with a native animated handoff while Compose renders. Neither waits for
+the animation to finish or for model initialization before revealing ready
+content. Returning to a running app does not replay the sequence; disabled
+animations and reduced-motion preferences skip the decorative motion.
+
+System launch windows use system appearance before application code can read
+preferences. Runtime handoffs restore the saved app appearance without changing
+the device's theme. The mark stays centered in the launch window on both
+platforms. On Duo, using the same window coordinates avoids a jump when the
+runtime receives its asymmetric safe area for right-side navigation.
+
+Five focused iOS tests passed on Duo: saved appearance resolution, corrupt or
+missing preference fallback, one handoff per process, cold-launch/resume
+interactivity, and persisted appearance. The launch UI check waits for a hittable
+Settings control and changes appearance after returning from the background.
+Android debug compilation and lint passed. Recorded cold launches covered both
+palettes and saved appearance opposite to the system setting; manual checks also
+confirmed that hot return preserves History and disabled animations still allow
+immediate navigation. iOS simulator and unsigned device builds passed, with the
+device binary retaining minimum iOS 17.0.
+
+iOS recordings cover iPad light/dark, Duo light and a forced dark app over a light
+system. Duo was also launched with Reduce Motion enabled; Settings remained
+interactive and the preference was restored afterward. The final window-centering
+adjustment followed the five passing tests and was checked with fresh simulator
+and device builds plus a Duo recording.
+
+Launch recordings and extracted frames are stored locally in `artifacts/splash/`.
+The iOS visual checks use an ad-hoc signed simulator install: SpringBoard rejected
+the storyboard in the earlier unsigned test artifact, producing a black launch
+screen. Signing the simulator app restored the expected native launch artwork.
+
 ## Interface polish
 
 Home and empty history now use centered content with generous top spacing.
