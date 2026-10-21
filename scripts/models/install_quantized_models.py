@@ -64,9 +64,9 @@ def prediction_drift(predictions: dict, reference: dict, label: str) -> dict:
     return result
 
 
-def validate_lock(lock: dict, root: Path = ROOT) -> None:
-    source = read_json(root / "models/source-manifest.json")
-    baseline = read_json(root / "models/conversion-validation.json")
+def validate_lock(lock: dict) -> None:
+    source = read_json(ROOT / "models/source-manifest.json")
+    baseline = read_json(ROOT / "models/conversion-validation.json")
     if (lock.get("schema_version") != 1 or
             lock.get("source_checkpoint_sha256") != CHECKPOINT_SHA256 or
             source["checkpoint"]["sha256"] != CHECKPOINT_SHA256 or
@@ -93,14 +93,14 @@ def validate_lock(lock: dict, root: Path = ROOT) -> None:
             prediction_drift(result["predictions_years"], reference, f"{runtime}/{backend}")
 
 
-def artifact_path(selected: dict, root: Path = ROOT) -> Path:
+def artifact_path(selected: dict) -> Path:
     relative = Path(selected["artifact"])
     if relative.is_absolute() or ".." in relative.parts:
         raise ValueError("Artifact must be a repository-relative generated model path")
-    path = root / relative
+    path = ROOT / relative
     if path.is_symlink() or not path.exists():
         raise ValueError(f"Missing model artifact or unsupported symlink: {path}")
-    path.resolve().relative_to((root / "artifacts/models").resolve())
+    path.resolve().relative_to((ROOT / "artifacts/models").resolve())
     return path
 
 
@@ -166,11 +166,11 @@ def metadata(lock: dict, runtime: str) -> dict:
             **lock["runtimes"][runtime]}
 
 
-def install(lock: dict, runtimes: list[str], root: Path = ROOT) -> None:
-    validate_lock(lock, root)
+def install(lock: dict, runtimes: list[str]) -> None:
+    validate_lock(lock)
     if not runtimes or len(set(runtimes)) != len(runtimes) or not set(runtimes) <= set(DESTINATIONS):
         raise ValueError("Select each supported runtime at most once")
-    notices = root / "models/licenses"
+    notices = ROOT / "models/licenses"
     for name in NOTICE_FILES:
         if not (notices / name).is_file() or (notices / name).stat().st_size == 0:
             raise ValueError(f"Missing model notice: {name}")
@@ -180,10 +180,10 @@ def install(lock: dict, runtimes: list[str], root: Path = ROOT) -> None:
         # All artifacts are checked before any installed model is moved.
         for runtime in runtimes:
             selected = lock["runtimes"][runtime]
-            source = artifact_path(selected, root)
+            source = artifact_path(selected)
             validate_bytes(runtime, source, selected)
             validate_runtime(runtime, source)
-            destination = root / DESTINATIONS[runtime]
+            destination = ROOT / DESTINATIONS[runtime]
             destination.parent.mkdir(parents=True, exist_ok=True)
             if destination.is_symlink():
                 raise ValueError(f"Refusing symlink destination: {destination}")
@@ -198,7 +198,7 @@ def install(lock: dict, runtimes: list[str], root: Path = ROOT) -> None:
                 shutil.copytree(source, model)
             else:
                 shutil.copy2(source, model)
-                shutil.copytree(root / "models/licenses", stage / "licenses")
+                shutil.copytree(notices, stage / "licenses")
                 for name in NOTICE_FILES:
                     check_file(stage / "licenses" / name,
                                {"bytes": (notices / name).stat().st_size, "sha256": sha256(notices / name)})
