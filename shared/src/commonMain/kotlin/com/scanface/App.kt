@@ -153,7 +153,7 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
                                         Glyph(AppIcon.Face, Modifier.padding(vertical = 24.dp).size(32.dp), MaterialTheme.colorScheme.primary, "ScanFace")
                                         Spacer(Modifier.height(16.dp))
                                         NavigationRailItem(route == Route.OVERVIEW, { navigate(Route.OVERVIEW) },
-                                            icon = { Glyph(AppIcon.Overview) }, label = { Text("Overview") })
+                                            icon = { Glyph(AppIcon.Overview) }, label = { Text("Home") })
                                         NavigationRailItem(route == Route.CAPTURE, ::scanFromNavigation, icon = { Glyph(AppIcon.Scan) }, label = { Text("Scan") })
                                         NavigationRailItem(route == Route.HISTORY, { navigate(Route.HISTORY) },
                                             icon = { Glyph(AppIcon.History) }, label = { Text("History") })
@@ -188,7 +188,7 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
                                 bottomBar = {
                                     if (!rail && !systemSideNavigation && route in listOf(Route.OVERVIEW, Route.HISTORY)) {
                                         NavigationBar(containerColor = MaterialTheme.colorScheme.background, tonalElevation = 0.dp, windowInsets = WindowInsets(0, 0, 0, 0)) {
-                                            NavigationBarItem(route == Route.OVERVIEW, { navigate(Route.OVERVIEW) }, icon = { Glyph(AppIcon.Overview) }, label = { Text("Overview") })
+                                            NavigationBarItem(route == Route.OVERVIEW, { navigate(Route.OVERVIEW) }, icon = { Glyph(AppIcon.Overview) }, label = { Text("Home") })
                                             NavigationBarItem(false, ::scanFromNavigation, icon = { Glyph(AppIcon.Scan) }, label = { Text("Scan") })
                                             NavigationBarItem(route == Route.HISTORY, { navigate(Route.HISTORY) }, icon = { Glyph(AppIcon.History) }, label = { Text("History") })
                                         }
@@ -307,7 +307,7 @@ private fun SystemSideNavigation(
         verticalArrangement = Arrangement.Bottom,
     ) {
         NavigationRailItem(route == Route.OVERVIEW, onOverview,
-            icon = { Glyph(AppIcon.Overview, description = "Overview") }, modifier = Modifier.height(64.dp))
+            icon = { Glyph(AppIcon.Overview, description = "Home") }, modifier = Modifier.height(64.dp))
         NavigationRailItem(false, onScan,
             icon = { Glyph(AppIcon.Scan, description = "Scan") }, modifier = Modifier.height(64.dp))
         NavigationRailItem(route == Route.HISTORY, onHistory,

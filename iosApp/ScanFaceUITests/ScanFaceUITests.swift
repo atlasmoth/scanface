@@ -8,7 +8,7 @@ final class ScanFaceUITests: XCTestCase {
         app.launchArguments = ["--uitesting-reset"]
         app.launch()
         XCTAssertTrue(app.staticTexts["ScanFace"].waitForExistence(timeout: 20))
-        XCTAssertTrue(app.staticTexts["Overview"].exists || app.buttons["Overview"].exists)
+        XCTAssertTrue(app.staticTexts["Home"].exists || app.buttons["Home"].exists)
         XCTAssertTrue(app.staticTexts["History"].exists || app.buttons["History"].exists)
     }
 
@@ -31,13 +31,13 @@ final class ScanFaceUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["No scans yet"].waitForExistence(timeout: 5))
         XCTAssertTrue(element("New face scan", in: app).exists)
         XCTAssertFalse(app.buttons["Export scan history"].exists)
-        tap("Overview", in: app)
+        tap("Home", in: app)
         XCTAssertTrue(app.staticTexts["Start with a face scan"].waitForExistence(timeout: 5))
         XCTAssertTrue(element("Take your first scan", in: app).exists)
         XCTAssertFalse(app.staticTexts["Latest scan"].exists)
     }
 
-    func testCameraCanOpenPickerAndReturnToOverview() {
+    func testCameraCanOpenPickerAndReturnToHome() {
         let app = XCUIApplication()
         app.resetAuthorizationStatus(for: .camera)
         app.launchArguments = ["--uitesting-reset"]

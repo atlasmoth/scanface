@@ -203,7 +203,7 @@ class ScanFaceSmokeTest {
 
             // Exercise both destinations while expanded, then ensure compact
             // navigation retains the chosen history destination after folding.
-            visible(By.text("Overview")).click()
+            visible(By.text("Home")).click()
             visible(By.text("Start with a face scan"))
             captureEvidence("android-unfolded-home")
             device.executeShellCommand("pm grant ${context.packageName} android.permission.CAMERA")
@@ -218,7 +218,7 @@ class ScanFaceSmokeTest {
             visible(By.text("Scan history"))
             visible(By.text("No scans yet"))
             captureEvidence("android-folded-empty-history")
-            visible(By.text("Overview")).click()
+            visible(By.text("Home")).click()
             visible(By.text("Start with a face scan"))
         } finally {
             initial?.let { setPosture(it) }
