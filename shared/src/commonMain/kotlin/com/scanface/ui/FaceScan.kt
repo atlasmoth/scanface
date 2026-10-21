@@ -18,7 +18,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
@@ -81,7 +80,7 @@ private fun ScanOverlay(scanComplete: Boolean, reduceMotion: Boolean, modifier: 
             }
         }
     }
-    Canvas(modifier.clipToBounds().testTag("scan.overlay").semantics {
+    Canvas(modifier.clipToBounds().semantics {
         contentDescription = if (scanComplete) "Scan complete" else "Scan in progress"
         progressBarRangeInfo = if (scanComplete) ProgressBarRangeInfo(1f, 0f..1f) else ProgressBarRangeInfo.Indeterminate
     }) {

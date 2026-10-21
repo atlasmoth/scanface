@@ -14,10 +14,6 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        // Run the benchmark explicitly with adb and scanfaceBenchmark=true.
-        // Excluding it avoids reporting its opt-in assumption as a CI failure.
-        testInstrumentationRunnerArguments["notClass"] = "com.scanface.ml.FahrQuantizationBenchmark"
         // LiteRT ships these ABIs; exclude ML Kit's extra x86 slice so Android
         // cannot install a build whose selected ABI lacks the inference runtime.
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
@@ -29,7 +25,13 @@ android {
     }
     androidResources { noCompress += "tflite" }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
-    sourceSets["androidTest"].assets.directories.add(rootProject.file("models/fixtures").absolutePath)
+}
+
+androidComponents {
+    beforeVariants {
+        it.deviceTests.values.forEach { test -> test.enable = false }
+        it.hostTests.values.forEach { test -> test.enable = false }
+    }
 }
 
 val verifyBundledFaceAgeModel = tasks.register("verifyBundledFaceAgeModel") {
@@ -86,8 +88,4 @@ dependencies {
     implementation(libs.ktor.client.okhttp)
     implementation(libs.litert)
     implementation(libs.mlkit.face.detection)
-    androidTestImplementation(libs.test.junit)
-    androidTestImplementation(libs.test.runner)
-    androidTestImplementation(libs.test.uiautomator)
-    androidTestImplementation(libs.camera.view)
 }

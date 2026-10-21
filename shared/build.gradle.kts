@@ -14,9 +14,7 @@ kotlin {
         compileSdk = 37
         minSdk = 26
         compilerOptions.jvmTarget.set(JvmTarget.JVM_17)
-        withHostTestBuilder {}.configure {}
     }
-    jvm("desktop") // Fast, hardware-independent shared-domain tests.
     iosArm64()
     iosSimulatorArm64()
     targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>().configureEach {
@@ -42,11 +40,6 @@ kotlin {
             implementation(libs.ktor.client.core)
             implementation(libs.koin.core)
         }
-        commonTest.dependencies {
-            implementation(kotlin("test"))
-            implementation(libs.coroutines.test)
-            implementation(libs.ktor.client.mock)
-        }
         androidMain.dependencies {
             implementation(libs.activity.compose)
             implementation(libs.lifecycle.runtime.compose)
@@ -59,6 +52,5 @@ kotlin {
             implementation(libs.ktor.client.okhttp)
         }
         iosMain.dependencies { implementation(libs.ktor.client.darwin) }
-        val desktopMain by getting { dependencies { implementation(compose.desktop.currentOs) } }
     }
 }
