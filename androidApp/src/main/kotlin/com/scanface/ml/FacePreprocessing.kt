@@ -28,7 +28,7 @@ internal data class FaceAlignment(val crop: Rect, val angleRadians: Double)
  * pipeline is a research adaptation, not a validated reproduction of the study.
  */
 internal object FacePreprocessing {
-    const val INPUT_SIZE = 112
+    private const val INPUT_SIZE = 112
 
     fun selectAndAlign(faces: List<DetectedFace>, width: Int, height: Int): FaceAlignment {
         if (faces.isEmpty()) throw UnusableFaceException("No face was found. Try a well-lit photo facing the camera.")
@@ -160,7 +160,7 @@ internal object FacePreprocessing {
      * rotation canvas. Computing only its retained pixels avoids another full
      * image allocation and is equivalent to rotating first, then cropping.
      */
-    internal fun alignedCrop(source: Bitmap, alignment: FaceAlignment): Bitmap {
+    private fun alignedCrop(source: Bitmap, alignment: FaceAlignment): Bitmap {
         val width = source.width
         val height = source.height
         val crop = alignment.crop

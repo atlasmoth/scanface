@@ -23,14 +23,10 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /** On-device FAHR-FaceAge weights with an explicitly distinct native-detector pipeline. */
-class AndroidFaceAnalyzer internal constructor(
-    context: Context,
-    private val locator: FaceLocator,
-    private val model: AgeModel,
-) : FaceAnalyzer, AutoCloseable {
-    constructor(context: Context) : this(context, BundledFaceDetector(), LiteRtAgeModel(context.applicationContext))
-
+class AndroidFaceAnalyzer(context: Context) : FaceAnalyzer, AutoCloseable {
     private val applicationContext = context.applicationContext
+    private val locator = BundledFaceDetector()
+    private val model = LiteRtAgeModel(applicationContext)
     private val dispatcher = Executors.newSingleThreadExecutor { work ->
         Thread(work, "scanface-inference").apply { isDaemon = true }
     }.asCoroutineDispatcher()

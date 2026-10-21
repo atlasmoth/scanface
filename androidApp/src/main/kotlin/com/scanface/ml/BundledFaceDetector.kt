@@ -13,15 +13,11 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-internal interface FaceLocator : AutoCloseable {
-    suspend fun findFaces(bitmap: Bitmap): List<DetectedFace>
-}
-
 /** Uses the bundled model; no model download or Google Play installation is needed. */
-internal class BundledFaceDetector : FaceLocator {
+internal class BundledFaceDetector : AutoCloseable {
     private var detector: FaceDetector? = null
 
-    override suspend fun findFaces(bitmap: Bitmap): List<DetectedFace> {
+    suspend fun findFaces(bitmap: Bitmap): List<DetectedFace> {
         val active = detector ?: FaceDetection.getClient(
             FaceDetectorOptions.Builder()
                 .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)

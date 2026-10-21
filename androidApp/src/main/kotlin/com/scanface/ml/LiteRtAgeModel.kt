@@ -8,22 +8,15 @@ import com.google.ai.edge.litert.TensorType
 import java.io.FileNotFoundException
 import org.json.JSONObject
 
-internal interface AgeModel : AutoCloseable {
-    fun estimate(pixels: FloatArray): Double
-}
-
 internal class MissingAgeModelException : Exception("The bundled FAHR-FaceAge model is missing.")
 
 /** All calls, including close, are confined to the analyzer's serialized worker. */
-internal class LiteRtAgeModel(
-    private val context: Context,
-    private val assetName: String = ASSET_NAME,
-) : AgeModel {
+internal class LiteRtAgeModel(private val context: Context) : AutoCloseable {
     private var compiled: CompiledModel? = null
     private var inputs: List<TensorBuffer> = emptyList()
     private var outputs: List<TensorBuffer> = emptyList()
 
-    override fun estimate(pixels: FloatArray): Double {
+    fun estimate(pixels: FloatArray): Double {
         require(pixels.size == 112 * 112 * 3 && pixels.all { it.isFinite() && it in 0f..255f }) {
             "Invalid FAHR-FaceAge RGB tensor"
         }
@@ -39,7 +32,7 @@ internal class LiteRtAgeModel(
 
     private fun load(): CompiledModel {
         try {
-            context.assets.open(assetName).use { /* Confirm packaging before loading JNI. */ }
+            context.assets.open(ASSET_NAME).use { /* Confirm packaging before loading JNI. */ }
             val metadata = context.assets.open("models/conversion.json").bufferedReader().use {
                 JSONObject(it.readText())
             }
@@ -49,7 +42,7 @@ internal class LiteRtAgeModel(
         }
         val model = CompiledModel.create(
             context.assets,
-            assetName,
+            ASSET_NAME,
             CompiledModel.Options(Accelerator.CPU).apply {
                 cpuOptions = CompiledModel.CpuOptions(numThreads = 2)
             },
@@ -86,8 +79,8 @@ internal class LiteRtAgeModel(
     }
 
     companion object {
-        const val ASSET_NAME = "models/fahr_faceage.tflite"
-        const val SIGNATURE = "serving_default"
+        private const val ASSET_NAME = "models/fahr_faceage.tflite"
+        private const val SIGNATURE = "serving_default"
         const val MODEL_ID = "fahr-faceage-1fbb84e-litert-int8w-native-v1"
     }
 }
