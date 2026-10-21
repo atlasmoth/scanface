@@ -10,7 +10,7 @@ Run from the repository root on macOS with the existing Conda environment named 
 
 ```sh
 bash scripts/models/install_tools.sh
-conda run -n dl python scripts/models/prepare_models.py --runtime both --test-portraits
+conda run -n dl python scripts/models/prepare_models.py --runtime both --validation-portraits
 conda run -n dl python scripts/models/quantize_litert.py --candidates int8-weight
 conda run -n dl python scripts/models/quantize_coreml.py --phase build --variants int8-float32
 conda run -n dl python scripts/models/quantize_coreml.py --phase evaluate --variants int8-float32
@@ -34,7 +34,7 @@ The dedicated installer verifies [selected-models.json](../models/selected-model
 
 After preparation, regenerate the iOS project with `xcodegen generate` inside `iosApp`. Xcode compiles the package into `FAHRFaceAge.mlmodelc`; the generated project includes that model, its conversion report and the attribution/licenses. Android assets are packaged by Gradle. Model weights are not downloaded by the running app, and no capture is sent to the model tooling or a remote inference service.
 
-`--test-portraits` downloads 22 author-supplied synthetic face crops, checked against [author-test-images.json](../models/author-test-images.json), for local tests only. Together with two mathematical patterns these form 24 numerical conversion cases. The portraits and provisioned device-test images are ignored by Git and excluded from shipping resources. The included [pixel fixtures](../models/fixtures) contain mathematical patterns, not personal photographs. The command also writes `reference.json` and `conversion-both.json` in `artifacts/models/`, including dependency versions, output values, per-case errors and artifact hashes. Conversion rejects nonfinite outputs or a maximum absolute discrepancy above 0.02 years. These checks validate numerical conversion, not clinical accuracy or face-detector equivalence.
+`--validation-portraits` downloads 22 author-supplied synthetic face crops, checked against [author-test-images.json](../models/author-test-images.json), for local conversion and quantization comparisons. Together with two generated mathematical patterns these form 24 numerical conversion cases. The portraits remain in ignored artifacts and are excluded from shipping resources. The command also writes `reference.json` and `conversion-both.json` in `artifacts/models/`, including dependency versions, output values, per-case errors and artifact hashes. Conversion rejects nonfinite outputs or a maximum absolute discrepancy above 0.02 years. These checks validate numerical conversion, not clinical accuracy or face-detector equivalence.
 
 ## Mobile runtime contract
 
@@ -141,7 +141,7 @@ Eye-region centroids or pupil landmarks are estimates of eye centers; detector n
 
 Core Image's face box and eye positions use lower-left image coordinates. The fallback maps each eye `(x, y)` to `(x, H - y)` and the box's top to `H - box.maxY` before comparing it with Vision's top-left pixel bounds. Both detectors inspect the same upright image; only the accepted eye positions are substituted.
 
-These native detectors do not reproduce RetinaFace detections, bounding boxes, or confidence calibration. The `native-v1` model IDs identify the platform-specific pipeline documented here. This is a **documented preprocessing substitution**, not validated reproduction of the study. There are two separate sources of difference: exported model outputs on identical input tensors, and end-to-end estimates from native versus author face crops. Pixel fixtures exercise the alignment and resampling independently of a detector; native tests exercise face rejection, inference and cancellation. Numeric conversion agreement on 24 cases does not establish clinical accuracy or detector parity.
+These native detectors do not reproduce RetinaFace detections, bounding boxes, or confidence calibration. The `native-v1` model IDs identify the platform-specific pipeline documented here. This is a **documented preprocessing substitution**, not validated reproduction of the study. There are two separate sources of difference: exported model outputs on identical input tensors, and end-to-end estimates from native versus author face crops. Numeric conversion agreement on 24 cases does not establish clinical accuracy or detector parity.
 
 ## What the output supports
 

@@ -47,7 +47,7 @@ Prepare the model assets before building either app. From the repository root:
 
 ```sh
 bash scripts/models/install_tools.sh
-conda run -n dl python scripts/models/prepare_models.py --runtime both --test-portraits
+conda run -n dl python scripts/models/prepare_models.py --runtime both --validation-portraits
 conda run -n dl python scripts/models/quantize_litert.py --candidates int8-weight
 conda run -n dl python scripts/models/quantize_coreml.py --phase build --variants int8-float32
 conda run -n dl python scripts/models/quantize_coreml.py --phase evaluate --variants int8-float32
@@ -65,8 +65,8 @@ The full workflow runs on macOS; Android-only preparation can use
 
 All model Python commands run in `conda dl`. The bootstrap isolates converter-only
 packages under `artifacts/models/converter-python`; do not downgrade shared
-environment packages to satisfy the converter. `--test-portraits` provisions
-22 hash-pinned author synthetic portraits for local numerical and device tests.
+environment packages to satisfy the converter. `--validation-portraits` provisions
+22 hash-pinned author synthetic portraits for numerical conversion and quantization comparisons.
 These images are not checked into Git or included in the shipping apps. See
 [the model setup details](docs/models.md#prepare-the-mobile-artifacts).
 
@@ -89,25 +89,21 @@ Choose the ScanFace scheme and an iPhone or iPad simulator. The Xcode build phas
 builds the shared Kotlin framework automatically. Physical-device builds require
 your own signing team in Xcode.
 
-## Verify
+## Build checks
 
-See [verification results](docs/verification.md) for the tested devices, completed
-checks and remaining physical-camera validation.
+See [build verification](docs/verification.md) for current checks and remaining
+physical-device validation.
 
 ```sh
-./gradlew :shared:desktopTest :androidApp:assembleDebug
-# With an Android emulator or device connected:
-./gradlew :androidApp:connectedDebugAndroidTest
+./gradlew :androidApp:assembleDebug :androidApp:lintDebug
 # iOS simulator (replace the destination with an installed simulator):
 xcodebuild -project iosApp/ScanFace.xcodeproj -scheme ScanFace \
   -destination 'platform=iOS Simulator,name=iPhone Duo' \
-  -derivedDataPath iosApp/DerivedData test
+  -derivedDataPath iosApp/DerivedData build
 ```
 
-`scripts/check.sh` runs the shared checks and Android build; setting
-`SCANFACE_IOS_DESTINATION` also runs the Xcode suite.
-The Android and iOS UI suites reset ScanFace's local test data; run them on a
-simulator or dedicated test device.
+`scripts/check.sh` builds Android and runs lint; setting
+`SCANFACE_IOS_DESTINATION` also builds iOS. The repository has no automated test suites.
 
 ## Structure
 
@@ -117,10 +113,9 @@ simulator or dedicated test device.
 | `shared/src/androidMain` | CameraX, Android photo picker, EXIF normalization, private storage and native sharing |
 | `shared/src/iosMain` | UIKit bridge, native image rendering, preferences and sharing |
 | `androidApp` | Koin, Ktor/OkHttp, bundled ML Kit face detection and LiteRT inference |
-| `iosApp` | SwiftUI host, AVFoundation camera, Photos picker, Vision/Core Image face geometry, Core ML inference and native tests |
-| `shared/src/commonTest` | Persistence, cancellation, image ownership, malformed results and model-manifest tests |
-| `scripts/models` | Conda tool bootstrap, pinned checkpoint conversion and numerical fixtures |
-| `models` | Source/hash manifests, attribution, licenses and non-personal pixel fixtures |
+| `iosApp` | SwiftUI host, AVFoundation camera, Photos picker, Vision/Core Image face geometry and Core ML inference |
+| `scripts/models` | Conda tool bootstrap, pinned checkpoint conversion, quantization and installation |
+| `models` | Source/hash manifests, attribution, licenses and recorded conversion/quantization evidence |
 | `design/concept-v1` | Approved visual direction and palette |
 
 ## Interface and cameras
@@ -186,7 +181,7 @@ check, **not a clinical accuracy study**. The current app has no survival model;
 FAHR-FaceSurvival weights are not publicly released.
 
 Models are installed at build time; the app does not download weights or contact
-a model endpoint. `ModelManifestService` remains an unused, tested network
+a model endpoint. `ModelManifestService` remains an unused network
 boundary. The entered age is only a comparison value and never a model input.
 Metadata exports retain the model identifier. Settings provides a short explanation
 of face alignment, on-device estimation and how the entered age is used.

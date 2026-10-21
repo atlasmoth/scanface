@@ -137,49 +137,18 @@ conda run -n dl python scripts/models/quantize_coreml.py --phase evaluate
 conda run -n dl python scripts/models/quantize_coreml.py --phase benchmark
 ```
 
-The optional LiteRT `--phase benchmark` measures the Python host interpreter;
-the Android numbers in this report instead come from the opt-in native test.
-Create its private fixture bundle with:
+The optional LiteRT `--phase benchmark` measures the Python host interpreter.
+The Android numbers in this report are historical device measurements from
+20 October 2026. Their instrumentation harness and provisioning script were
+removed with the repository's automated tests on 21 October 2026; the recorded
+measurements remain part of the selected model's provenance.
 
-```sh
-conda run -n dl python scripts/models/prepare_native_benchmark.py \
-  --model fp32=artifacts/models/fahr_faceage.tflite \
-  --model fp16=artifacts/models/quantization/litert/fp16.tflite \
-  --model int8-weight=artifacts/models/quantization/litert/int8-weight.tflite \
-  --model int8-dynamic=artifacts/models/quantization/litert/int8-dynamic.tflite \
-  --model int4-weight=artifacts/models/quantization/litert/int4-weight.tflite \
-  --model int4-block32=artifacts/models/quantization/litert/int4-block32.tflite
-```
-
-Copy the generated `manifest.json`, `inputs/` and model files into the debug
-app's private `files/model-benchmark/` directory using `adb run-as`. Install the
-debug app and its instrumentation APK, then run:
-
-```sh
-adb shell am instrument -w -r \
-  -e class com.scanface.ml.FahrQuantizationBenchmark \
-  -e scanfaceBenchmark true \
-  com.scanface.app.test/androidx.test.runner.AndroidJUnitRunner
-adb exec-out run-as com.scanface.app cat \
-  files/model-benchmark/native-android.json > native-android.json
-```
-
-The benchmark is excluded from ordinary Gradle test runs and requires explicit
-opt-in when invoked directly. Its large private candidate files
-are test-only and should be removed after use; none are shipping resources.
 Regenerated reports stay in `artifacts/models/quantization/` until reviewed.
 Selection changes require an explicit reviewed lock update. Installation
 rehashes all files, validates the recorded drift and tensor/opset contracts,
 stages complete model directories and rolls back on failure. Build guards and
 runtime metadata checks prevent silently using a different model profile.
 
-Native regression tests compare the installed selection against its own locked
-gradient/gray predictions with the existing 0.02-year execution tolerance. They
-also exercise actual face detection, alignment and inference. Original float32
-fixtures and their original tolerance are retained unchanged. Physical handset
-latency, memory, battery and broader prediction validation remain future work.
-
-After installation, all 10 Android native/UI regressions, 23 iOS native tests
-and 8 installer safety tests passed. Android lint and clean debug build, iOS
-simulator and unsigned device builds, and negative profile/hash build checks
-also passed. iOS 17 remains the minimum deployment target.
+Physical handset latency, memory, battery and broader prediction validation
+remain future work. Android lint and app builds remain available through
+`scripts/check.sh`; iOS 17 remains the minimum deployment target.
