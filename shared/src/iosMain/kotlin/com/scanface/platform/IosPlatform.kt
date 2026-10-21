@@ -263,14 +263,6 @@ private class AtomicIosKeyValueStore : KeyValueStore {
 
     private fun decode(key: String, value: String): String =
         if (key == AppStore.STORAGE_KEY) photoReferences().decode(value) else value
-
-    override fun remove(key: String) {
-        val path = path(key)
-        if (manager.fileExistsAtPath(path)) {
-            check(manager.removeItemAtPath(path, error = null)) { "Couldn't remove saved scans." }
-        }
-        legacyDefaults.removeObjectForKey(key)
-    }
 }
 
 private fun activePresenter(): UIViewController? {

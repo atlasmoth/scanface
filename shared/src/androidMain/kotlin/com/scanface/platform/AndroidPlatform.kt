@@ -54,9 +54,6 @@ private class AndroidPlatformServices(private val context: Context) : PlatformSe
         override fun put(key: String, value: String) {
             check(preferences.edit().putString(key, value).commit()) { "Unable to save local data." }
         }
-        override fun remove(key: String) {
-            check(preferences.edit().remove(key).commit()) { "Unable to remove local data." }
-        }
     }
 
     override fun nowMillis(): Long = System.currentTimeMillis()

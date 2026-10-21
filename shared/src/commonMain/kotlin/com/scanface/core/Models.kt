@@ -15,7 +15,6 @@ data class CapturedPhoto(
 interface KeyValueStore {
     fun get(key: String): String?
     fun put(key: String, value: String)
-    fun remove(key: String)
 }
 
 @Serializable
@@ -56,14 +55,6 @@ data class AnalysisResult(
  */
 interface FaceAnalyzer {
     suspend fun analyze(photo: CapturedPhoto): AnalysisResult
-}
-
-/** Fallback for a platform/build where a real on-device model is unavailable. */
-class PendingModelAnalyzer : FaceAnalyzer {
-    override suspend fun analyze(photo: CapturedPhoto) = AnalysisResult(
-        status = AnalysisStatus.AWAITING_MODEL,
-        message = "The on-device age model is unavailable in this build. No facial-age estimate was produced.",
-    )
 }
 
 data class AppState(

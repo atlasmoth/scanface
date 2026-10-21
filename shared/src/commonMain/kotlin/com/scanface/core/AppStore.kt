@@ -21,7 +21,7 @@ import kotlinx.serialization.json.Json
  */
 class AppStore(
     private val storage: KeyValueStore,
-    private val analyzer: FaceAnalyzer = PendingModelAnalyzer(),
+    private val analyzer: FaceAnalyzer,
     private val deletePhoto: (String) -> Unit,
     private val scope: CoroutineScope,
 ) {
@@ -329,7 +329,7 @@ class AppStore(
 
     companion object {
         const val STORAGE_KEY = "scanface.snapshot.v1"
-        const val RECOVERY_KEY = "scanface.snapshot.recovery"
+        private const val RECOVERY_KEY = "scanface.snapshot.recovery"
         private const val STORAGE_ERROR = "Your changes could not be saved on this device. Please try again."
         private const val CLEANUP_ERROR = "Some photos could not be deleted. Retry photo cleanup in Settings."
     }

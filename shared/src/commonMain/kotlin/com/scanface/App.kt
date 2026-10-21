@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
 private enum class Route { OVERVIEW, HISTORY, CAPTURE, RESULT, SETTINGS }
 
 @Composable
-fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingModelAnalyzer() }) {
+fun App(services: PlatformServices, analyzer: FaceAnalyzer) {
     val haptics = rememberAppHaptics()
     CompositionLocalProvider(LocalAppHaptics provides haptics) {
         AppContent(services, analyzer)
