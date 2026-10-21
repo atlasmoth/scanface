@@ -315,7 +315,7 @@ def main():
     reference = validate_source()["reference_years"]
     cases = list(samples())
     if len(cases) != 24 or {n for n, _ in cases} != set(reference):
-        raise ValueError("All 22 hash-verified author portraits and 2 patterns are required; prepare --test-portraits first")
+        raise ValueError("All 22 hash-verified author portraits and 2 patterns are required; prepare --validation-portraits first")
     if args.phase in ("build", "all"):
         build(args.variants, args.force)
     if args.phase in ("evaluate", "all"):

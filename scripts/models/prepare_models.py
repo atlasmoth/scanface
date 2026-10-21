@@ -12,7 +12,6 @@ import importlib.metadata
 import json
 import math
 from pathlib import Path
-import shutil
 import sys
 import urllib.request
 import zipfile
@@ -29,7 +28,6 @@ REVISION = "1fbb84ef25956aeeb26e9e279abda2eaeef0504c"
 CHECKPOINT_SHA256 = "980ad2f134c5d82e9aca39a738f88a5b10aaf15ca9a5462bf95599be023cdbba"
 URL = f"https://huggingface.co/fridolin22/FAHR-Face/resolve/{REVISION}/fahr_faceage.pth"
 PORTRAITS_URL = "https://www.dropbox.com/scl/fo/hm9a5x60vya2810gyqty9/AD4yp_v6UY-1HLqMKy902X8?rlkey=d8hfle133ecsvh4bp7ripzeq8&dl=1"
-PORTRAIT_SHA256 = "949e6af0c82ca07c4f90ad3344171c9cf69f1c3a003c26d34e2336b18be21f79"
 
 
 def sha256(path: Path) -> str:
@@ -95,7 +93,7 @@ def samples():
     gradient = np.stack(((3*x + y) % 256, (x + 2*y) % 256, (7*x + 5*y) % 256), axis=-1)
     yield "gradient", gradient.astype(np.float32)[None]
     yield "gray", np.full((1, 112, 112, 3), 127., dtype=np.float32)
-    # Optional author-provided synthetic portraits are local test data, not
+    # Optional author-provided synthetic portraits are local validation data, not
     # redistributed in Git or the shipping app. They are already face crops.
     portrait_lock = json.loads((ROOT / "models/author-test-images.json").read_text())
     for entry in portrait_lock["images"]:
@@ -103,13 +101,13 @@ def samples():
         if not path.exists():
             continue
         if sha256(path) != entry["sha256"]:
-            raise ValueError(f"Author fixture changed: {path.name}")
+            raise ValueError(f"Author validation portrait changed: {path.name}")
         im = Image.open(path).convert("RGB").resize((112, 112), Image.Resampling.BILINEAR)
         yield f"author-{path.stem}", np.asarray(im, dtype=np.float32)[None]
 
 
-def prepare_test_portraits():
-    """Author synthetic fixtures for local tests only; never shipping resources."""
+def prepare_validation_portraits():
+    """Pinned author portraits for numerical conversion and quantization checks."""
     WORK.mkdir(parents=True, exist_ok=True)
     archive = WORK / "author-synthetic.zip"
     if not archive.exists():
@@ -126,29 +124,13 @@ def prepare_test_portraits():
             if hashlib.sha256(data).hexdigest() != entry["sha256"]:
                 raise ValueError(f"Author portrait hash mismatch: {entry['local_name']}")
             (portraits / entry["local_name"]).write_bytes(data)
-    image = portraits / "00.png"
-    if sha256(image) != PORTRAIT_SHA256:
-        raise ValueError("Author test portrait changed; refusing to provision it")
-    android = ROOT / "androidApp/src/androidTest/assets/author-face.png"
-    android.parent.mkdir(parents=True, exist_ok=True)
-    android_image = portraits / "03.png"
-    if sha256(android_image) != "42743ca2d36c4f2e6f3aeea6a84e4de959bf0f30615f02a5af7e37fd29062db2":
-        raise ValueError("Android author test portrait changed")
-    shutil.copy2(android_image, android)
-    portrait = Image.open(image).convert("RGB")
-    portrait.thumbnail((512, 512), Image.Resampling.LANCZOS)
-    padded = Image.new("RGB", (portrait.width+256, portrait.height+256), (240, 240, 240))
-    padded.paste(portrait, (128, 128))
-    ios = WORK / "ios-smoke/author-portrait.jpg"
-    ios.parent.mkdir(parents=True, exist_ok=True)
-    padded.save(ios, quality=95)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--runtime", choices=["coreml", "litert", "both", "reference"], default="both")
     parser.add_argument("--install", action="store_true", help="Retired: use install_quantized_models.py after quantization")
-    parser.add_argument("--test-portraits", action="store_true", help="Download author synthetic portraits for local validation (not redistributed)")
+    parser.add_argument("--validation-portraits", action="store_true", help="Download author synthetic portraits for numerical conversion and quantization validation (not redistributed)")
     args = parser.parse_args()
     if args.install:
         parser.error(
@@ -157,8 +139,8 @@ def main():
             "then run scripts/models/install_quantized_models.py. See docs/models.md."
         )
     torch.set_num_threads(4)
-    if args.test_portraits:
-        prepare_test_portraits()
+    if args.validation_portraits:
+        prepare_validation_portraits()
     author = load_author_model()
     model = MobileAge(author).eval()
     cases = list(samples())
