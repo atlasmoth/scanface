@@ -8,5 +8,5 @@ if [[ -n "${SCANFACE_IOS_DESTINATION:-}" ]]; then
   xcodegen generate --spec iosApp/project.yml
   xcodebuild -project iosApp/ScanFace.xcodeproj -scheme ScanFace \
     -destination "$SCANFACE_IOS_DESTINATION" \
-    -derivedDataPath iosApp/DerivedData test CODE_SIGNING_ALLOWED=NO
+    -derivedDataPath iosApp/DerivedData test
 fi

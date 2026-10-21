@@ -21,6 +21,14 @@ device: LiteRT on Android, Core ML on iOS. Review and save the result, revisit
 history, export a metadata summary, or delete the local capture. Missing models
 and unusable photos produce an explanation, never an invented estimate.
 
+Analysis happens in place in the camera preview: fine mint brackets and a narrow
+moving light accompany soft, spaced haptic pulses while the live view stays
+visible. Imported photos occupy that same preview during analysis. Camera
+controls lock until analysis finishes, while close remains available to cancel.
+The result opens as soon as inference finishes. Motion and pulses pause behind
+dialogs or in the background; reduced-motion settings retain static brackets.
+Results are never delayed to finish the animation.
+
 The model weights are **CC BY-NC-SA 4.0: noncommercial use only**. The author's
 code is Apache 2.0. Commercial use of the weights requires additional permission;
 the app's code license cannot replace the weight license. See
@@ -91,7 +99,7 @@ checks and remaining physical-camera validation.
 # iOS simulator (replace the destination with an installed simulator):
 xcodebuild -project iosApp/ScanFace.xcodeproj -scheme ScanFace \
   -destination 'platform=iOS Simulator,name=iPhone Duo' \
-  -derivedDataPath iosApp/DerivedData test CODE_SIGNING_ALLOWED=NO
+  -derivedDataPath iosApp/DerivedData test
 ```
 
 `scripts/check.sh` runs the shared checks and Android build; setting

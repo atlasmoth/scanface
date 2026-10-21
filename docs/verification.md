@@ -7,7 +7,7 @@ actionable feedback. Saved results come from captures or imported photos.
 
 | Check | Result |
 | --- | --- |
-| Shared JVM suite | 54 passed: 29 state/storage, 9 Ktor manifest, 8 photo-reference and 8 asynchronous camera-zoom tests |
+| Shared JVM suite | 56 passed: 29 state/storage, 9 Ktor manifest, 8 photo-reference, 8 asynchronous camera-zoom and 2 scan-feedback timing tests |
 | Android connected suite | 4 UI flows passed across the camera-refinement run and targeted rerun, including real two-finger zoom and resume; all 10 earlier UI/native tests passed with selected int8 weights during quantization, on the Pixel 10 Pro Fold AVD, API 37 |
 | Android debug build and lint | Build passed; lint reported no issues |
 | iOS native simulator suite | 23 passed with selected int8 weights, including actual Core ML inference, metadata rejection, preprocessing and storage regressions |
@@ -17,6 +17,46 @@ actionable feedback. Saved results come from captures or imported photos.
 | iOS deployment target | Compiled app binaries report minimum iOS 17.0 |
 | Model conversion | 24 pinned inputs agree with PyTorch; maximum error 0.0000687 years (LiteRT), 0.0000458 years (Core ML) |
 | Quantized installer | 8 safety tests passed, including corrupt artifacts, incomplete evidence, stale package cleanup and rollback |
+
+## Scan feedback
+
+After capture, analysis stays in the live camera preview beneath thin mint corner
+brackets, small edge ticks and a narrow moving light band. Camera controls and
+pinch zoom are locked while close remains available to cancel. Imported photos
+appear within that same preview area during analysis. The app opens the result
+only after inference finishes; the result photo has no scan animation.
+
+Soft scan feedback begins after 180 ms and repeats every 650 ms while analysis
+is visibly active. A successful result receives a completion cue; unsuccessful
+analysis retains its existing warning cue. The scan overlay and pulse coroutine
+stop on completion, cancellation, a confirmation dialog, or backgrounding. When
+reduced motion is enabled, static brackets remain and decorative pulses stop.
+Android also observes disabled animations and Battery Saver. Native haptics
+follow current platform settings and suppress background completion feedback.
+There is no minimum duration or recording delay in either app.
+
+All 56 shared tests passed, including spaced pulses, cancellation and avoiding
+stacked feedback for very fast inference. Android debug APK, instrumentation APK
+and lint passed after moving analysis into the camera preview.
+
+One focused Android instrumentation flow passed using the real App navigation
+and CameraX capture with an inference hold confined to the test APK. It verifies
+that the same preview stays attached and streaming, input controls are locked,
+the discard dialog pauses feedback, cancellation cannot open a stale result,
+and completion opens the result and releases the camera. Its evidence is in
+`artifacts/scan-feedback/android-live-preview/`.
+
+The final iOS simulator and unsigned device builds passed; the device binary
+retains minimum iOS 17.0. The existing native cancellation test passed. An
+ordinary photo import on Duo showed the scan inside the native viewfinder with
+locked controls, then opened the real Core ML result. The recording contains no
+test delay; the scan appears around 57.5–59 seconds and the result by 60 seconds.
+This evidence is in `artifacts/scan-feedback/ios/in-camera/`. The development
+apps were restored without pending captures or test launch arguments.
+
+Local screenshots and recordings are in `artifacts/scan-feedback/`. Simulator
+checks verify feedback timing and lifecycle; the tactile feel still needs a
+physical device.
 
 ## Launch refinement
 
