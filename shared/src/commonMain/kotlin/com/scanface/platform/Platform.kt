@@ -18,6 +18,8 @@ expect fun createPlatformServices(): PlatformServices
 @Composable
 expect fun CameraScreen(
     darkTheme: Boolean,
+    analyzing: Boolean,
+    feedbackEnabled: Boolean,
     onCaptured: (CapturedPhoto) -> Unit,
     onClose: () -> Unit,
 )

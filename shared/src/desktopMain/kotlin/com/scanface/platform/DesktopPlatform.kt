@@ -22,7 +22,8 @@ actual fun createPlatformServices(): PlatformServices = object : PlatformService
 }
 
 @Composable
-actual fun CameraScreen(darkTheme: Boolean, onCaptured: (CapturedPhoto) -> Unit, onClose: () -> Unit) {
+actual fun CameraScreen(darkTheme: Boolean, analyzing: Boolean, feedbackEnabled: Boolean,
+                      onCaptured: (CapturedPhoto) -> Unit, onClose: () -> Unit) {
     Text("Camera capture is available in the Android and iOS apps.")
 }
 

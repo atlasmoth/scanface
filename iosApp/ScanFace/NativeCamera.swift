@@ -11,15 +11,30 @@ final class NativeCameraFactory: NSObject, CameraControllerFactory {
         onClose: @escaping () -> Void
     ) -> UIViewController {
         let model = CaptureSessionModel(onCaptured: onCaptured)
-        let controller = UIHostingController(
-            rootView: CaptureScreen(model: model, dark: darkTheme, close: onClose)
-        )
+        let controller = CameraHostController(model: model, dark: darkTheme, close: onClose)
         controller.overrideUserInterfaceStyle = darkTheme ? .dark : .light
         controller.view.backgroundColor = darkTheme
             ? UIColor(red: 16/255, green: 26/255, blue: 22/255, alpha: 1)
             : UIColor(red: 246/255, green: 247/255, blue: 242/255, alpha: 1)
         return controller
     }
+
+    func updateAnalysis(controller: UIViewController, analyzing: Bool, active: Bool, reduceMotion: Bool) {
+        (controller as? CameraHostController)?.model.updateAnalysis(
+            analyzing: analyzing, active: active, reduceMotion: reduceMotion
+        )
+    }
+}
+
+private final class CameraHostController: UIHostingController<CaptureScreen> {
+    let model: CaptureSessionModel
+
+    init(model: CaptureSessionModel, dark: Bool, close: @escaping () -> Void) {
+        self.model = model
+        super.init(rootView: CaptureScreen(model: model, dark: dark, close: close))
+    }
+
+    @MainActor required dynamic init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 }
 
 enum CaptureAvailability: Equatable {
@@ -78,6 +93,10 @@ final class CaptureSessionModel: NSObject, ObservableObject {
     let session = AVCaptureSession()
     @Published private(set) var availability: CaptureAvailability = .preparing
     @Published private(set) var isCapturing = false
+    @Published private(set) var isAnalyzing = false
+    @Published private(set) var scanActive = false
+    @Published private(set) var reduceScanMotion = false
+    @Published private(set) var importedAnalysisImage: UIImage?
     @Published private(set) var frontFacing = true
     @Published private(set) var canFlip = false
     @Published private(set) var supportsFlash = false
@@ -191,12 +210,26 @@ final class CaptureSessionModel: NSObject, ObservableObject {
 
     func stop() {
         active = false
+        isAnalyzing = false
+        scanActive = false
+        importedAnalysisImage = nil
         invalidateZoomUpdates()
         endScreenFlash()
         queue.async { [weak self] in
             guard let self else { return }
             if self.session.isRunning { self.session.stopRunning() }
         }
+    }
+
+    func updateAnalysis(analyzing: Bool, active: Bool, reduceMotion: Bool) {
+        if isAnalyzing != analyzing {
+            isAnalyzing = analyzing
+            if analyzing { invalidateZoomUpdates() }
+        }
+        let visible = analyzing && active
+        if scanActive != visible { scanActive = visible }
+        if reduceScanMotion != reduceMotion { reduceScanMotion = reduceMotion }
+        if !analyzing && !isCapturing { importedAnalysisImage = nil }
     }
 
     private func stopSessionForBackground() {
@@ -210,21 +243,21 @@ final class CaptureSessionModel: NSObject, ObservableObject {
     }
 
     func flipCamera() {
-        guard availability == .ready, !isCapturing, canFlip else { return }
+        guard availability == .ready, !isCapturing, !isAnalyzing, canFlip else { return }
         availability = .preparing
         flash = .off
         configure(position: frontFacing ? .back : .front)
     }
 
     func selectLens(_ id: String) {
-        guard availability == .ready, !isCapturing, id != selectedLensID else { return }
+        guard availability == .ready, !isCapturing, !isAnalyzing, id != selectedLensID else { return }
         availability = .preparing
         flash = .off
         configure(position: frontFacing ? .front : .back, preferredID: id)
     }
 
     func beginPinch() -> Int? {
-        guard availability == .ready, !isCapturing else { return nil }
+        guard availability == .ready, !isCapturing, !isAnalyzing else { return nil }
         zoom.beginPinch()
         pinching = true
         showZoomReadout()
@@ -232,7 +265,7 @@ final class CaptureSessionModel: NSObject, ObservableObject {
     }
 
     func updatePinch(scale: CGFloat, generation: Int) {
-        guard availability == .ready, !isCapturing, generation == zoomGeneration else { return }
+        guard availability == .ready, !isCapturing, !isAnalyzing, generation == zoomGeneration else { return }
         var updated = zoom
         updated.pinch(scale: scale)
         requestZoomUpdate(updated)
@@ -245,7 +278,7 @@ final class CaptureSessionModel: NSObject, ObservableObject {
     }
 
     func adjustAccessibleZoom(increasing: Bool) {
-        guard availability == .ready, !isCapturing else { return }
+        guard availability == .ready, !isCapturing, !isAnalyzing else { return }
         var updated = zoom
         updated.setFactor(zoom.factor + (increasing ? 0.25 : -0.25))
         requestZoomUpdate(updated)
@@ -433,7 +466,8 @@ final class CaptureSessionModel: NSObject, ObservableObject {
     }
 
     func capture() {
-        guard availability == .ready, !isCapturing else { return }
+        guard availability == .ready, !isCapturing, !isAnalyzing else { return }
+        importedAnalysisImage = nil
         isCapturing = true
         let requestedZoom = zoom.factor
         invalidateZoomUpdates()
@@ -513,7 +547,8 @@ final class CaptureSessionModel: NSObject, ObservableObject {
     }
 
     func importPhoto(_ image: UIImage) {
-        guard !isCapturing else { return }
+        guard !isCapturing, !isAnalyzing else { return }
+        importedAnalysisImage = image
         isCapturing = true
         persist(image, lens: "Imported photo")
     }
@@ -538,11 +573,15 @@ final class CaptureSessionModel: NSObject, ObservableObject {
                         return
                     }
                     CameraFeedback.success()
+                    // Close the input gap before the shared analysis state reaches
+                    // the hosting controller; the session itself stays live.
+                    self.isAnalyzing = true
                     self.onCaptured(photo)
                 }
             } catch {
                 DispatchQueue.main.async {
                     self.isCapturing = false
+                    self.importedAnalysisImage = nil
                     self.errorMessage = "Couldn't save this photo. Check available storage and try again."
                 }
             }
@@ -630,7 +669,7 @@ private struct CaptureScreen: View {
 
     private var canvas: Color { Color(hex: dark ? 0x101A16 : 0xF6F7F2) }
     private var action: Color { Color(hex: dark ? 0xAED7BA : 0x245C45) }
-    private var ready: Bool { model.availability == .ready && !model.isCapturing }
+    private var ready: Bool { model.availability == .ready && !model.isCapturing && !model.isAnalyzing }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -646,7 +685,7 @@ private struct CaptureScreen: View {
                     .contentShape(Rectangle())
             }
             .foregroundStyle(action)
-            .disabled(model.isCapturing)
+            .disabled(model.isCapturing || model.isAnalyzing)
             .accessibilityIdentifier("camera.import")
         }
         .padding(.horizontal, 12)
@@ -693,11 +732,25 @@ private struct CaptureScreen: View {
             if model.availability == .ready || model.availability == .preparing {
                 CameraPreview(model: model)
                     .overlay {
-                        if model.availability == .preparing {
+                        if model.availability == .preparing && !model.isAnalyzing && model.importedAnalysisImage == nil {
                             ProgressView().tint(.white)
                                 .accessibilityLabel("Opening camera")
                         }
                     }
+            }
+
+            // Imports share this viewfinder while being analyzed. Camera captures
+            // deliberately leave the live AVFoundation layer visible instead.
+            if let image = model.importedAnalysisImage {
+                GeometryReader { geometry in
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                        .background(Color(hex: 0x121614))
+                }
+                .allowsHitTesting(false)
+                .accessibilityLabel("Selected photo")
             }
 
             VStack {
@@ -709,7 +762,7 @@ private struct CaptureScreen: View {
             }
             .allowsHitTesting(false)
 
-            if model.availability != .ready && model.availability != .preparing {
+            if model.availability != .ready && model.availability != .preparing && !model.isAnalyzing && model.importedAnalysisImage == nil {
                 unavailableContent
                     .padding(.horizontal, 24)
                     .padding(.top, 56)
@@ -717,10 +770,28 @@ private struct CaptureScreen: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
 
+            if model.scanActive {
+                CameraScanOverlay(reduceMotion: model.reduceScanMotion)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 72)
+                    .padding(.bottom, 148)
+                    .allowsHitTesting(false)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Scan in progress")
+                    .accessibilityIdentifier("camera.scanOverlay")
+            }
+
             VStack(spacing: 0) {
                 topControls
                 Spacer(minLength: 8)
-                if model.showingZoom {
+                if model.isAnalyzing {
+                    Text("Analyzing your scan…")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Color(hex: 0xC8E8D7))
+                        .shadow(color: .black.opacity(0.8), radius: 4)
+                        .padding(.bottom, 14)
+                        .accessibilityIdentifier("camera.analysisStatus")
+                } else if model.showingZoom {
                     Text(String(format: "%.1f×", Double(model.zoom.factor)))
                         .font(.system(size: 14, weight: .medium, design: .rounded))
                         .foregroundStyle(.white)
@@ -760,6 +831,7 @@ private struct CaptureScreen: View {
                 Menu {
                     ForEach(model.lenses) { lens in
                         Button {
+                            guard ready else { return }
                             CameraFeedback.selection()
                             model.selectLens(lens.id)
                         } label: {
@@ -801,8 +873,8 @@ private struct CaptureScreen: View {
             }
             .buttonStyle(CameraShutterStyle())
             .disabled(!ready)
-            .opacity(model.availability == .ready ? 1 : 0.35)
-            .accessibilityLabel(model.isCapturing ? "Saving photo" : "Take photo")
+            .opacity(ready ? 1 : 0.35)
+            .accessibilityLabel(model.isAnalyzing ? "Analyzing scan" : (model.isCapturing ? "Saving photo" : "Take photo"))
             .accessibilityIdentifier("camera.capture")
 
             HStack {
@@ -833,6 +905,7 @@ private struct CaptureScreen: View {
         Menu {
             ForEach(model.availableFlashModes, id: \.self) { mode in
                 Button {
+                    guard ready else { return }
                     CameraFeedback.selection()
                     model.flash = mode
                 } label: {
@@ -885,6 +958,49 @@ private struct CaptureScreen: View {
         .multilineTextAlignment(.center)
     }
 
+}
+
+/// A quiet scanning instrument drawn in the viewfinder, never over the result.
+private struct CameraScanOverlay: View {
+    let reduceMotion: Bool
+    @State private var started = Date()
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduceMotion)) { timeline in
+            Canvas { context, size in
+                guard size.width > 0, size.height > 0 else { return }
+                let tint = Color(hex: 0xB4E2CD)
+                let frame = CGRect(origin: .zero, size: size).insetBy(dx: 1, dy: 1)
+                let corner = min(24, min(size.width, size.height) * 0.13)
+                var brackets = Path()
+                for (x, y, dx, dy) in [
+                    (frame.minX, frame.minY, 1.0, 1.0),
+                    (frame.maxX, frame.minY, -1.0, 1.0),
+                    (frame.minX, frame.maxY, 1.0, -1.0),
+                    (frame.maxX, frame.maxY, -1.0, -1.0)
+                ] {
+                    brackets.move(to: CGPoint(x: x, y: y + dy * corner))
+                    brackets.addLine(to: CGPoint(x: x, y: y))
+                    brackets.addLine(to: CGPoint(x: x + dx * corner, y: y))
+                }
+                context.stroke(brackets, with: .color(tint.opacity(0.7)), style: StrokeStyle(lineWidth: 1.3, lineCap: .round))
+                if !reduceMotion {
+                    let phase = timeline.date.timeIntervalSince(started).truncatingRemainder(dividingBy: 2.8) / 2.8
+                    let sweep = (1 - cos(phase * 2 * .pi)) / 2
+                    let y = frame.minY + 10 + max(0, frame.height - 20) * sweep
+                    let band = CGRect(x: frame.minX + 5, y: y - 11, width: max(0, frame.width - 10), height: 22)
+                    context.fill(Path(band), with: .linearGradient(
+                        Gradient(colors: [.clear, tint.opacity(0.09), .clear]),
+                        startPoint: CGPoint(x: 0, y: band.minY), endPoint: CGPoint(x: 0, y: band.maxY)
+                    ))
+                    var line = Path()
+                    line.move(to: CGPoint(x: frame.minX + 5, y: y))
+                    line.addLine(to: CGPoint(x: frame.maxX - 5, y: y))
+                    context.stroke(line, with: .color(tint.opacity(0.65)), lineWidth: 1)
+                }
+            }
+        }
+    }
 }
 
 private struct CameraShutterStyle: ButtonStyle {
@@ -971,7 +1087,7 @@ private struct CameraPreview: UIViewRepresentable {
     }
     func updateUIView(_ uiView: PreviewView, context: Context) {
         uiView.accessibilityValue = String(format: "%.1f times, from %.1f to %.1f", Double(model.zoom.factor), Double(model.zoom.minimum), Double(model.zoom.maximum))
-        uiView.accessibilityTraits = model.availability == .ready && !model.isCapturing ? [.adjustable] : [.notEnabled]
+        uiView.accessibilityTraits = model.availability == .ready && !model.isCapturing && !model.isAnalyzing ? [.adjustable] : [.notEnabled]
     }
 }
 

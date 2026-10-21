@@ -24,6 +24,7 @@ import com.scanface.App
 import com.scanface.core.AppStore
 import com.scanface.core.CapturedPhoto
 import com.scanface.core.KeyValueStore
+import com.scanface.ui.rememberScanPresentation
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.readBytes
 import kotlinx.cinterop.usePinned
@@ -39,6 +40,8 @@ interface CameraControllerFactory {
         onCaptured: (CapturedPhoto) -> Unit,
         onClose: () -> Unit,
     ): UIViewController
+
+    fun updateAnalysis(controller: UIViewController, analyzing: Boolean, active: Boolean, reduceMotion: Boolean)
 }
 
 private var cameraFactory: CameraControllerFactory? = null
@@ -76,14 +79,20 @@ fun MainViewController(cameraFactory: CameraControllerFactory, analyzer: NativeF
 @Composable
 actual fun CameraScreen(
     darkTheme: Boolean,
+    analyzing: Boolean,
+    feedbackEnabled: Boolean,
     onCaptured: (CapturedPhoto) -> Unit,
     onClose: () -> Unit,
 ) {
     val factory = requireNotNull(cameraFactory) { "Install the native camera factory before starting ScanFace." }
+    val scan = rememberScanPresentation(analyzing, feedbackEnabled)
+    val captured = rememberUpdatedState(onCaptured)
+    val close = rememberUpdatedState(onClose)
     UIKitViewController(
-        factory = { factory.makeCameraController(darkTheme, onCaptured, onClose) },
+        factory = { factory.makeCameraController(darkTheme, { captured.value(it) }, { close.value() }) },
         modifier = Modifier.fillMaxSize(),
         update = { controller ->
+            factory.updateAnalysis(controller, analyzing, scan.active, scan.reduceMotion)
             controller.overrideUserInterfaceStyle = if (darkTheme) {
                 UIUserInterfaceStyle.UIUserInterfaceStyleDark
             } else {

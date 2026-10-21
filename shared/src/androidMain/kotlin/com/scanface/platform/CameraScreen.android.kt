@@ -18,8 +18,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -27,6 +29,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -78,6 +81,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.scanface.core.CapturedPhoto
 import com.scanface.ui.AppIcon
+import com.scanface.ui.CameraScanOverlay
 import com.scanface.ui.Glyph
 import java.io.File
 import java.util.UUID
@@ -89,6 +93,8 @@ import kotlinx.coroutines.withContext
 @Composable
 actual fun CameraScreen(
     darkTheme: Boolean,
+    analyzing: Boolean,
+    feedbackEnabled: Boolean,
     onCaptured: (CapturedPhoto) -> Unit,
     onClose: () -> Unit,
 ) {
@@ -98,9 +104,11 @@ actual fun CameraScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     val latestOnCaptured by rememberUpdatedState(onCaptured)
+    val latestAnalyzing by rememberUpdatedState(analyzing)
     var permissionGranted by remember { mutableStateOf(context.hasCameraPermission()) }
     var permissionRequested by rememberSaveable { mutableStateOf(false) }
     var importing by remember { mutableStateOf(false) }
+    var importedPhoto by remember { mutableStateOf<CapturedPhoto?>(null) }
     var importError by remember { mutableStateOf<String?>(null) }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         permissionRequested = true
@@ -108,7 +116,7 @@ actual fun CameraScreen(
         if (!it) haptics.perform(AppHaptic.Warning)
     }
     val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        if (uri != null && !importing) {
+        if (uri != null && !importing && !latestAnalyzing) {
             scope.launch {
                 importing = true
                 importError = null
@@ -116,6 +124,7 @@ actual fun CameraScreen(
                 var handedOff = false
                 try {
                     withContext(Dispatchers.IO) { photo = importPhoto(context, uri) }
+                    importedPhoto = photo
                     haptics.perform(AppHaptic.Success)
                     latestOnCaptured(requireNotNull(photo))
                     handedOff = true
@@ -132,8 +141,10 @@ actual fun CameraScreen(
         }
     }
     val openPicker = {
-        haptics.perform(AppHaptic.Light)
-        photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        if (!analyzing && !importing) {
+            haptics.perform(AppHaptic.Light)
+            photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        }
     }
     DisposableEffect(lifecycleOwner, context) {
         val observer = LifecycleEventObserver { _, event ->
@@ -149,17 +160,23 @@ actual fun CameraScreen(
     Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
         if (permissionGranted) {
             GrantedCamera(
+                analyzing = analyzing,
+                feedbackEnabled = feedbackEnabled,
+                importedPhoto = importedPhoto,
                 importing = importing,
                 importError = importError,
                 onCaptured = latestOnCaptured,
                 onClose = onClose,
                 openPicker = openPicker,
             )
+        } else if (analyzing && importedPhoto != null) {
+            ImportedPhotoAnalysis(requireNotNull(importedPhoto), feedbackEnabled, onClose)
         } else {
             val permanentlyDenied = permissionRequested && activity != null &&
                 !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.CAMERA)
             CameraPermission(
                 permanentlyDenied = permanentlyDenied,
+                analyzing = analyzing,
                 importing = importing,
                 error = importError,
                 onAllow = {
@@ -176,6 +193,9 @@ actual fun CameraScreen(
 
 @Composable
 private fun GrantedCamera(
+    analyzing: Boolean,
+    feedbackEnabled: Boolean,
+    importedPhoto: CapturedPhoto?,
     importing: Boolean,
     importError: String?,
     onCaptured: (CapturedPhoto) -> Unit,
@@ -190,7 +210,7 @@ private fun GrantedCamera(
         CameraController(context, context.findActivity(), previewView)
     }
     val state by controller.state.collectAsState()
-    val busy = state.busy || importing
+    val busy = state.busy || importing || analyzing
     val controlsLocked = busy || state.zoomChanging
     DisposableEffect(controller, lifecycleOwner) {
         controller.start(lifecycleOwner)
@@ -203,7 +223,7 @@ private fun GrantedCamera(
         Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 12.dp).padding(top = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally) {
             CameraPreview(
-                previewView, state, busy,
+                previewView, state, busy, analyzing, feedbackEnabled, importedPhoto,
                 Modifier.fillMaxWidth().weight(1f),
                 onClose = { haptics.perform(AppHaptic.Light); onClose() },
                 onCapture = {
@@ -244,6 +264,9 @@ private fun CameraPreview(
     preview: PreviewView,
     state: CameraUiState,
     busy: Boolean,
+    analyzing: Boolean,
+    feedbackEnabled: Boolean,
+    importedPhoto: CapturedPhoto?,
     modifier: Modifier,
     onClose: () -> Unit,
     onCapture: () -> Unit,
@@ -253,10 +276,12 @@ private fun CameraPreview(
     val controlsEnabled = state.ready && !busy && !state.zoomChanging
     Box(modifier.clip(RoundedCornerShape(24.dp)).background(Color(0xFF101414))) {
         AndroidView(factory = { preview }, update = { it.isEnabled = !busy }, modifier = Modifier.fillMaxSize())
+        if (analyzing && importedPhoto != null) ImportedPhotoPreview(importedPhoto, Modifier.matchParentSize())
         Box(Modifier.fillMaxWidth().height(110.dp).align(Alignment.TopCenter)
             .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .42f), Color.Transparent))))
         Box(Modifier.fillMaxWidth().height(200.dp).align(Alignment.BottomCenter)
             .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .68f)))))
+        CameraScanOverlay(analyzing, feedbackEnabled, Modifier.matchParentSize().padding(top = 60.dp, bottom = 160.dp))
         if (!state.ready && state.error == null) {
             CircularProgressIndicator(Modifier.align(Alignment.Center), color = Color.White)
         } else if (!state.ready) {
@@ -267,13 +292,17 @@ private fun CameraPreview(
             Glyph(AppIcon.Close, tint = Color.White)
         }
         AnimatedVisibility(
-            visible = state.zoomReadoutVisible,
+            visible = state.zoomReadoutVisible && !analyzing,
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 120.dp),
             enter = fadeIn(), exit = fadeOut(),
         ) {
             Text(formatZoom(state.requestedZoom), color = CameraAccent,
                 style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Medium)
         }
+        if (analyzing) Text("Analyzing your scan…",
+            Modifier.align(Alignment.BottomCenter).padding(horizontal = 20.dp).padding(bottom = 126.dp)
+                .semantics { liveRegion = LiveRegionMode.Polite },
+            color = Color.White, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
         Box(Modifier.align(Alignment.BottomCenter).padding(horizontal = 20.dp, vertical = 24.dp)
             .widthIn(max = 360.dp).fillMaxWidth().height(82.dp)) {
             CameraCircleButton(
@@ -281,12 +310,39 @@ private fun CameraPreview(
                 enabled = state.canFlip && controlsEnabled,
                 modifier = Modifier.align(Alignment.CenterStart), onClick = onFlip,
             ) { FlipGlyph() }
-            ShutterButton(controlsEnabled, busy, Modifier.align(Alignment.Center), onCapture)
+            ShutterButton(controlsEnabled, busy && !analyzing, Modifier.align(Alignment.Center), onCapture)
             CameraCircleButton(
                 description = if (state.flashes.size > 1) "${state.flash.label}. Change flash mode." else "Flash unavailable on this camera",
                 enabled = controlsEnabled && state.flashes.size > 1,
                 modifier = Modifier.align(Alignment.CenterEnd), onClick = onFlash,
             ) { FlashGlyph(state.flash) }
+        }
+    }
+}
+
+@Composable
+private fun ImportedPhotoPreview(photo: CapturedPhoto, modifier: Modifier) {
+    BoxWithConstraints(modifier.background(Color(0xFF101414)), contentAlignment = Alignment.Center) {
+        val aspect = photo.width.toFloat() / photo.height
+        PhotoImage(photo.path, Modifier.width(minOf(maxWidth, maxHeight * aspect)).aspectRatio(aspect), "Selected photo")
+    }
+}
+
+@Composable
+private fun ImportedPhotoAnalysis(photo: CapturedPhoto, feedbackEnabled: Boolean, onClose: () -> Unit) {
+    val haptics = LocalAppHaptics.current
+    Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 12.dp).padding(top = 12.dp)) {
+        Box(Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(24.dp))) {
+            ImportedPhotoPreview(photo, Modifier.matchParentSize())
+            CameraScanOverlay(true, feedbackEnabled, Modifier.matchParentSize().padding(top = 60.dp, bottom = 80.dp))
+            CameraCircleButton("Close camera", true, Modifier.align(Alignment.TopStart).padding(12.dp),
+                { haptics.perform(AppHaptic.Light); onClose() }) { Glyph(AppIcon.Close, tint = Color.White) }
+            Text("Analyzing your scan…", Modifier.align(Alignment.BottomCenter).padding(24.dp)
+                .semantics { liveRegion = LiveRegionMode.Polite },
+                color = Color.White, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+        }
+        TextButton({}, enabled = false, modifier = Modifier.align(Alignment.CenterHorizontally).heightIn(min = 56.dp)) {
+            Text("Choose an existing photo")
         }
     }
 }
@@ -360,6 +416,7 @@ private fun FlipGlyph() {
 @Composable
 private fun CameraPermission(
     permanentlyDenied: Boolean,
+    analyzing: Boolean,
     importing: Boolean,
     error: String?,
     onAllow: () -> Unit,
@@ -390,13 +447,15 @@ private fun CameraPermission(
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 12.dp, bottom = 24.dp),
                 )
-                Button(onClick = onAllow, enabled = !importing, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+                Button(onClick = onAllow, enabled = !importing && !analyzing, modifier = Modifier.fillMaxWidth().height(56.dp)) {
                     Text(if (permanentlyDenied) "Open Settings" else "Allow camera")
                 }
-                TextButton(onClick = openPicker, enabled = !importing) {
+                TextButton(onClick = openPicker, enabled = !importing && !analyzing) {
                     Text(if (importing) "Preparing photo…" else "Choose an existing photo")
                 }
                 if (importing) CircularProgressIndicator(Modifier.size(24.dp))
+                if (analyzing) Text("Analyzing your scan…", Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                    style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
                 if (error != null) Text(
                     error,
                     color = MaterialTheme.colorScheme.error,

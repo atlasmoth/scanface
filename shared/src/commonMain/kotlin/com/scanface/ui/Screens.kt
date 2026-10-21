@@ -156,8 +156,7 @@ fun HistoryScreen(records: List<ScanRecord>, selectedId: String?, wide: Boolean,
 
 @Composable
 fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
-                 onSave: () -> Unit, onRetake: () -> Unit, onShare: () -> Unit, onDelete: () -> Unit,
-                 feedbackEnabled: Boolean = true) {
+                 onSave: () -> Unit, onRetake: () -> Unit, onShare: () -> Unit, onDelete: () -> Unit) {
     val haptics = LocalAppHaptics.current
     var detailsExpanded by rememberSaveable(record.id) { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 28.dp, vertical = 20.dp),
@@ -170,7 +169,7 @@ fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
                 if (maxWidth >= 560.dp) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(36.dp)) {
                         BoxWithConstraints(Modifier.weight(.45f), contentAlignment = Alignment.Center) {
-                            ScanPhoto(record, analyzing, feedbackEnabled,
+                            PhotoThumbnail(record,
                                 Modifier.width(minOf(maxWidth, 360.dp * photoAspect)).aspectRatio(photoAspect))
                         }
                         Column(Modifier.weight(.55f)) { ScanEstimate(record, analyzing) }
@@ -178,7 +177,7 @@ fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
                 } else {
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(28.dp)) {
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            ScanPhoto(record, analyzing, feedbackEnabled,
+                            PhotoThumbnail(record,
                                 Modifier.width(minOf(availablePhotoWidth, 340.dp, 360.dp * photoAspect)).aspectRatio(photoAspect))
                         }
                         ScanEstimate(record, analyzing)

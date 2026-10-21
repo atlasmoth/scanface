@@ -7,15 +7,11 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -29,7 +25,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.scanface.core.ScanRecord
 import com.scanface.platform.AppHaptic
 import com.scanface.platform.LocalAppHaptics
 import com.scanface.platform.rememberScanEnvironment
@@ -49,27 +44,28 @@ internal suspend fun scanPulseLoop(pulse: () -> Unit) {
     }
 }
 
+internal data class ScanPresentation(val active: Boolean, val reduceMotion: Boolean)
+
 @Composable
-internal fun ScanPhoto(record: ScanRecord, analyzing: Boolean, feedbackEnabled: Boolean, modifier: Modifier) {
-    if (!analyzing) {
-        PhotoThumbnail(record, modifier)
-        return
-    }
+internal fun rememberScanPresentation(analyzing: Boolean, feedbackEnabled: Boolean): ScanPresentation {
     val environment = rememberScanEnvironment()
-    val active = environment.isForeground && feedbackEnabled
+    val active = analyzing && environment.isForeground && feedbackEnabled
     val haptics = LocalAppHaptics.current
     val currentHaptics = rememberUpdatedState(haptics)
     val pulseEnabled = active && !environment.reduceMotion
-    LaunchedEffect(record.id, pulseEnabled) {
+    LaunchedEffect(pulseEnabled) {
         if (pulseEnabled) scanPulseLoop { currentHaptics.value.perform(AppHaptic.ScanTick) }
     }
-    Box(modifier.clip(RoundedCornerShape(14.dp))) {
-        PhotoThumbnail(record, Modifier.fillMaxSize())
-        if (active) ScanOverlay(environment.reduceMotion, Modifier.matchParentSize())
-    }
+    return ScanPresentation(active, environment.reduceMotion)
 }
 
-/** Edge instruments and a narrow light plane keep the original face unobscured. */
+@Composable
+internal fun CameraScanOverlay(analyzing: Boolean, feedbackEnabled: Boolean, modifier: Modifier) {
+    val presentation = rememberScanPresentation(analyzing, feedbackEnabled)
+    if (presentation.active) ScanOverlay(presentation.reduceMotion, modifier)
+}
+
+/** Edge instruments and a narrow light plane keep the camera preview unobscured. */
 @Composable
 private fun ScanOverlay(reduceMotion: Boolean, modifier: Modifier) {
     val sweep: State<Float> = if (reduceMotion) rememberUpdatedState(.5f) else {

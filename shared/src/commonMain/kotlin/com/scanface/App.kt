@@ -74,7 +74,10 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
     }
     fun back() {
         when (route) {
-            Route.CAPTURE -> routeName = returnRoute
+            Route.CAPTURE -> {
+                if (store.state.value.pending != null) discardTarget = returnRoute
+                else routeName = returnRoute
+            }
             Route.RESULT -> navigate(Route.valueOf(returnRoute))
             Route.SETTINGS -> {
                 haptics.perform(AppHaptic.Selection)
@@ -122,18 +125,20 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
                     }
                     if (route == Route.CAPTURE) {
                         Box(Modifier.fillMaxSize()) {
-                        CameraScreen(dark, onCaptured = {
+                        CameraScreen(dark, state.isAnalyzing, discardTarget == null, onCaptured = {
                             selectedId = null
                             val analysis = store.capture(it)
                             val captureId = store.state.value.pending?.takeIf { pending -> pending.photoPath == it.path }?.id
-                            routeName = if (captureId != null) Route.RESULT.name else returnRoute
+                            if (captureId == null) routeName = returnRoute
                             if (captureId != null) scope.launch {
                                 analysis.join()
                                 val completed = store.state.value
-                                if (completed.pending?.id == captureId && !completed.isAnalyzing && completed.error == null &&
-                                    routeName == Route.RESULT.name && discardTarget == null) {
-                                    haptics.perform(if (completed.pending.status == AnalysisStatus.COMPLETE)
-                                        AppHaptic.Success else AppHaptic.Warning)
+                                if (completed.pending?.id == captureId && !completed.isAnalyzing && routeName == Route.CAPTURE.name) {
+                                    routeName = Route.RESULT.name
+                                    if (completed.error == null && discardTarget == null) {
+                                        haptics.perform(if (completed.pending.status == AnalysisStatus.COMPLETE)
+                                            AppHaptic.Success else AppHaptic.Warning)
+                                    }
                                 }
                             }
                         }, onClose = ::back)
@@ -220,8 +225,7 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
                                                     }
                                                 },
                                                 { discardTarget = Route.CAPTURE.name },
-                                                { services.shareText(store.exportCsv(record.id)) }, { deleteId = record.id },
-                                                feedbackEnabled = discardTarget == null && deleteId == null && !clearAll)
+                                                { services.shareText(store.exportCsv(record.id)) }, { deleteId = record.id })
                                             else Column(Modifier.padding(24.dp)) {
                                                 EmptyState("This scan is no longer here", "Start a new capture or return to your history.", "New face scan", ::scan)
                                             }
