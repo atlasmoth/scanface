@@ -33,11 +33,9 @@ kotlin {
             implementation(compose.foundation)
             implementation(compose.material3)
             implementation(compose.ui)
-            implementation(compose.components.resources)
             implementation(libs.coroutines.core)
             implementation(libs.serialization.json)
             implementation(libs.datetime)
-            implementation(libs.koin.core)
         }
         androidMain.dependencies {
             implementation(libs.activity.compose)
