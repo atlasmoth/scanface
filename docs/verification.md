@@ -23,36 +23,55 @@ actionable feedback. Saved results come from captures or imported photos.
 After capture, analysis stays in the live camera preview beneath thin mint corner
 brackets, small edge ticks and a narrow moving light band. Camera controls and
 pinch zoom are locked while close remains available to cancel. Imported photos
-appear within that same preview area during analysis. The app opens the result
-only after inference finishes; the result photo has no scan animation.
+appear within that same preview area during analysis. The overlay is clipped to
+the full visible camera image, or the exact aspect-fit rectangle of an imported
+photo; the sweep can reach its top and bottom edges without entering letterboxes.
+
+Inference completion immediately starts the result's 220 ms fade-in. The outgoing
+camera fades over 180 ms while its sweep finishes at the image's bottom edge over
+160 ms; neither animation gates navigation. Capture controls stay locked through
+the handoff, and imported pixels remain visible until disposal. Each deliberate
+retake has a fresh camera session, even if the previous exit is still running.
+Reduced motion, backgrounding and an open confirmation dialog skip the transition.
+The result photo has no scan animation.
+
+On iOS, UIKit fades the still-mounted camera controller itself. Result photos
+use a remembered Compose bitmap so they blend and clip with the rest of the
+result; applying Compose alpha to embedded UIKit views caused a brief blank
+frame during the first verification and was replaced.
 
 Soft scan feedback begins after 180 ms and repeats every 650 ms while analysis
 is visibly active. A successful result receives a completion cue; unsuccessful
-analysis retains its existing warning cue. The scan overlay and pulse coroutine
-stop on completion, cancellation, a confirmation dialog, or backgrounding. When
-reduced motion is enabled, static brackets remain and decorative pulses stop.
+analysis retains its existing warning cue. Pulses stop when inference finishes;
+the outgoing overlay completes during the fade. Both stop on cancellation,
+a confirmation dialog, or backgrounding. When reduced motion is enabled,
+static brackets remain and decorative pulses stop.
 Android also observes disabled animations and Battery Saver. Native haptics
 follow current platform settings and suppress background completion feedback.
 There is no minimum duration or recording delay in either app.
 
 All 56 shared tests passed, including spaced pulses, cancellation and avoiding
 stacked feedback for very fast inference. Android debug APK, instrumentation APK
-and lint passed after moving analysis into the camera preview.
+and lint passed for the updated handoff.
 
 One focused Android instrumentation flow passed using the real App navigation
 and CameraX capture with an inference hold confined to the test APK. It verifies
 that the same preview stays attached and streaming, input controls are locked,
-the discard dialog pauses feedback, cancellation cannot open a stale result,
-and completion opens the result and releases the camera. Its evidence is in
-`artifacts/scan-feedback/android-live-preview/`.
+the overlay matches the visible preview bounds, the discard dialog pauses
+feedback, and cancellation cannot open a stale result. Results appear within
+one second of releasing inference, the camera releases within one second of
+result entry, and the outgoing preview never unlocks. Its evidence is in
+`artifacts/scan-feedback/android-handoff/`.
 
 The final iOS simulator and unsigned device builds passed; the device binary
-retains minimum iOS 17.0. The existing native cancellation test passed. An
-ordinary photo import on Duo showed the scan inside the native viewfinder with
-locked controls, then opened the real Core ML result. The recording contains no
-test delay; the scan appears around 57.5–59 seconds and the result by 60 seconds.
-This evidence is in `artifacts/scan-feedback/ios/in-camera/`. The development
-apps were restored without pending captures or test launch arguments.
+retains minimum iOS 17.0. An ordinary photo import on Duo showed the scan clipped
+to the imported image inside the native viewfinder, then opened the real Core ML
+result. Transition frames confirm the scan reaches the image's bottom edge while
+the camera and result blend without a blank-photo gap. The recording contains no
+test delay: the handoff is around 8.2–8.4 seconds in
+`artifacts/scan-feedback/ios/handoff/duo-native-handoff.mp4`. The earlier in-camera
+pass also verified native cancellation. The development apps were restored
+without pending captures or test launch arguments.
 
 Local screenshots and recordings are in `artifacts/scan-feedback/`. Simulator
 checks verify feedback timing and lifecycle; the tactile feel still needs a
@@ -104,9 +123,11 @@ screen. Signing the simulator app restored the expected native launch artwork.
 Home and empty history now use centered content with generous top spacing.
 Repeated cards, the home guidance panel, privacy tagline and Settings research
 section were removed. Populated overview/history use open sections and simple
-rows; scan details preserve the complete photo and reveal metadata through an
-accessible disclosure. Settings uses plain appearance, age and saved-scan
-sections. Light/dark colors remain consistent across shared and native views.
+rows; scan details preserve the complete photo. The “About this scan” disclosure
+was removed. Settings now has a plain “How it works” explanation of face alignment,
+on-device estimation and entered-age comparison alongside appearance, age and
+saved-scan sections. Light/dark colors remain consistent across shared and native
+views.
 
 Both camera screens fill the available preview height above a compact photo-import
 footer. The separate header, fixed aspect ratios and width/height caps are gone;

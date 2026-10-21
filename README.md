@@ -25,8 +25,10 @@ Analysis happens in place in the camera preview: fine mint brackets and a narrow
 moving light accompany soft, spaced haptic pulses while the live view stays
 visible. Imported photos occupy that same preview during analysis. Camera
 controls lock until analysis finishes, while close remains available to cancel.
-The result opens as soon as inference finishes. Motion and pulses pause behind
-dialogs or in the background; reduced-motion settings retain static brackets.
+The result starts fading in as soon as inference finishes, while the outgoing
+scan sweeps to the image's bottom edge. The overlay is clipped to the actual image
+bounds, including aspect-fitted imports. Motion and pulses pause behind dialogs
+or in the background; reduced-motion settings retain static brackets and skip the fade.
 Results are never delayed to finish the animation.
 
 The model weights are **CC BY-NC-SA 4.0: noncommercial use only**. The author's
@@ -186,8 +188,9 @@ FAHR-FaceSurvival weights are not publicly released.
 Models are installed at build time; the app does not download weights or contact
 a model endpoint. `ModelManifestService` remains an unused, tested network
 boundary. The entered age is only a comparison value and never a model input.
-Completed scans disclose the model identifier and preprocessing variation.
+Metadata exports retain the model identifier. Settings provides a short explanation
+of face alignment, on-device estimation and how the entered age is used.
 
 Facial age is a research estimate, not a diagnosis, health score or prediction of
-an individual's lifespan. Settings links the author source, study and weight
-license. See [the complete input contract and research limitations](docs/models.md).
+an individual's lifespan. See [the author source, weight license, complete input
+contract and research limitations](docs/models.md).
