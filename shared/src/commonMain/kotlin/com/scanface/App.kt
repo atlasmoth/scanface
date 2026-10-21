@@ -130,9 +130,10 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
                             if (captureId != null) scope.launch {
                                 analysis.join()
                                 val completed = store.state.value
-                                if (completed.pending?.id == captureId && !completed.isAnalyzing &&
-                                    completed.pending.status != AnalysisStatus.COMPLETE && completed.error == null) {
-                                    haptics.perform(AppHaptic.Warning)
+                                if (completed.pending?.id == captureId && !completed.isAnalyzing && completed.error == null &&
+                                    routeName == Route.RESULT.name && discardTarget == null) {
+                                    haptics.perform(if (completed.pending.status == AnalysisStatus.COMPLETE)
+                                        AppHaptic.Success else AppHaptic.Warning)
                                 }
                             }
                         }, onClose = ::back)
@@ -219,7 +220,8 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
                                                     }
                                                 },
                                                 { discardTarget = Route.CAPTURE.name },
-                                                { services.shareText(store.exportCsv(record.id)) }, { deleteId = record.id })
+                                                { services.shareText(store.exportCsv(record.id)) }, { deleteId = record.id },
+                                                feedbackEnabled = discardTarget == null && deleteId == null && !clearAll)
                                             else Column(Modifier.padding(24.dp)) {
                                                 EmptyState("This scan is no longer here", "Start a new capture or return to your history.", "New face scan", ::scan)
                                             }
@@ -269,7 +271,10 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
         }
         if (discardTarget != null) {
             AlertDialog(onDismissRequest = { discardTarget = null },
-                title = { Text("Discard this capture?") }, text = { Text("Save this scan to keep it in your history, or discard the photo to continue.") },
+                title = { Text("Discard this capture?") }, text = {
+                    Text(if (state.isAnalyzing) "This stops the scan and removes this photo."
+                        else "Save this scan to keep it in your history, or discard the photo to continue.")
+                },
                 confirmButton = { TextButton({
                     if (store.discardPending()) {
                         if (store.state.value.cleanupPendingCount == 0 && store.state.value.error == null) {
@@ -282,7 +287,7 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
                 dismissButton = { TextButton({
                     haptics.perform(AppHaptic.Light)
                     discardTarget = null
-                }) { Text("Keep editing") } })
+                }) { Text(if (state.isAnalyzing) "Keep scanning" else "Keep editing") } })
         }
     }
 }

@@ -15,9 +15,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.scanface.core.*
 import com.scanface.platform.AppHaptic
@@ -153,7 +156,8 @@ fun HistoryScreen(records: List<ScanRecord>, selectedId: String?, wide: Boolean,
 
 @Composable
 fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
-                 onSave: () -> Unit, onRetake: () -> Unit, onShare: () -> Unit, onDelete: () -> Unit) {
+                 onSave: () -> Unit, onRetake: () -> Unit, onShare: () -> Unit, onDelete: () -> Unit,
+                 feedbackEnabled: Boolean = true) {
     val haptics = LocalAppHaptics.current
     var detailsExpanded by rememberSaveable(record.id) { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 28.dp, vertical = 20.dp),
@@ -166,14 +170,16 @@ fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
                 if (maxWidth >= 560.dp) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(36.dp)) {
                         BoxWithConstraints(Modifier.weight(.45f), contentAlignment = Alignment.Center) {
-                            PhotoThumbnail(record, Modifier.width(minOf(maxWidth, 320.dp * photoAspect)).aspectRatio(photoAspect))
+                            ScanPhoto(record, analyzing, feedbackEnabled,
+                                Modifier.width(minOf(maxWidth, 360.dp * photoAspect)).aspectRatio(photoAspect))
                         }
                         Column(Modifier.weight(.55f)) { ScanEstimate(record, analyzing) }
                     }
                 } else {
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(28.dp)) {
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            PhotoThumbnail(record, Modifier.width(minOf(availablePhotoWidth, 300.dp, 280.dp * photoAspect)).aspectRatio(photoAspect))
+                            ScanPhoto(record, analyzing, feedbackEnabled,
+                                Modifier.width(minOf(availablePhotoWidth, 340.dp, 360.dp * photoAspect)).aspectRatio(photoAspect))
                         }
                         ScanEstimate(record, analyzing)
                     }
@@ -181,9 +187,13 @@ fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
             }
             if (pending) {
                 Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    PrimaryButton("Save scan", AppIcon.Check, Modifier.widthIn(max = 360.dp).fillMaxWidth(), !analyzing, onSave)
-                    Spacer(Modifier.height(8.dp))
-                    TextButton({ haptics.perform(AppHaptic.Warning); onRetake() }, Modifier.heightIn(min = 48.dp)) { Text("Retake photo") }
+                    if (!analyzing) {
+                        PrimaryButton("Save scan", AppIcon.Check, Modifier.widthIn(max = 360.dp).fillMaxWidth(), onClick = onSave)
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    TextButton({ haptics.perform(AppHaptic.Warning); onRetake() }, Modifier.heightIn(min = 48.dp)) {
+                        Text(if (analyzing) "Cancel scan" else "Retake photo")
+                    }
                 }
             } else {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
@@ -196,7 +206,7 @@ fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
                     }
                 }
             }
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (!analyzing) Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f))
                 TextButton({ haptics.perform(AppHaptic.Selection); detailsExpanded = !detailsExpanded },
                     Modifier.fillMaxWidth().semantics {
@@ -230,10 +240,8 @@ fun ResultScreen(record: ScanRecord, pending: Boolean, analyzing: Boolean,
 private fun ScanEstimate(record: ScanRecord, analyzing: Boolean) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (analyzing) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
-                Text("Analyzing your scan…", style = MaterialTheme.typography.titleMedium)
-            }
+            Text("Analyzing your scan…", Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
+                style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
         } else if (record.age != null && record.status == AnalysisStatus.COMPLETE) {
             Text("Estimated facial age", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
