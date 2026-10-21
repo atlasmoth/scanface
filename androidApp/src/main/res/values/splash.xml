@@ -1,0 +1,47 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <color name="splash_background">#F6F7F2</color>
+    <color name="splash_ink">#245C45</color>
+    <attr name="splashMarkColor" format="color" />
+    <dimen name="splash_mark_container">288dp</dimen>
+    <item name="splash_mark" type="drawable">@drawable/splash_mark_still</item>
+
+    <style name="AppStartingTheme" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_mark</item>
+        <item name="windowSplashScreenAnimationDuration">600</item>
+        <item name="splashMarkColor">@color/splash_ink</item>
+        <item name="postSplashScreenTheme">@style/AppTheme</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">true</item>
+    </style>
+
+    <!-- Runtime selection restores an explicit saved appearance before content inflation.
+         The system-owned starting window uses the ordinary day/night resources. -->
+    <style name="AppStartingTheme.Light" parent="AppStartingTheme">
+        <item name="windowSplashScreenBackground">#F6F7F2</item>
+        <item name="splashMarkColor">#245C45</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.Light</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">true</item>
+    </style>
+    <style name="AppStartingTheme.Dark" parent="AppStartingTheme">
+        <item name="windowSplashScreenBackground">#101A16</item>
+        <item name="splashMarkColor">#AED7BA</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.Dark</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
+    </style>
+
+    <style name="AppTheme.Light" parent="AppTheme">
+        <item name="android:windowBackground">#F6F7F2</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">true</item>
+        <item name="splashMarkColor">#245C45</item>
+    </style>
+    <style name="AppTheme.Dark" parent="AppTheme">
+        <item name="android:windowBackground">#101A16</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
+        <item name="splashMarkColor">#AED7BA</item>
+    </style>
+</resources>

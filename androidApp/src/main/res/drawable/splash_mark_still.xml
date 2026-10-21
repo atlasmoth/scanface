@@ -1,0 +1,30 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:width="432dp" android:height="432dp"
+    android:viewportWidth="432" android:viewportHeight="432"
+    tools:ignore="VectorRaster">
+    <!-- Android's animated splash specification requires a 432dp source.
+         The native 288dp container scales this 168-unit artwork to 112dp.
+         Its corners fit comfortably inside the system's 192dp safe circle. -->
+    <group android:name="mark" android:translateX="124" android:translateY="124"
+        android:scaleX="2" android:scaleY="2">
+        <path android:name="corners" android:fillColor="@android:color/transparent"
+            android:strokeColor="?attr/splashMarkColor" android:strokeAlpha="0.55"
+            android:strokeWidth="1.6" android:strokeLineCap="round"
+            android:pathData="M22,4 L12,4 Q4,4 4,12 L4,22 M70,4 L80,4 Q88,4 88,12 L88,22 M4,70 L4,80 Q4,88 12,88 L22,88 M88,70 L88,80 Q88,88 80,88 L70,88" />
+        <path android:name="face" android:fillColor="@android:color/transparent"
+            android:strokeColor="?attr/splashMarkColor" android:strokeWidth="1.6"
+            android:strokeLineCap="round"
+            android:pathData="M46,20 A18,24.5 0,1 1,46,69 A18,24.5 0,1 1,46,20" />
+        <path android:name="resting_line" android:fillColor="@android:color/transparent"
+            android:strokeColor="?attr/splashMarkColor" android:strokeAlpha="0.35"
+            android:strokeWidth="1.6" android:strokeLineCap="round"
+            android:pathData="M17,46 L75,46" />
+        <group android:name="sweep">
+            <path android:name="sweep_line" android:fillColor="@android:color/transparent"
+                android:strokeColor="?attr/splashMarkColor" android:strokeAlpha="0"
+                android:strokeWidth="1.6" android:strokeLineCap="round"
+                android:pathData="M17,46 L75,46" />
+        </group>
+    </group>
+</vector>

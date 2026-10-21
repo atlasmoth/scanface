@@ -1,0 +1,7 @@
+<objectAnimator xmlns:android="http://schemas.android.com/apk/res/android" android:duration="600">
+    <propertyValuesHolder android:propertyName="strokeAlpha" android:valueType="floatType">
+        <keyframe android:fraction="0" android:value="0" />
+        <keyframe android:fraction="0.7" android:value="0" />
+        <keyframe android:fraction="1" android:value="0.35" />
+    </propertyValuesHolder>
+</objectAnimator>

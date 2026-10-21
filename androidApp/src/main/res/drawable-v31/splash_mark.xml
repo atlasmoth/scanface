@@ -1,0 +1,8 @@
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/splash_mark_still">
+    <target android:name="corners" android:animation="@animator/splash_corner_reveal" />
+    <target android:name="face" android:animation="@animator/splash_face_reveal" />
+    <target android:name="sweep" android:animation="@animator/splash_scan_sweep" />
+    <target android:name="sweep_line" android:animation="@animator/splash_scan_fade" />
+    <target android:name="resting_line" android:animation="@animator/splash_line_settle" />
+</animated-vector>

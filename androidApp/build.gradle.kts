@@ -81,6 +81,7 @@ tasks.named("preBuild") { dependsOn(verifyBundledFaceAgeModel) }
 dependencies {
     implementation(project(":shared"))
     implementation(libs.activity.compose)
+    implementation(libs.androidx.splashscreen)
     implementation(libs.koin.android)
     implementation(libs.ktor.client.okhttp)
     implementation(libs.litert)
