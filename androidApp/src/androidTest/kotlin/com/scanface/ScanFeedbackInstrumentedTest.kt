@@ -2,9 +2,11 @@ package com.scanface
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Rect
 import android.os.SystemClock
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import androidx.camera.view.PreviewView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -17,6 +19,7 @@ import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
 import com.scanface.core.AnalysisResult
 import com.scanface.core.AnalysisStatus
+import com.scanface.core.AppStore
 import com.scanface.core.CapturedPhoto
 import com.scanface.core.FaceAnalyzer
 import com.scanface.core.KeyValueStore
@@ -38,6 +41,7 @@ import org.junit.runner.RunWith
 import org.koin.core.context.GlobalContext
 import org.koin.core.context.loadKoinModules
 import org.koin.dsl.module
+import org.json.JSONObject
 
 /** Holds only inference in the test APK; capture, App navigation, and preview are real. */
 @RunWith(AndroidJUnit4::class)
@@ -60,7 +64,10 @@ class ScanFeedbackInstrumentedTest {
         Configurator.getInstance().waitForIdleTimeout = 100
         originalAnalyzer = GlobalContext.get().get()
         originalServices = GlobalContext.get().get()
-        val services = object : PlatformServices by originalServices { override val storage = MemoryStore() }
+        val theme = runCatching {
+            JSONObject(originalServices.storage.get(AppStore.STORAGE_KEY).orEmpty()).optString("theme", "SYSTEM")
+        }.getOrDefault("SYSTEM").takeIf { it in listOf("SYSTEM", "LIGHT", "DARK") } ?: "SYSTEM"
+        val services = object : PlatformServices by originalServices { override val storage = MemoryStore(theme) }
         loadKoinModules(module {
             single<FaceAnalyzer> { analyzer }
             single<PlatformServices> { services }
@@ -87,6 +94,7 @@ class ScanFeedbackInstrumentedTest {
         val preview = requirePreview()
         screenshot("android-live-preview-scanning")
         assertLockedPreview(preview)
+        assertScanFitsPreview(preview)
         visible(By.desc("Close camera")).click()
         visible(By.text("Discard this capture?"))
         assertTrue("The modal pauses scan feedback", device.wait(Until.gone(By.desc(OVERLAY)), 3_000))
@@ -103,10 +111,28 @@ class ScanFeedbackInstrumentedTest {
         // Let the live sweep move before inspecting it again. No production delay exists.
         SystemClock.sleep(700)
         assertSame("The active camera remains mounted during inference", secondPreview, requirePreview())
-        second.result.complete(AnalysisResult(AnalysisStatus.COMPLETE, 35.0, "instrumentation-only"))
-        visible(By.text("Estimated facial age"))
-        assertTrue("Scan feedback ends before results appear", device.wait(Until.gone(By.desc(OVERLAY)), 3_000))
-        scenario.onActivity { assertEquals("The camera is released after inference", null, findPreview(it.window.decorView)) }
+        var enabledDuringExit = false
+        val observer = ViewTreeObserver.OnPreDrawListener {
+            if (secondPreview.isAttachedToWindow && secondPreview.isEnabled) enabledDuringExit = true
+            true
+        }
+        scenario.onActivity { secondPreview.viewTreeObserver.addOnPreDrawListener(observer) }
+        try {
+            second.result.complete(AnalysisResult(AnalysisStatus.COMPLETE, 35.0, "instrumentation-only"))
+            assertTrue("Results begin appearing without waiting for a complete sweep cycle",
+                device.wait(Until.hasObject(By.text("Estimated facial age")), 1_000))
+            assertTrue("The outgoing scan fades away with the camera", device.wait(Until.gone(By.desc(OVERLAY)), 1_000))
+            await("The camera is released after the short exit transition", timeout = 1_000) {
+                var released = false
+                scenario.onActivity { released = findPreview(it.window.decorView) == null }
+                released
+            }
+            assertFalse("The outgoing preview never unlocks during the fade", enabledDuringExit)
+        } finally {
+            scenario.onActivity {
+                if (secondPreview.viewTreeObserver.isAlive) secondPreview.viewTreeObserver.removeOnPreDrawListener(observer)
+            }
+        }
         screenshot("android-live-preview-complete")
     }
 
@@ -140,6 +166,13 @@ class ScanFeedbackInstrumentedTest {
         return requireNotNull(preview) { "Live camera preview was removed during analysis" }
     }
 
+    private fun assertScanFitsPreview(preview: PreviewView) {
+        val bounds = Rect()
+        scenario.onActivity { assertTrue(preview.getGlobalVisibleRect(bounds)) }
+        assertEquals("The scan spans the actual visible camera image, without arbitrary insets",
+            bounds, visible(By.desc(OVERLAY)).visibleBounds)
+    }
+
     private fun findPreview(view: View): PreviewView? {
         if (view is PreviewView) return view
         if (view is ViewGroup) for (index in 0 until view.childCount) {
@@ -158,14 +191,14 @@ class ScanFeedbackInstrumentedTest {
     private fun visible(selector: BySelector): UiObject2 =
         requireNotNull(device.wait(Until.findObject(selector), 10_000)) { "Missing UI element: $selector" }
 
-    private fun await(label: String, condition: () -> Boolean) {
-        val deadline = SystemClock.uptimeMillis() + 10_000
+    private fun await(label: String, timeout: Long = 10_000, condition: () -> Boolean) {
+        val deadline = SystemClock.uptimeMillis() + timeout
         while (!condition() && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(50)
         assertTrue(label, condition())
     }
 
-    private class MemoryStore : KeyValueStore {
-        private val values = mutableMapOf<String, String>()
+    private class MemoryStore(theme: String) : KeyValueStore {
+        private val values = mutableMapOf(AppStore.STORAGE_KEY to "{\"theme\":\"$theme\"}")
         override fun get(key: String): String? = values[key]
         override fun put(key: String, value: String) { values[key] = value }
         override fun remove(key: String) { values.remove(key) }

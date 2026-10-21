@@ -3,6 +3,7 @@
 package com.scanface.platform
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -13,9 +14,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.viewinterop.UIKitView
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.viewinterop.UIKitViewController
 import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitInteropInteractionMode
@@ -32,6 +36,9 @@ import kotlinx.cinterop.useContents
 import platform.CoreGraphics.CGRectMake
 import platform.Foundation.*
 import platform.UIKit.*
+import org.jetbrains.skia.Image as SkiaImage
+
+internal actual val cameraFadeHandledNatively = true
 
 /** Swift owns AVFoundation; the shared UI owns the surrounding application flow. */
 interface CameraControllerFactory {
@@ -41,7 +48,7 @@ interface CameraControllerFactory {
         onClose: () -> Unit,
     ): UIViewController
 
-    fun updateAnalysis(controller: UIViewController, analyzing: Boolean, active: Boolean, reduceMotion: Boolean)
+    fun updateAnalysis(controller: UIViewController, analyzing: Boolean, scanComplete: Boolean, active: Boolean, reduceMotion: Boolean)
 }
 
 private var cameraFactory: CameraControllerFactory? = null
@@ -80,19 +87,20 @@ fun MainViewController(cameraFactory: CameraControllerFactory, analyzer: NativeF
 actual fun CameraScreen(
     darkTheme: Boolean,
     analyzing: Boolean,
+    scanComplete: Boolean,
     feedbackEnabled: Boolean,
     onCaptured: (CapturedPhoto) -> Unit,
     onClose: () -> Unit,
 ) {
     val factory = requireNotNull(cameraFactory) { "Install the native camera factory before starting ScanFace." }
-    val scan = rememberScanPresentation(analyzing, feedbackEnabled)
+    val scan = rememberScanPresentation(analyzing, scanComplete, feedbackEnabled)
     val captured = rememberUpdatedState(onCaptured)
     val close = rememberUpdatedState(onClose)
     UIKitViewController(
         factory = { factory.makeCameraController(darkTheme, { captured.value(it) }, { close.value() }) },
         modifier = Modifier.fillMaxSize(),
         update = { controller ->
-            factory.updateAnalysis(controller, analyzing, scan.active, scan.reduceMotion)
+            factory.updateAnalysis(controller, analyzing, scanComplete, scan.active, scan.reduceMotion)
             controller.overrideUserInterfaceStyle = if (darkTheme) {
                 UIUserInterfaceStyle.UIUserInterfaceStyleDark
             } else {
@@ -108,10 +116,16 @@ actual fun CameraScreen(
 
 @Composable
 actual fun PhotoImage(path: String?, modifier: Modifier, contentDescription: String) {
-    val resolvedPath = path?.takeIf { it.isNotBlank() }?.let {
-        runCatching { photoReferences().resolve(it) }.getOrNull()
+    val image = remember(path) {
+        runCatching {
+            val resolved = path?.takeIf { it.isNotBlank() }?.let { photoReferences().resolve(it) }
+                ?: return@runCatching null
+            val data = NSFileManager.defaultManager.contentsAtPath(resolved) ?: return@runCatching null
+            val bytes = data.bytes?.readBytes(data.length.toInt()) ?: return@runCatching null
+            SkiaImage.makeFromEncoded(bytes).toComposeImageBitmap()
+        }.getOrNull()
     }
-    if (resolvedPath == null) {
+    if (image == null) {
         Box(
             modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center,
@@ -119,24 +133,13 @@ actual fun PhotoImage(path: String?, modifier: Modifier, contentDescription: Str
             Text("◯", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     } else {
-        UIKitView(
-            modifier = modifier,
-            factory = {
-                UIImageView().apply {
-                    contentMode = UIViewContentMode.UIViewContentModeScaleAspectFill
-                    clipsToBounds = true
-                    accessibilityLabel = contentDescription
-                    isAccessibilityElement = contentDescription.isNotBlank()
-                }
-            },
-            update = { imageView ->
-                imageView.image = UIImage.imageWithContentsOfFile(resolvedPath)
-                imageView.accessibilityLabel = contentDescription
-            },
-            properties = UIKitInteropProperties(
-                interactionMode = null,
-                isNativeAccessibilityEnabled = true,
-            ),
+        // A Compose image participates in the result fade and parent clipping;
+        // UIKit image views disappear while an ancestor has animated alpha.
+        Image(
+            bitmap = image,
+            contentDescription = contentDescription.takeIf { it.isNotBlank() },
+            modifier = modifier.clipToBounds(),
+            contentScale = ContentScale.Crop,
         )
     }
 }

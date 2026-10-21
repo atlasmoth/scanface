@@ -15,10 +15,14 @@ interface PlatformServices {
 
 expect fun createPlatformServices(): PlatformServices
 
+/** UIKit camera alpha must be animated natively while its interop view stays mounted. */
+internal expect val cameraFadeHandledNatively: Boolean
+
 @Composable
 expect fun CameraScreen(
     darkTheme: Boolean,
     analyzing: Boolean,
+    scanComplete: Boolean,
     feedbackEnabled: Boolean,
     onCaptured: (CapturedPhoto) -> Unit,
     onClose: () -> Unit,

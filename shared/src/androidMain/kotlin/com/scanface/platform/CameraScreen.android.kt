@@ -57,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -90,10 +91,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+internal actual val cameraFadeHandledNatively = false
+
 @Composable
 actual fun CameraScreen(
     darkTheme: Boolean,
     analyzing: Boolean,
+    scanComplete: Boolean,
     feedbackEnabled: Boolean,
     onCaptured: (CapturedPhoto) -> Unit,
     onClose: () -> Unit,
@@ -104,7 +108,8 @@ actual fun CameraScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     val latestOnCaptured by rememberUpdatedState(onCaptured)
-    val latestAnalyzing by rememberUpdatedState(analyzing)
+    val processing = analyzing || scanComplete
+    val latestProcessing by rememberUpdatedState(processing)
     var permissionGranted by remember { mutableStateOf(context.hasCameraPermission()) }
     var permissionRequested by rememberSaveable { mutableStateOf(false) }
     var importing by remember { mutableStateOf(false) }
@@ -116,7 +121,7 @@ actual fun CameraScreen(
         if (!it) haptics.perform(AppHaptic.Warning)
     }
     val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        if (uri != null && !importing && !latestAnalyzing) {
+        if (uri != null && !importing && !latestProcessing) {
             scope.launch {
                 importing = true
                 importError = null
@@ -141,7 +146,7 @@ actual fun CameraScreen(
         }
     }
     val openPicker = {
-        if (!analyzing && !importing) {
+        if (!processing && !importing) {
             haptics.perform(AppHaptic.Light)
             photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
         }
@@ -153,7 +158,7 @@ actual fun CameraScreen(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    PlatformBackHandler(enabled = true) {
+    PlatformBackHandler(enabled = !scanComplete) {
         haptics.perform(AppHaptic.Light)
         onClose()
     }
@@ -161,6 +166,7 @@ actual fun CameraScreen(
         if (permissionGranted) {
             GrantedCamera(
                 analyzing = analyzing,
+                scanComplete = scanComplete,
                 feedbackEnabled = feedbackEnabled,
                 importedPhoto = importedPhoto,
                 importing = importing,
@@ -169,14 +175,14 @@ actual fun CameraScreen(
                 onClose = onClose,
                 openPicker = openPicker,
             )
-        } else if (analyzing && importedPhoto != null) {
-            ImportedPhotoAnalysis(requireNotNull(importedPhoto), feedbackEnabled, onClose)
+        } else if (processing && importedPhoto != null) {
+            ImportedPhotoAnalysis(requireNotNull(importedPhoto), analyzing, scanComplete, feedbackEnabled, onClose)
         } else {
             val permanentlyDenied = permissionRequested && activity != null &&
                 !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.CAMERA)
             CameraPermission(
                 permanentlyDenied = permanentlyDenied,
-                analyzing = analyzing,
+                analyzing = processing,
                 importing = importing,
                 error = importError,
                 onAllow = {
@@ -194,6 +200,7 @@ actual fun CameraScreen(
 @Composable
 private fun GrantedCamera(
     analyzing: Boolean,
+    scanComplete: Boolean,
     feedbackEnabled: Boolean,
     importedPhoto: CapturedPhoto?,
     importing: Boolean,
@@ -210,7 +217,7 @@ private fun GrantedCamera(
         CameraController(context, context.findActivity(), previewView)
     }
     val state by controller.state.collectAsState()
-    val busy = state.busy || importing || analyzing
+    val busy = state.busy || importing || analyzing || scanComplete
     val controlsLocked = busy || state.zoomChanging
     DisposableEffect(controller, lifecycleOwner) {
         controller.start(lifecycleOwner)
@@ -223,7 +230,7 @@ private fun GrantedCamera(
         Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 12.dp).padding(top = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally) {
             CameraPreview(
-                previewView, state, busy, analyzing, feedbackEnabled, importedPhoto,
+                previewView, state, busy, analyzing, scanComplete, feedbackEnabled, importedPhoto,
                 Modifier.fillMaxWidth().weight(1f),
                 onClose = { haptics.perform(AppHaptic.Light); onClose() },
                 onCapture = {
@@ -265,6 +272,7 @@ private fun CameraPreview(
     state: CameraUiState,
     busy: Boolean,
     analyzing: Boolean,
+    scanComplete: Boolean,
     feedbackEnabled: Boolean,
     importedPhoto: CapturedPhoto?,
     modifier: Modifier,
@@ -273,33 +281,39 @@ private fun CameraPreview(
     onFlip: () -> Unit,
     onFlash: () -> Unit,
 ) {
+    val processing = analyzing || scanComplete
     val controlsEnabled = state.ready && !busy && !state.zoomChanging
     Box(modifier.clip(RoundedCornerShape(24.dp)).background(Color(0xFF101414))) {
         AndroidView(factory = { preview }, update = { it.isEnabled = !busy }, modifier = Modifier.fillMaxSize())
-        if (analyzing && importedPhoto != null) ImportedPhotoPreview(importedPhoto, Modifier.matchParentSize())
+        if (processing && importedPhoto != null) {
+            ImportedPhotoPreview(importedPhoto, analyzing, scanComplete, feedbackEnabled, Modifier.matchParentSize())
+        } else {
+            // FILL_CENTER uses the whole visible PreviewView, so its exact bounds
+            // are also the displayed camera image bounds, including cropped edges.
+            CameraScanOverlay(analyzing, scanComplete, feedbackEnabled, Modifier.matchParentSize())
+        }
         Box(Modifier.fillMaxWidth().height(110.dp).align(Alignment.TopCenter)
             .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .42f), Color.Transparent))))
         Box(Modifier.fillMaxWidth().height(200.dp).align(Alignment.BottomCenter)
             .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .68f)))))
-        CameraScanOverlay(analyzing, feedbackEnabled, Modifier.matchParentSize().padding(top = 60.dp, bottom = 160.dp))
         if (!state.ready && state.error == null) {
             CircularProgressIndicator(Modifier.align(Alignment.Center), color = Color.White)
         } else if (!state.ready) {
             Text("Camera unavailable", Modifier.align(Alignment.Center).padding(24.dp),
                 color = Color.White, textAlign = TextAlign.Center)
         }
-        CameraCircleButton("Close camera", true, Modifier.align(Alignment.TopStart).padding(12.dp), onClose) {
+        CameraCircleButton("Close camera", !scanComplete, Modifier.align(Alignment.TopStart).padding(12.dp), onClose) {
             Glyph(AppIcon.Close, tint = Color.White)
         }
         AnimatedVisibility(
-            visible = state.zoomReadoutVisible && !analyzing,
+            visible = state.zoomReadoutVisible && !processing,
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 120.dp),
             enter = fadeIn(), exit = fadeOut(),
         ) {
             Text(formatZoom(state.requestedZoom), color = CameraAccent,
                 style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Medium)
         }
-        if (analyzing) Text("Analyzing your scan…",
+        if (processing) Text(if (scanComplete) "Scan complete" else "Analyzing your scan…",
             Modifier.align(Alignment.BottomCenter).padding(horizontal = 20.dp).padding(bottom = 126.dp)
                 .semantics { liveRegion = LiveRegionMode.Polite },
             color = Color.White, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
@@ -310,7 +324,7 @@ private fun CameraPreview(
                 enabled = state.canFlip && controlsEnabled,
                 modifier = Modifier.align(Alignment.CenterStart), onClick = onFlip,
             ) { FlipGlyph() }
-            ShutterButton(controlsEnabled, busy && !analyzing, Modifier.align(Alignment.Center), onCapture)
+            ShutterButton(controlsEnabled, busy && !processing, Modifier.align(Alignment.Center), onCapture)
             CameraCircleButton(
                 description = if (state.flashes.size > 1) "${state.flash.label}. Change flash mode." else "Flash unavailable on this camera",
                 enabled = controlsEnabled && state.flashes.size > 1,
@@ -321,23 +335,34 @@ private fun CameraPreview(
 }
 
 @Composable
-private fun ImportedPhotoPreview(photo: CapturedPhoto, modifier: Modifier) {
+private fun ImportedPhotoPreview(
+    photo: CapturedPhoto,
+    analyzing: Boolean,
+    scanComplete: Boolean,
+    feedbackEnabled: Boolean,
+    modifier: Modifier,
+) {
     BoxWithConstraints(modifier.background(Color(0xFF101414)), contentAlignment = Alignment.Center) {
         val aspect = photo.width.toFloat() / photo.height
-        PhotoImage(photo.path, Modifier.width(minOf(maxWidth, maxHeight * aspect)).aspectRatio(aspect), "Selected photo")
+        // Image and instruments share one fitted, clipped rectangle. Neither
+        // sweep nor brackets can draw into the surrounding letterbox.
+        Box(Modifier.width(minOf(maxWidth, maxHeight * aspect)).aspectRatio(aspect).clipToBounds()) {
+            PhotoImage(photo.path, Modifier.matchParentSize(), "Selected photo")
+            CameraScanOverlay(analyzing, scanComplete, feedbackEnabled, Modifier.matchParentSize())
+        }
     }
 }
 
 @Composable
-private fun ImportedPhotoAnalysis(photo: CapturedPhoto, feedbackEnabled: Boolean, onClose: () -> Unit) {
+private fun ImportedPhotoAnalysis(photo: CapturedPhoto, analyzing: Boolean, scanComplete: Boolean,
+                                  feedbackEnabled: Boolean, onClose: () -> Unit) {
     val haptics = LocalAppHaptics.current
     Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 12.dp).padding(top = 12.dp)) {
         Box(Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(24.dp))) {
-            ImportedPhotoPreview(photo, Modifier.matchParentSize())
-            CameraScanOverlay(true, feedbackEnabled, Modifier.matchParentSize().padding(top = 60.dp, bottom = 80.dp))
-            CameraCircleButton("Close camera", true, Modifier.align(Alignment.TopStart).padding(12.dp),
+            ImportedPhotoPreview(photo, analyzing, scanComplete, feedbackEnabled, Modifier.matchParentSize())
+            CameraCircleButton("Close camera", !scanComplete, Modifier.align(Alignment.TopStart).padding(12.dp),
                 { haptics.perform(AppHaptic.Light); onClose() }) { Glyph(AppIcon.Close, tint = Color.White) }
-            Text("Analyzing your scan…", Modifier.align(Alignment.BottomCenter).padding(24.dp)
+            Text(if (scanComplete) "Scan complete" else "Analyzing your scan…", Modifier.align(Alignment.BottomCenter).padding(24.dp)
                 .semantics { liveRegion = LiveRegionMode.Polite },
                 color = Color.White, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
         }

@@ -1,17 +1,16 @@
 package com.scanface.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -47,12 +46,12 @@ internal suspend fun scanPulseLoop(pulse: () -> Unit) {
 internal data class ScanPresentation(val active: Boolean, val reduceMotion: Boolean)
 
 @Composable
-internal fun rememberScanPresentation(analyzing: Boolean, feedbackEnabled: Boolean): ScanPresentation {
+internal fun rememberScanPresentation(analyzing: Boolean, scanComplete: Boolean, feedbackEnabled: Boolean): ScanPresentation {
     val environment = rememberScanEnvironment()
-    val active = analyzing && environment.isForeground && feedbackEnabled
+    val active = (analyzing || scanComplete) && environment.isForeground && feedbackEnabled
     val haptics = LocalAppHaptics.current
     val currentHaptics = rememberUpdatedState(haptics)
-    val pulseEnabled = active && !environment.reduceMotion
+    val pulseEnabled = active && analyzing && !scanComplete && !environment.reduceMotion
     LaunchedEffect(pulseEnabled) {
         if (pulseEnabled) scanPulseLoop { currentHaptics.value.perform(AppHaptic.ScanTick) }
     }
@@ -60,25 +59,33 @@ internal fun rememberScanPresentation(analyzing: Boolean, feedbackEnabled: Boole
 }
 
 @Composable
-internal fun CameraScanOverlay(analyzing: Boolean, feedbackEnabled: Boolean, modifier: Modifier) {
-    val presentation = rememberScanPresentation(analyzing, feedbackEnabled)
-    if (presentation.active) ScanOverlay(presentation.reduceMotion, modifier)
+internal fun CameraScanOverlay(analyzing: Boolean, scanComplete: Boolean, feedbackEnabled: Boolean, modifier: Modifier) {
+    val presentation = rememberScanPresentation(analyzing, scanComplete, feedbackEnabled)
+    if (presentation.active) ScanOverlay(scanComplete, presentation.reduceMotion, modifier)
 }
 
 /** Edge instruments and a narrow light plane keep the camera preview unobscured. */
 @Composable
-private fun ScanOverlay(reduceMotion: Boolean, modifier: Modifier) {
-    val sweep: State<Float> = if (reduceMotion) rememberUpdatedState(.5f) else {
-        rememberInfiniteTransition(label = "Face scan").animateFloat(
-            initialValue = 0f, targetValue = 1f,
-            animationSpec = infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Reverse),
-            label = "Scan light",
-        )
+private fun ScanOverlay(scanComplete: Boolean, reduceMotion: Boolean, modifier: Modifier) {
+    val sweep = remember { Animatable(0f) }
+    LaunchedEffect(scanComplete, reduceMotion) {
+        when {
+            reduceMotion -> sweep.snapTo(if (scanComplete) 1f else .5f)
+            // Finish the sweep during the outgoing camera fade. Navigation never waits for it.
+            scanComplete -> sweep.animateTo(1f, tween(160, easing = FastOutSlowInEasing))
+            else -> {
+                while (true) {
+                    sweep.animateTo(1f, tween(2600, easing = LinearEasing))
+                    sweep.animateTo(0f, tween(2600, easing = LinearEasing))
+                }
+            }
+        }
     }
-    Canvas(modifier.testTag("scan.overlay").semantics {
-        contentDescription = "Scan in progress"
-        progressBarRangeInfo = ProgressBarRangeInfo.Indeterminate
+    Canvas(modifier.clipToBounds().testTag("scan.overlay").semantics {
+        contentDescription = if (scanComplete) "Scan complete" else "Scan in progress"
+        progressBarRangeInfo = if (scanComplete) ProgressBarRangeInfo(1f, 0f..1f) else ProgressBarRangeInfo.Indeterminate
     }) {
+        if (size.minDimension <= 0f) return@Canvas
         val mint = Color(0xFFA6F0D1)
         val white = Color(0xFFE0FFF2)
         val inset = minOf(14.dp.toPx(), size.minDimension * .08f)
@@ -100,8 +107,8 @@ private fun ScanOverlay(reduceMotion: Boolean, modifier: Modifier) {
         if (!reduceMotion) {
             // Read animation state in the draw phase: the photo never reloads at frame rate.
             val position = sweep.value
-            val travelTop = top + arm + 6.dp.toPx()
-            val travelBottom = bottom - arm - 6.dp.toPx()
+            val travelTop = minOf(1.dp.toPx(), size.height / 2)
+            val travelBottom = size.height - travelTop
             val y = travelTop + (travelBottom - travelTop) * position
             val halfBand = minOf(18.dp.toPx(), size.height * .065f)
             drawRect(

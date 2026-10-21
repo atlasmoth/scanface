@@ -7,6 +7,8 @@ import androidx.compose.ui.Modifier
 import com.scanface.core.CapturedPhoto
 import com.scanface.core.KeyValueStore
 
+internal actual val cameraFadeHandledNatively = false
+
 /** JVM host for domain tests; production apps use their native platform adapters. */
 actual fun createPlatformServices(): PlatformServices = object : PlatformServices {
     override val storage = object : KeyValueStore {
@@ -22,7 +24,7 @@ actual fun createPlatformServices(): PlatformServices = object : PlatformService
 }
 
 @Composable
-actual fun CameraScreen(darkTheme: Boolean, analyzing: Boolean, feedbackEnabled: Boolean,
+actual fun CameraScreen(darkTheme: Boolean, analyzing: Boolean, scanComplete: Boolean, feedbackEnabled: Boolean,
                       onCaptured: (CapturedPhoto) -> Unit, onClose: () -> Unit) {
     Text("Camera capture is available in the Android and iOS apps.")
 }

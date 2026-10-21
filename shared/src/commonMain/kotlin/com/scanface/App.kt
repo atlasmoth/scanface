@@ -1,5 +1,12 @@
 package com.scanface
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -33,6 +40,7 @@ fun App(services: PlatformServices, analyzer: FaceAnalyzer = remember { PendingM
 @Composable
 private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
     val haptics = LocalAppHaptics.current
+    val scanEnvironment = rememberScanEnvironment()
     val scope = rememberCoroutineScope()
     val store = remember(services, analyzer) { AppStore(services.storage, analyzer, services::deletePhoto, scope) }
     val state by store.state.collectAsState()
@@ -42,6 +50,7 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
     var deleteId by rememberSaveable { mutableStateOf<String?>(null) }
     var clearAll by rememberSaveable { mutableStateOf(false) }
     var discardTarget by rememberSaveable { mutableStateOf<String?>(null) }
+    var captureSession by rememberSaveable { mutableIntStateOf(0) }
     val route = Route.valueOf(routeName)
     val snackbar = remember { SnackbarHostState() }
     val systemDark = isSystemInDarkTheme()
@@ -61,6 +70,7 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
         if (state.pending != null) routeName = Route.RESULT.name
         else {
             returnRoute = if (route == Route.HISTORY) Route.HISTORY.name else Route.OVERVIEW.name
+            captureSession++
             routeName = Route.CAPTURE.name
         }
     }
@@ -123,9 +133,25 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
                         }
                         previouslyWide = historyWide
                     }
-                    if (route == Route.CAPTURE) {
+                    val scanComplete = state.pending != null && !state.isAnalyzing
+                    AnimatedContent(
+                        // A rapid retake during the exit animation needs a fresh native
+                        // camera, not the outgoing controller whose alpha is already zero.
+                        targetState = if (route == Route.CAPTURE) captureSession else null,
+                        modifier = Modifier.fillMaxSize(),
+                        transitionSpec = {
+                            if (initialState != null && targetState == null && scanComplete && discardTarget == null &&
+                                scanEnvironment.isForeground && !scanEnvironment.reduceMotion) {
+                                fadeIn(tween(220)) togetherWith if (cameraFadeHandledNatively) {
+                                    ExitTransition.KeepUntilTransitionsFinished
+                                } else fadeOut(tween(180))
+                            } else EnterTransition.None togetherWith ExitTransition.None
+                        },
+                        label = "Camera to result",
+                    ) { cameraSession ->
+                    if (cameraSession != null) {
                         Box(Modifier.fillMaxSize()) {
-                        CameraScreen(dark, state.isAnalyzing, discardTarget == null, onCaptured = {
+                        CameraScreen(dark, state.isAnalyzing, scanComplete, discardTarget == null, onCaptured = {
                             selectedId = null
                             val analysis = store.capture(it)
                             val captureId = store.state.value.pending?.takeIf { pending -> pending.photoPath == it.path }?.id
@@ -141,7 +167,7 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
                                     }
                                 }
                             }
-                        }, onClose = ::back)
+                        }, onClose = { if (route == Route.CAPTURE) back() })
                         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(16.dp))
                         }
                     } else {
@@ -236,6 +262,7 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
                             }
                         }
                     }
+                    }
                 }
                 if (navigationRegion != null && route != Route.CAPTURE) {
                     SystemSideNavigation(
@@ -284,6 +311,7 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
                         if (store.state.value.cleanupPendingCount == 0 && store.state.value.error == null) {
                             haptics.perform(AppHaptic.Success)
                         }
+                        if (discardTarget == Route.CAPTURE.name) captureSession++
                         routeName = discardTarget!!
                         discardTarget = null
                     }

@@ -19,22 +19,62 @@ final class NativeCameraFactory: NSObject, CameraControllerFactory {
         return controller
     }
 
-    func updateAnalysis(controller: UIViewController, analyzing: Bool, active: Bool, reduceMotion: Bool) {
-        (controller as? CameraHostController)?.model.updateAnalysis(
-            analyzing: analyzing, active: active, reduceMotion: reduceMotion
+    func updateAnalysis(controller: UIViewController, analyzing: Bool, scanComplete: Bool, active: Bool, reduceMotion: Bool) {
+        (controller as? CameraHostController)?.updateAnalysis(
+            analyzing: analyzing, scanComplete: scanComplete, active: active, reduceMotion: reduceMotion
         )
     }
 }
 
 private final class CameraHostController: UIHostingController<CaptureScreen> {
     let model: CaptureSessionModel
+    private var handingOffResult = false
 
     init(model: CaptureSessionModel, dark: Bool, close: @escaping () -> Void) {
         self.model = model
         super.init(rootView: CaptureScreen(model: model, dark: dark, close: close))
+        NotificationCenter.default.addObserver(self, selector: #selector(finishHandoffImmediately), name: UIApplication.willResignActiveNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(motionPreferenceChanged), name: UIAccessibility.reduceMotionStatusDidChangeNotification, object: nil)
     }
 
     @MainActor required dynamic init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    func updateAnalysis(analyzing: Bool, scanComplete: Bool, active: Bool, reduceMotion: Bool) {
+        model.updateAnalysis(analyzing: analyzing, scanComplete: scanComplete, active: active, reduceMotion: reduceMotion)
+        guard scanComplete else { return }
+        if !handingOffResult {
+            handingOffResult = true
+            view.isUserInteractionEnabled = false
+            view.accessibilityElementsHidden = true
+            // Compose keeps this controller mounted during the result's entrance.
+            // Animate UIKit directly: a Compose alpha layer hides native interop
+            // views instead of blending the outgoing camera with the result.
+            if active && !reduceMotion && !UIAccessibility.isReduceMotionEnabled {
+                UIView.animate(withDuration: 0.18, delay: 0, options: [.beginFromCurrentState, .curveEaseOut]) {
+                    self.view.alpha = 0
+                }
+            } else {
+                finishHandoffImmediately()
+            }
+        } else if !active || reduceMotion {
+            finishHandoffImmediately()
+        }
+    }
+
+    @objc private func finishHandoffImmediately() {
+        guard handingOffResult else { return }
+        view.layer.removeAllAnimations()
+        view.alpha = 0
+    }
+
+    @objc private func motionPreferenceChanged() {
+        if UIAccessibility.isReduceMotionEnabled { finishHandoffImmediately() }
+    }
+
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        finishHandoffImmediately()
+    }
 }
 
 enum CaptureAvailability: Equatable {
@@ -94,6 +134,7 @@ final class CaptureSessionModel: NSObject, ObservableObject {
     @Published private(set) var availability: CaptureAvailability = .preparing
     @Published private(set) var isCapturing = false
     @Published private(set) var isAnalyzing = false
+    @Published private(set) var scanComplete = false
     @Published private(set) var scanActive = false
     @Published private(set) var reduceScanMotion = false
     @Published private(set) var importedAnalysisImage: UIImage?
@@ -108,6 +149,7 @@ final class CaptureSessionModel: NSObject, ObservableObject {
     @Published private(set) var illuminating = false
     @Published var flash: CaptureFlash = .off
     @Published var errorMessage: String?
+    var analysisBusy: Bool { isAnalyzing || scanComplete }
 
     private let queue = DispatchQueue(label: "app.scanface.camera", qos: .userInitiated)
     private let photoOutput = AVCapturePhotoOutput()
@@ -211,6 +253,7 @@ final class CaptureSessionModel: NSObject, ObservableObject {
     func stop() {
         active = false
         isAnalyzing = false
+        scanComplete = false
         scanActive = false
         importedAnalysisImage = nil
         invalidateZoomUpdates()
@@ -221,15 +264,18 @@ final class CaptureSessionModel: NSObject, ObservableObject {
         }
     }
 
-    func updateAnalysis(analyzing: Bool, active: Bool, reduceMotion: Bool) {
+    func updateAnalysis(analyzing: Bool, scanComplete: Bool, active: Bool, reduceMotion: Bool) {
         if isAnalyzing != analyzing {
             isAnalyzing = analyzing
             if analyzing { invalidateZoomUpdates() }
         }
-        let visible = analyzing && active
+        if self.scanComplete != scanComplete { self.scanComplete = scanComplete }
+        let visible = (analyzing || scanComplete) && active
         if scanActive != visible { scanActive = visible }
         if reduceScanMotion != reduceMotion { reduceScanMotion = reduceMotion }
-        if !analyzing && !isCapturing { importedAnalysisImage = nil }
+        // The store can finish one update before navigation starts its fade.
+        // Retain imported pixels until disposal or a new capture, avoiding a flash
+        // of the live camera between those two updates.
     }
 
     private func stopSessionForBackground() {
@@ -243,21 +289,21 @@ final class CaptureSessionModel: NSObject, ObservableObject {
     }
 
     func flipCamera() {
-        guard availability == .ready, !isCapturing, !isAnalyzing, canFlip else { return }
+        guard availability == .ready, !isCapturing, !analysisBusy, canFlip else { return }
         availability = .preparing
         flash = .off
         configure(position: frontFacing ? .back : .front)
     }
 
     func selectLens(_ id: String) {
-        guard availability == .ready, !isCapturing, !isAnalyzing, id != selectedLensID else { return }
+        guard availability == .ready, !isCapturing, !analysisBusy, id != selectedLensID else { return }
         availability = .preparing
         flash = .off
         configure(position: frontFacing ? .front : .back, preferredID: id)
     }
 
     func beginPinch() -> Int? {
-        guard availability == .ready, !isCapturing, !isAnalyzing else { return nil }
+        guard availability == .ready, !isCapturing, !analysisBusy else { return nil }
         zoom.beginPinch()
         pinching = true
         showZoomReadout()
@@ -265,7 +311,7 @@ final class CaptureSessionModel: NSObject, ObservableObject {
     }
 
     func updatePinch(scale: CGFloat, generation: Int) {
-        guard availability == .ready, !isCapturing, !isAnalyzing, generation == zoomGeneration else { return }
+        guard availability == .ready, !isCapturing, !analysisBusy, generation == zoomGeneration else { return }
         var updated = zoom
         updated.pinch(scale: scale)
         requestZoomUpdate(updated)
@@ -278,7 +324,7 @@ final class CaptureSessionModel: NSObject, ObservableObject {
     }
 
     func adjustAccessibleZoom(increasing: Bool) {
-        guard availability == .ready, !isCapturing, !isAnalyzing else { return }
+        guard availability == .ready, !isCapturing, !analysisBusy else { return }
         var updated = zoom
         updated.setFactor(zoom.factor + (increasing ? 0.25 : -0.25))
         requestZoomUpdate(updated)
@@ -466,7 +512,7 @@ final class CaptureSessionModel: NSObject, ObservableObject {
     }
 
     func capture() {
-        guard availability == .ready, !isCapturing, !isAnalyzing else { return }
+        guard availability == .ready, !isCapturing, !analysisBusy else { return }
         importedAnalysisImage = nil
         isCapturing = true
         let requestedZoom = zoom.factor
@@ -547,7 +593,7 @@ final class CaptureSessionModel: NSObject, ObservableObject {
     }
 
     func importPhoto(_ image: UIImage) {
-        guard !isCapturing, !isAnalyzing else { return }
+        guard !isCapturing, !analysisBusy else { return }
         importedAnalysisImage = image
         isCapturing = true
         persist(image, lens: "Imported photo")
@@ -669,7 +715,7 @@ private struct CaptureScreen: View {
 
     private var canvas: Color { Color(hex: dark ? 0x101A16 : 0xF6F7F2) }
     private var action: Color { Color(hex: dark ? 0xAED7BA : 0x245C45) }
-    private var ready: Bool { model.availability == .ready && !model.isCapturing && !model.isAnalyzing }
+    private var ready: Bool { model.availability == .ready && !model.isCapturing && !model.analysisBusy }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -685,7 +731,7 @@ private struct CaptureScreen: View {
                     .contentShape(Rectangle())
             }
             .foregroundStyle(action)
-            .disabled(model.isCapturing || model.isAnalyzing)
+            .disabled(model.isCapturing || model.analysisBusy)
             .accessibilityIdentifier("camera.import")
         }
         .padding(.horizontal, 12)
@@ -732,26 +778,14 @@ private struct CaptureScreen: View {
             if model.availability == .ready || model.availability == .preparing {
                 CameraPreview(model: model)
                     .overlay {
-                        if model.availability == .preparing && !model.isAnalyzing && model.importedAnalysisImage == nil {
+                        if model.availability == .preparing && !model.analysisBusy && model.importedAnalysisImage == nil {
                             ProgressView().tint(.white)
                                 .accessibilityLabel("Opening camera")
                         }
                     }
             }
 
-            // Imports share this viewfinder while being analyzed. Camera captures
-            // deliberately leave the live AVFoundation layer visible instead.
-            if let image = model.importedAnalysisImage {
-                GeometryReader { geometry in
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: geometry.size.width, height: geometry.size.height)
-                        .background(Color(hex: 0x121614))
-                }
-                .allowsHitTesting(false)
-                .accessibilityLabel("Selected photo")
-            }
+            analysisMedia
 
             VStack {
                 LinearGradient(colors: [.black.opacity(0.48), .clear], startPoint: .top, endPoint: .bottom)
@@ -762,7 +796,7 @@ private struct CaptureScreen: View {
             }
             .allowsHitTesting(false)
 
-            if model.availability != .ready && model.availability != .preparing && !model.isAnalyzing && model.importedAnalysisImage == nil {
+            if model.availability != .ready && model.availability != .preparing && !model.analysisBusy && model.importedAnalysisImage == nil {
                 unavailableContent
                     .padding(.horizontal, 24)
                     .padding(.top, 56)
@@ -770,22 +804,11 @@ private struct CaptureScreen: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
 
-            if model.scanActive {
-                CameraScanOverlay(reduceMotion: model.reduceScanMotion)
-                    .padding(.horizontal, 24)
-                    .padding(.top, 72)
-                    .padding(.bottom, 148)
-                    .allowsHitTesting(false)
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("Scan in progress")
-                    .accessibilityIdentifier("camera.scanOverlay")
-            }
-
             VStack(spacing: 0) {
                 topControls
                 Spacer(minLength: 8)
-                if model.isAnalyzing {
-                    Text("Analyzing your scan…")
+                if model.analysisBusy {
+                    Text(model.scanComplete ? "Scan complete" : "Analyzing your scan…")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(Color(hex: 0xC8E8D7))
                         .shadow(color: .black.opacity(0.8), radius: 4)
@@ -812,6 +835,38 @@ private struct CaptureScreen: View {
         .accessibilityIdentifier("camera.preview")
     }
 
+    /// Image and instruments use the same aspect-fit rectangle. The live preview
+    /// already fills the viewport with an aspect-fill crop, so it uses all bounds.
+    private var analysisMedia: some View {
+        GeometryReader { geometry in
+            let bounds = CGRect(origin: .zero, size: geometry.size)
+            let imageRect = model.importedAnalysisImage.map {
+                AVMakeRect(aspectRatio: $0.size, insideRect: bounds)
+            } ?? bounds
+            ZStack(alignment: .topLeading) {
+                if let image = model.importedAnalysisImage {
+                    Color(hex: 0x121614)
+                    Image(uiImage: image)
+                        .resizable()
+                        .frame(width: imageRect.width, height: imageRect.height)
+                        .offset(x: imageRect.minX, y: imageRect.minY)
+                        .accessibilityLabel("Selected photo")
+                }
+                if model.scanActive {
+                    CameraScanOverlay(reduceMotion: model.reduceScanMotion, completing: model.scanComplete)
+                        .frame(width: imageRect.width, height: imageRect.height)
+                        .clipped()
+                        .offset(x: imageRect.minX, y: imageRect.minY)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(model.scanComplete ? "Scan complete" : "Scan in progress")
+                        .accessibilityIdentifier("camera.scanOverlay")
+                }
+            }
+            .frame(width: bounds.width, height: bounds.height, alignment: .topLeading)
+        }
+        .allowsHitTesting(false)
+    }
+
     private var topControls: some View {
         HStack {
             Button {
@@ -824,6 +879,7 @@ private struct CaptureScreen: View {
                     .frame(width: 48, height: 48)
                     .background(.black.opacity(0.28), in: Circle())
             }
+            .disabled(model.scanComplete)
             .accessibilityLabel("Close camera")
             .accessibilityIdentifier("camera.close")
             Spacer()
@@ -874,7 +930,7 @@ private struct CaptureScreen: View {
             .buttonStyle(CameraShutterStyle())
             .disabled(!ready)
             .opacity(ready ? 1 : 0.35)
-            .accessibilityLabel(model.isAnalyzing ? "Analyzing scan" : (model.isCapturing ? "Saving photo" : "Take photo"))
+            .accessibilityLabel(model.analysisBusy ? "Analyzing scan" : (model.isCapturing ? "Saving photo" : "Take photo"))
             .accessibilityIdentifier("camera.capture")
 
             HStack {
@@ -963,14 +1019,31 @@ private struct CaptureScreen: View {
 /// A quiet scanning instrument drawn in the viewfinder, never over the result.
 private struct CameraScanOverlay: View {
     let reduceMotion: Bool
+    let completing: Bool
     @State private var started = Date()
+    @State private var completedAt: Date?
+    @State private var completionOrigin = 0.0
+
+    private func loopingSweep(at date: Date) -> Double {
+        let phase = max(0, date.timeIntervalSince(started)).truncatingRemainder(dividingBy: 2.8) / 2.8
+        return (1 - cos(phase * 2 * .pi)) / 2
+    }
+
+    private func sweep(at date: Date) -> Double {
+        guard let completedAt else { return loopingSweep(at: date) }
+        // Finish within the outgoing camera fade; this never gates navigation.
+        let fraction = min(1, max(0, date.timeIntervalSince(completedAt) / 0.16))
+        let eased = 1 - pow(1 - fraction, 3)
+        return completionOrigin + (1 - completionOrigin) * eased
+    }
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduceMotion)) { timeline in
             Canvas { context, size in
                 guard size.width > 0, size.height > 0 else { return }
                 let tint = Color(hex: 0xB4E2CD)
-                let frame = CGRect(origin: .zero, size: size).insetBy(dx: 1, dy: 1)
+                let inset = min(14, min(size.width, size.height) * 0.04)
+                let frame = CGRect(origin: .zero, size: size).insetBy(dx: inset, dy: inset)
                 let corner = min(24, min(size.width, size.height) * 0.13)
                 var brackets = Path()
                 for (x, y, dx, dy) in [
@@ -985,9 +1058,7 @@ private struct CameraScanOverlay: View {
                 }
                 context.stroke(brackets, with: .color(tint.opacity(0.7)), style: StrokeStyle(lineWidth: 1.3, lineCap: .round))
                 if !reduceMotion {
-                    let phase = timeline.date.timeIntervalSince(started).truncatingRemainder(dividingBy: 2.8) / 2.8
-                    let sweep = (1 - cos(phase * 2 * .pi)) / 2
-                    let y = frame.minY + 10 + max(0, frame.height - 20) * sweep
+                    let y = 1 + max(0, size.height - 2) * sweep(at: timeline.date)
                     let band = CGRect(x: frame.minX + 5, y: y - 11, width: max(0, frame.width - 10), height: 22)
                     context.fill(Path(band), with: .linearGradient(
                         Gradient(colors: [.clear, tint.opacity(0.09), .clear]),
@@ -998,6 +1069,15 @@ private struct CameraScanOverlay: View {
                     line.addLine(to: CGPoint(x: frame.maxX - 5, y: y))
                     context.stroke(line, with: .color(tint.opacity(0.65)), lineWidth: 1)
                 }
+            }
+        }
+        .onChange(of: completing, initial: true) { _, complete in
+            if complete {
+                let now = Date()
+                completionOrigin = loopingSweep(at: now)
+                completedAt = now
+            } else {
+                completedAt = nil
             }
         }
     }
@@ -1087,7 +1167,7 @@ private struct CameraPreview: UIViewRepresentable {
     }
     func updateUIView(_ uiView: PreviewView, context: Context) {
         uiView.accessibilityValue = String(format: "%.1f times, from %.1f to %.1f", Double(model.zoom.factor), Double(model.zoom.minimum), Double(model.zoom.maximum))
-        uiView.accessibilityTraits = model.availability == .ready && !model.isCapturing && !model.isAnalyzing ? [.adjustable] : [.notEnabled]
+        uiView.accessibilityTraits = model.availability == .ready && !model.isCapturing && !model.analysisBusy ? [.adjustable] : [.notEnabled]
     }
 }
 
