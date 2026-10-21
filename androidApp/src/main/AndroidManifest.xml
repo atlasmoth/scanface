@@ -16,6 +16,7 @@
         android:usesCleartextTraffic="false">
         <activity
             android:name=".MainActivity"
+            android:theme="@style/AppStartingTheme"
             android:exported="true"
             android:resizeableActivity="true"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode|density">
