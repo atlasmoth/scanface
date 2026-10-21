@@ -29,6 +29,19 @@ final class CoreMLFaceAnalyzer: NSObject, NativeFaceAnalyzer {
         queue.async { [self] in
             do {
                 try operation.checkCancellation()
+                #if DEBUG && targetEnvironment(simulator)
+                // Explicit UI-test opt-in keeps the real analysis state visible for
+                // recording and cancellation checks. Device and release builds
+                // contain no delay; this still runs the actual Vision/Core ML path.
+                if ProcessInfo.processInfo.arguments.contains("--uitesting-slow-analysis") {
+                    let deadline = ProcessInfo.processInfo.systemUptime + 12
+                    while ProcessInfo.processInfo.systemUptime < deadline {
+                        try operation.checkCancellation()
+                        Thread.sleep(forTimeInterval: 0.05)
+                    }
+                    try operation.checkCancellation()
+                }
+                #endif
                 let result: AnalysisResult
                 if let analyzeOverride {
                     result = try analyzeOverride(photo, operation)
