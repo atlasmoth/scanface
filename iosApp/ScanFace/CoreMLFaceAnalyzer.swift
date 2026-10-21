@@ -8,12 +8,7 @@ import Vision
 final class CoreMLFaceAnalyzer: NSObject, NativeFaceAnalyzer {
     static let modelID = "fahr-faceage-1fbb84e-coreml-int8w-native-v1"
     private let queue = DispatchQueue(label: "app.scanface.face-analysis", qos: .userInitiated)
-    private let model: CoreMLAgeModel
-
-    init(bundle: Bundle = .main) {
-        model = CoreMLAgeModel(bundle: bundle)
-        super.init()
-    }
+    private let model = CoreMLAgeModel()
 
     func startAnalysis(photo: CapturedPhoto, onResult: @escaping (AnalysisResult) -> Void) -> any NativeAnalysisTask {
         let operation = NativeAnalysisOperation()
@@ -109,16 +104,14 @@ enum FaceAnalysisFailure: Error, Equatable {
 }
 
 /// Accessed only by the analyzer's serial worker, including model creation.
-final class CoreMLAgeModel {
-    private let bundle: Bundle
+private final class CoreMLAgeModel {
     private var loaded: MLModel?
     private var inputName: String?
     private var outputName: String?
 
-    init(bundle: Bundle) { self.bundle = bundle }
-
     private func load() throws -> MLModel {
         if let loaded { return loaded }
+        let bundle = Bundle.main
         guard let url = bundle.url(forResource: "FAHRFaceAge", withExtension: "mlmodelc") else {
             throw FaceAnalysisFailure.modelMissing
         }
@@ -141,7 +134,7 @@ final class CoreMLAgeModel {
         return model
     }
 
-    static func validateSelection(_ data: Data) throws {
+    private static func validateSelection(_ data: Data) throws {
         struct Selection: Decodable { let model_id: String }
         guard let selection = try? JSONDecoder().decode(Selection.self, from: data),
               selection.model_id == CoreMLFaceAnalyzer.modelID else {
@@ -149,7 +142,7 @@ final class CoreMLAgeModel {
         }
     }
 
-    static func validate(_ description: MLModelDescription) throws -> (input: String, output: String) {
+    private static func validate(_ description: MLModelDescription) throws -> (input: String, output: String) {
         let inputs = description.inputDescriptionsByName
         let outputs = description.outputDescriptionsByName
         guard inputs.count == 1, outputs.count == 1,

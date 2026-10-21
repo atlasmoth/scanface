@@ -6,14 +6,13 @@ import Foundation
 import ImageIO
 import Vision
 
-struct FaceGeometry {
+private struct FaceGeometry {
     let bounds: CGRect
     let leftEye: CGPoint
     let rightEye: CGPoint
-    var usedCoreImageFallback = false
 }
 
-struct RGBRaster {
+private struct RGBRaster {
     let width: Int
     let height: Int
     let bytes: [UInt8]
@@ -37,13 +36,6 @@ struct RGBRaster {
         self.height = height
         self.bytes = bytes
     }
-
-    init(width: Int, height: Int, bytes: [UInt8]) {
-        precondition(bytes.count == width * height * 4)
-        self.width = width
-        self.height = height
-        self.bytes = bytes
-    }
 }
 
 enum FaceImagePreprocessor {
@@ -58,7 +50,7 @@ enum FaceImagePreprocessor {
         return try alignedRGB(RGBRaster(image: image), face: geometry, operation: operation)
     }
 
-    static func detect(in image: CGImage, operation: NativeAnalysisOperation) throws -> FaceGeometry {
+    private static func detect(in image: CGImage, operation: NativeAnalysisOperation) throws -> FaceGeometry {
         let pixels = try visionPixels(image)
         let handler = VNImageRequestHandler(cvPixelBuffer: pixels, orientation: .up)
         // Landmarks revision 3 otherwise runs detector revision 2 internally,
@@ -121,7 +113,7 @@ enum FaceImagePreprocessor {
         return recovered
     }
 
-    static func validatedGeometry(bounds: CGRect, firstEye: CGPoint, secondEye: CGPoint) -> FaceGeometry? {
+    private static func validatedGeometry(bounds: CGRect, firstEye: CGPoint, secondEye: CGPoint) -> FaceGeometry? {
         let eyes = [firstEye, secondEye].sorted { $0.x < $1.x }
         let distance = hypot(eyes[1].x - eyes[0].x, eyes[1].y - eyes[0].y)
         guard distance.isFinite, distance >= max(20, bounds.width * 0.15),
@@ -131,7 +123,7 @@ enum FaceImagePreprocessor {
         return FaceGeometry(bounds: bounds, leftEye: eyes[0], rightEye: eyes[1])
     }
 
-    static func fallbackEyes(in image: CGImage, matching bounds: CGRect) throws -> FaceGeometry {
+    private static func fallbackEyes(in image: CGImage, matching bounds: CGRect) throws -> FaceGeometry {
         let input = CIImage(cgImage: image)
         let context = CIContext(options: [.useSoftwareRenderer: true])
         guard let detector = CIDetector(ofType: CIDetectorTypeFace, context: context,
@@ -153,9 +145,7 @@ enum FaceImagePreprocessor {
                 secondEye: CGPoint(x: face.rightEyePosition.x, y: height - face.rightEyePosition.y)) else {
             throw FaceAnalysisFailure.missingEyes
         }
-        var recovered = valid
-        recovered.usedCoreImageFallback = true
-        return recovered
+        return valid
     }
 
     /// Avoids platform-dependent implicit RGBA conversions in Vision's cropper.
@@ -192,7 +182,7 @@ enum FaceImagePreprocessor {
 
     /// Author preprocessing rotates the full image about its center, then moves
     /// only the bounding-box center. It does not crop the rotated corner bounds.
-    static func rotatedCrop(face: FaceGeometry, width: Int, height: Int) throws -> (CGRect, CGFloat) {
+    private static func rotatedCrop(face: FaceGeometry, width: Int, height: Int) throws -> (CGRect, CGFloat) {
         let eyes = [face.leftEye, face.rightEye].sorted { $0.x < $1.x }
         let angle = atan2(eyes[1].y - eyes[0].y, eyes[1].x - eyes[0].x)
         guard angle.isFinite, face.bounds.width.isFinite, face.bounds.height.isFinite else {
@@ -210,8 +200,8 @@ enum FaceImagePreprocessor {
         return (CGRect(x: x1, y: y1, width: x2 - x1, height: y2 - y1), angle)
     }
 
-    static func alignedRGB(_ image: RGBRaster, face: FaceGeometry,
-        operation: NativeAnalysisOperation = NativeAnalysisOperation()) throws -> [Float] {
+    private static func alignedRGB(_ image: RGBRaster, face: FaceGeometry,
+        operation: NativeAnalysisOperation) throws -> [Float] {
         let (crop, angle) = try rotatedCrop(face: face, width: image.width, height: image.height)
         let width = Int(crop.width), height = Int(crop.height)
         let centerX = Double(image.width) / 2, centerY = Double(image.height) / 2
@@ -243,7 +233,7 @@ enum FaceImagePreprocessor {
         return bilinearRGB(aligned, width: width, height: height, size: 112)
     }
 
-    static func bilinearRGB(_ pixels: [UInt8], width: Int, height: Int, size: Int) -> [Float] {
+    private static func bilinearRGB(_ pixels: [UInt8], width: Int, height: Int, size: Int) -> [Float] {
         // Pillow BILINEAR widens its triangle when reducing an image. Its RGB
         // path uses 22-bit normalized coefficients and rounds each separable pass.
         func coefficients(source: Int) -> [(start: Int, weights: [Int])] {
