@@ -85,7 +85,6 @@ dependencies {
     implementation(libs.activity.compose)
     implementation(libs.androidx.splashscreen)
     implementation(libs.koin.android)
-    implementation(libs.ktor.client.okhttp)
     implementation(libs.litert)
     implementation(libs.mlkit.face.detection)
 }

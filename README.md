@@ -112,7 +112,7 @@ xcodebuild -project iosApp/ScanFace.xcodeproj -scheme ScanFace \
 | `shared/src/commonMain` | Compose screens, semantic themes, navigation, durable app state, model contracts |
 | `shared/src/androidMain` | CameraX, Android photo picker, EXIF normalization, private storage and native sharing |
 | `shared/src/iosMain` | UIKit bridge, native image rendering, preferences and sharing |
-| `androidApp` | Koin, Ktor/OkHttp, bundled ML Kit face detection and LiteRT inference |
+| `androidApp` | Koin, bundled ML Kit face detection and LiteRT inference |
 | `iosApp` | SwiftUI host, AVFoundation camera, Photos picker, Vision/Core Image face geometry and Core ML inference |
 | `scripts/models` | Conda tool bootstrap, pinned checkpoint conversion, quantization and installation |
 | `models` | Source/hash manifests, attribution, licenses and recorded conversion/quantization evidence |
@@ -141,7 +141,7 @@ xcodebuild -project iosApp/ScanFace.xcodeproj -scheme ScanFace \
   remain untouched. Permission denial, missing cameras, interrupted sessions,
   storage failures and canceled captures have recovery paths.
 
-Photos never enter the networking layer. The share action exports CSV metadata
+The app processes photos locally. The share action exports CSV metadata
 without local paths or photo bytes. Android backup is disabled; iOS captures are
 excluded from backup. Saved photos and metadata persist until deleted in the app
 or the app is removed. Photo deletions are journaled before cleanup; failed
@@ -181,8 +181,7 @@ check, **not a clinical accuracy study**. The current app has no survival model;
 FAHR-FaceSurvival weights are not publicly released.
 
 Models are installed at build time; the app does not download weights or contact
-a model endpoint. `ModelManifestService` remains an unused network
-boundary. The entered age is only a comparison value and never a model input.
+a model endpoint. The entered age is only a comparison value and never a model input.
 Metadata exports retain the model identifier. Settings provides a short explanation
 of face alignment, on-device estimation and how the entered age is used.
 

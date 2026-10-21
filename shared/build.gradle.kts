@@ -37,7 +37,6 @@ kotlin {
             implementation(libs.coroutines.core)
             implementation(libs.serialization.json)
             implementation(libs.datetime)
-            implementation(libs.ktor.client.core)
             implementation(libs.koin.core)
         }
         androidMain.dependencies {
@@ -49,8 +48,6 @@ kotlin {
             implementation(libs.camera.camera2)
             implementation(libs.camera.lifecycle)
             implementation(libs.camera.view)
-            implementation(libs.ktor.client.okhttp)
         }
-        iosMain.dependencies { implementation(libs.ktor.client.darwin) }
     }
 }
