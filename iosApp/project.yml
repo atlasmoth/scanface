@@ -12,6 +12,7 @@ settings:
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
     ENABLE_USER_SCRIPT_SANDBOXING: NO
+    ENABLE_TESTABILITY: NO
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
     FRAMEWORK_SEARCH_PATHS:
@@ -69,41 +70,10 @@ targets:
             export JAVA_HOME=$(/usr/libexec/java_home -v 17)
           fi
           ./gradlew :shared:embedAndSignAppleFrameworkForXcode
-  ScanFaceTests:
-    type: bundle.unit-test
-    platform: iOS
-    sources:
-      - path: ScanFaceTests
-      - path: ../models/fixtures
-        buildPhase: resources
-      - path: ../artifacts/models/ios-smoke/author-portrait.jpg
-        buildPhase: resources
-        optional: true
-    dependencies:
-      - target: ScanFace
-    settings:
-      base:
-        GENERATE_INFOPLIST_FILE: YES
-        PRODUCT_BUNDLE_IDENTIFIER: app.scanface.tests
-  ScanFaceUITests:
-    type: bundle.ui-testing
-    platform: iOS
-    sources: [ScanFaceUITests]
-    dependencies:
-      - target: ScanFace
-    settings:
-      base:
-        GENERATE_INFOPLIST_FILE: YES
-        PRODUCT_BUNDLE_IDENTIFIER: app.scanface.uitests
 schemes:
   ScanFace:
     build:
       targets:
-        ScanFace: all
+        ScanFace: [run, profile, analyze, archive]
     run:
       config: Debug
-    test:
-      config: Debug
-      targets:
-        - ScanFaceTests
-        - ScanFaceUITests

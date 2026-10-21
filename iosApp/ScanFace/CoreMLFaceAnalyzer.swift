@@ -9,18 +9,9 @@ final class CoreMLFaceAnalyzer: NSObject, NativeFaceAnalyzer {
     static let modelID = "fahr-faceage-1fbb84e-coreml-int8w-native-v1"
     private let queue = DispatchQueue(label: "app.scanface.face-analysis", qos: .userInitiated)
     private let model: CoreMLAgeModel
-    private let analyzeOverride: ((CapturedPhoto, NativeAnalysisOperation) throws -> AnalysisResult)?
 
     init(bundle: Bundle = .main) {
         model = CoreMLAgeModel(bundle: bundle)
-        analyzeOverride = nil
-        super.init()
-    }
-
-    /// Allows deterministic cancellation tests without a running ML kernel.
-    init(analyze: @escaping (CapturedPhoto, NativeAnalysisOperation) throws -> AnalysisResult) {
-        model = CoreMLAgeModel(bundle: .main)
-        analyzeOverride = analyze
         super.init()
     }
 
@@ -29,20 +20,15 @@ final class CoreMLFaceAnalyzer: NSObject, NativeFaceAnalyzer {
         queue.async { [self] in
             do {
                 try operation.checkCancellation()
-                let result: AnalysisResult
-                if let analyzeOverride {
-                    result = try analyzeOverride(photo, operation)
-                } else {
-                    let pixels = try autoreleasepool {
-                        try FaceImagePreprocessor.prepare(path: photo.path, operation: operation)
-                    }
-                    try operation.checkCancellation()
-                    let age = try model.predict(rgb: pixels)
-                    try operation.checkCancellation()
-                    result = AnalysisResult(status: .complete, age: KotlinDouble(value: age),
-                        modelId: Self.modelID,
-                        message: "Research estimate using on-device Core ML. Apple Vision, with Core Image eye detection when needed, replaces the study's RetinaFace preprocessing; equivalence has not been established. Not for medical decisions.")
+                let pixels = try autoreleasepool {
+                    try FaceImagePreprocessor.prepare(path: photo.path, operation: operation)
                 }
+                try operation.checkCancellation()
+                let age = try model.predict(rgb: pixels)
+                try operation.checkCancellation()
+                let result = AnalysisResult(status: .complete, age: KotlinDouble(value: age),
+                    modelId: Self.modelID,
+                    message: "Research estimate using on-device Core ML. Apple Vision, with Core Image eye detection when needed, replaces the study's RetinaFace preprocessing; equivalence has not been established. Not for medical decisions.")
                 operation.deliver(result, to: onResult)
             } catch is CancellationError {
                 // The Kotlin continuation is already cancelled. Never revive its scan.

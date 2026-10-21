@@ -10,7 +10,7 @@ Prepare the model from the repository root before generating the Xcode project:
 
 ```sh
 bash scripts/models/install_tools.sh
-conda run -n dl python scripts/models/prepare_models.py --runtime coreml --test-portraits
+conda run -n dl python scripts/models/prepare_models.py --runtime coreml --validation-portraits
 conda run -n dl python scripts/models/quantize_coreml.py --phase build --variants int8-float32
 conda run -n dl python scripts/models/quantize_coreml.py --phase evaluate --variants int8-float32
 conda run -n dl python scripts/models/install_quantized_models.py --runtime coreml
@@ -32,8 +32,8 @@ down from the 327 MiB float32 baseline, and is ignored by
 Git. Xcode compiles it to `FAHRFaceAge.mlmodelc`. `project.yml` bundles the full
 `models/licenses` folder and `ScanFace/Models/conversion.json` with the app.
 Regenerate the project after model preparation so its resources are present.
-Author synthetic portraits are downloaded only for local tests and never shipped
-with the app.
+Author synthetic portraits are downloaded only for local conversion validation
+and never shipped with the app.
 
 The checked-in project is generated from `project.yml`. Privacy strings,
 supported orientations, model resources and launch configuration are defined
@@ -50,10 +50,10 @@ appearance; the runtime handoff restores the app's saved appearance.
 # From the repository root:
 xcodebuild -project iosApp/ScanFace.xcodeproj -scheme ScanFace \
   -destination 'platform=iOS Simulator,name=iPhone Duo' \
-  -derivedDataPath build/ios test
+  -derivedDataPath build/ios build
 ```
 
-Keep normal ad-hoc simulator signing enabled when testing launch appearance.
+Keep normal ad-hoc simulator signing enabled when checking launch appearance.
 An unsigned simulator install can run while SpringBoard rejects its launch
 storyboard and shows a black screen. `CODE_SIGNING_ALLOWED=NO` is suitable for
 device compilation checks that do not install or run the app.
@@ -109,12 +109,11 @@ contracts and rejects nonfinite or out-of-range estimates. Its identifier is
 `fahr-faceage-1fbb84e-coreml-int8w-native-v1`. Missing model resources produce an
 actionable error, never a substitute estimate.
 
-The conversion command checks 24 numerical cases when `--test-portraits` is
+The conversion command checks 24 numerical cases when `--validation-portraits` is
 supplied: two mathematical patterns and 22 hash-pinned synthetic portraits. The
 0.02-year tolerance checks the original float32 conversion. Compression is
 screened separately against a 0.10-year mean and 0.25-year maximum drift on the
-22 synthetic faces, for both CPU_ONLY and ALL compute requests. Native regression
-tests use the selected model's predictions with a 0.02-year runtime tolerance.
+22 synthetic faces, for both CPU_ONLY and ALL compute requests.
 These are numerical checks, not accuracy on people. See the
 [quantization comparison](../docs/quantization.md). Models are for academic research and do
 not diagnose conditions, measure individual health, or predict lifespan.
@@ -126,10 +125,6 @@ terms for distributed adaptations. Commercial use requires additional permission
 See [provenance, preprocessing and licenses](../docs/models.md) and
 [the bundled attribution notice](../models/licenses/NOTICE.md).
 
-Simulator tests cover navigation, appearance, adaptation, import, photo
-normalization, preprocessing fixtures, model tensor checks and cancellation.
-Provisioning `--test-portraits` also supplies the local synthetic portrait for
-end-to-end native detection/Core ML tests; regenerate the project afterward.
-Camera preview, hardware flash, camera switching, focus, and physical rotation require a real
-iPhone or iPad for final verification. Current recorded test results are in
-[verification.md](../docs/verification.md).
+Use the simulator to check navigation, appearance, adaptation, and photo import.
+Camera preview, hardware flash, camera switching, focus, and physical rotation
+require a real iPhone or iPad for final verification.

@@ -4,18 +4,6 @@ import ScanFaceKit
 
 @main
 struct ScanFaceApp: App {
-    init() {
-        #if DEBUG && targetEnvironment(simulator)
-        if ProcessInfo.processInfo.arguments.contains("--uitesting-reset") {
-            IosPlatformKt.createPlatformServices().storage.remove(key: "scanface.snapshot.v1")
-            let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-            if let captures = support?.appendingPathComponent("ScanFace/Captures", isDirectory: true) {
-                try? FileManager.default.removeItem(at: captures)
-            }
-        }
-        #endif
-    }
-
     var body: some Scene {
         WindowGroup {
             SharedApplication()

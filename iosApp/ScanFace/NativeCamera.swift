@@ -732,7 +732,6 @@ private struct CaptureScreen: View {
             }
             .foregroundStyle(action)
             .disabled(model.isCapturing || model.analysisBusy)
-            .accessibilityIdentifier("camera.import")
         }
         .padding(.horizontal, 12)
         .padding(.top, 8)
@@ -813,7 +812,6 @@ private struct CaptureScreen: View {
                         .foregroundStyle(Color(hex: 0xC8E8D7))
                         .shadow(color: .black.opacity(0.8), radius: 4)
                         .padding(.bottom, 14)
-                        .accessibilityIdentifier("camera.analysisStatus")
                 } else if model.showingZoom {
                     Text(String(format: "%.1f×", Double(model.zoom.factor)))
                         .font(.system(size: 14, weight: .medium, design: .rounded))
@@ -832,7 +830,6 @@ private struct CaptureScreen: View {
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Camera preview")
-        .accessibilityIdentifier("camera.preview")
     }
 
     /// Image and instruments use the same aspect-fit rectangle. The live preview
@@ -859,7 +856,6 @@ private struct CaptureScreen: View {
                         .offset(x: imageRect.minX, y: imageRect.minY)
                         .accessibilityElement(children: .ignore)
                         .accessibilityLabel(model.scanComplete ? "Scan complete" : "Scan in progress")
-                        .accessibilityIdentifier("camera.scanOverlay")
                 }
             }
             .frame(width: bounds.width, height: bounds.height, alignment: .topLeading)
@@ -881,7 +877,6 @@ private struct CaptureScreen: View {
             }
             .disabled(model.scanComplete)
             .accessibilityLabel("Close camera")
-            .accessibilityIdentifier("camera.close")
             Spacer()
             if model.lenses.count > 1 {
                 Menu {
@@ -906,7 +901,6 @@ private struct CaptureScreen: View {
                 .disabled(!ready)
                 .accessibilityLabel("Choose camera lens")
                 .accessibilityValue(model.lenses.first { $0.id == model.selectedLensID }?.title ?? "")
-                .accessibilityIdentifier("camera.lens")
             }
         }
     }
@@ -931,7 +925,6 @@ private struct CaptureScreen: View {
             .disabled(!ready)
             .opacity(ready ? 1 : 0.35)
             .accessibilityLabel(model.analysisBusy ? "Analyzing scan" : (model.isCapturing ? "Saving photo" : "Take photo"))
-            .accessibilityIdentifier("camera.capture")
 
             HStack {
                 Button {
@@ -947,7 +940,6 @@ private struct CaptureScreen: View {
                 .disabled(!model.canFlip || !ready)
                 .opacity(model.canFlip ? 1 : 0.35)
                 .accessibilityLabel("Switch to \(model.frontFacing ? "back" : "front") camera")
-                .accessibilityIdentifier("camera.flip")
                 Spacer()
                 flashControl
             }
@@ -978,7 +970,6 @@ private struct CaptureScreen: View {
         .disabled(!model.supportsFlash || !ready)
         .opacity(model.supportsFlash ? 1 : 0.4)
         .accessibilityLabel(model.supportsFlash ? "Flash \(model.flash.rawValue)" : "Flash unavailable on this camera")
-        .accessibilityIdentifier("camera.flash")
     }
 
     @ViewBuilder private var unavailableContent: some View {
@@ -1117,7 +1108,6 @@ private final class PreviewView: UIView {
         isAccessibilityElement = true
         accessibilityLabel = "Camera zoom"
         accessibilityHint = "Swipe up or down to adjust zoom."
-        accessibilityIdentifier = "camera.zoom"
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }

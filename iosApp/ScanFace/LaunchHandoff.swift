@@ -43,7 +43,6 @@ final class LaunchHandoffView: UIView {
 
     init(dark: Bool) {
         super.init(frame: .zero)
-        accessibilityIdentifier = "launch.handoff"
         accessibilityElementsHidden = true
         addSubview(mark)
         mark.translatesAutoresizingMaskIntoConstraints = false
