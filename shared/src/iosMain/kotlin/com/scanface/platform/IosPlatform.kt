@@ -9,6 +9,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,11 +56,21 @@ fun updateNavigationRegion(region: NavigationRegion?) {
 @Composable
 actual fun PlatformNavigationRegion(): NavigationRegion? = navigationRegion.value
 
-fun MainViewController(cameraFactory: CameraControllerFactory, analyzer: NativeFaceAnalyzer): UIViewController {
+fun MainViewController(cameraFactory: CameraControllerFactory, analyzer: NativeFaceAnalyzer, onReady: () -> Unit): UIViewController {
     com.scanface.platform.cameraFactory = cameraFactory
     updateNavigationRegion(null)
     val faceAnalyzer = IosFaceAnalyzer(analyzer)
-    return ComposeUIViewController { App(createPlatformServices(), faceAnalyzer) }
+    return ComposeUIViewController {
+        App(createPlatformServices(), faceAnalyzer)
+        val ready = rememberUpdatedState(onReady)
+        LaunchedEffect(Unit) {
+            // App restores its theme and route synchronously. Let its first frame
+            // reach the renderer before removing the native launch handoff.
+            withFrameNanos { }
+            withFrameNanos { }
+            ready.value()
+        }
+    }
 }
 
 @Composable

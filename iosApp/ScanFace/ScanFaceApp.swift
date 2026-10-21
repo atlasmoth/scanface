@@ -26,8 +26,7 @@ struct ScanFaceApp: App {
 
 private struct SharedApplication: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
-        let shared = IosPlatformKt.MainViewController(cameraFactory: NativeCameraFactory(), analyzer: CoreMLFaceAnalyzer())
-        return ComposeHostController(content: shared)
+        ComposeHostController()
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
@@ -36,13 +35,21 @@ private struct SharedApplication: UIViewControllerRepresentable {
 /// Keeps explicit app theme changes independent of system traits and forwards
 /// asymmetric safe areas to Compose on iPad, resized windows, and iPhone Duo.
 private final class ComposeHostController: UIViewController {
-    private let content: UIViewController
+    private var content: UIViewController!
     private var dark = false
+    private var receivedTheme = false
     private var themeObserver: NSObjectProtocol?
+    private var backgroundObserver: NSObjectProtocol?
+    private var motionObserver: NSObjectProtocol?
     private var lastNavigationRect: CGRect?
+    private let initialAppearance = LaunchAppearance.saved()
+    private var launchHandoff: LaunchHandoffView?
+    private var launchStarted = false
+    private let presentsLaunch = LaunchHandoffGate.process.claim()
+    private var launchCompleted = false
+    private var launchTimeout: DispatchWorkItem?
 
-    init(content: UIViewController) {
-        self.content = content
+    init() {
         super.init(nibName: nil, bundle: nil)
         themeObserver = NotificationCenter.default.addObserver(
             forName: NSNotification.Name("ScanFaceThemeDidChange"),
@@ -50,7 +57,19 @@ private final class ComposeHostController: UIViewController {
         ) { [weak self] notification in
             guard let self, let dark = notification.userInfo?["dark"] as? Bool else { return }
             self.dark = dark
+            self.receivedTheme = true
+            self.launchHandoff?.apply(dark: dark)
             self.setNeedsStatusBarAppearanceUpdate()
+        }
+        backgroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main
+        ) { [weak self] _ in self?.finishLaunch(animated: false) }
+        motionObserver = NotificationCenter.default.addObserver(
+            forName: UIAccessibility.reduceMotionStatusDidChangeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            guard let self, UIAccessibility.isReduceMotionEnabled else { return }
+            self.launchHandoff?.settle()
+            if self.launchCompleted { self.finishLaunch(animated: false) }
         }
     }
 
@@ -58,6 +77,12 @@ private final class ComposeHostController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        dark = initialAppearance.isDark(systemDark: traitCollection.userInterfaceStyle == .dark)
+        view.backgroundColor = LaunchHandoffView.canvas(dark: dark)
+        content = IosPlatformKt.MainViewController(
+            cameraFactory: NativeCameraFactory(), analyzer: CoreMLFaceAnalyzer(),
+            onReady: { [weak self] in self?.finishLaunch(animated: true) }
+        )
         addChild(content)
         view.addSubview(content.view)
         content.view.translatesAutoresizingMaskIntoConstraints = false
@@ -68,6 +93,24 @@ private final class ComposeHostController: UIViewController {
             content.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
         content.didMove(toParent: self)
+        if presentsLaunch && !launchCompleted {
+            let handoff = LaunchHandoffView(dark: dark)
+            launchHandoff = handoff
+            view.addSubview(handoff)
+            handoff.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                handoff.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                handoff.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+                handoff.topAnchor.constraint(equalTo: view.topAnchor),
+                handoff.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            ])
+            content.view.accessibilityElementsHidden = true
+            // A missed renderer callback must never leave an invisible input or
+            // accessibility barrier. Normal launches remove this on the first draw.
+            let timeout = DispatchWorkItem { [weak self] in self?.finishLaunch(animated: false) }
+            launchTimeout = timeout
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: timeout)
+        }
         if #available(iOS 27.1, *) {
             registerForTraitChanges(UITraitCollection.systemTraitsAffectingVerticalBarEdge) {
                 (controller: ComposeHostController, _: UITraitCollection) in
@@ -79,6 +122,50 @@ private final class ComposeHostController: UIViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         updateNavigationRegion()
+        if !launchStarted, view.window != nil, let launchHandoff {
+            launchStarted = true
+            // Match the system storyboard’s window center before animating.
+            launchHandoff.layoutIfNeeded()
+            launchHandoff.animateIfAllowed()
+        }
+    }
+
+    override func viewIsAppearing(_ animated: Bool) {
+        super.viewIsAppearing(animated)
+        if !receivedTheme {
+            dark = initialAppearance.isDark(systemDark: traitCollection.userInterfaceStyle == .dark)
+            view.backgroundColor = LaunchHandoffView.canvas(dark: dark)
+            launchHandoff?.apply(dark: dark)
+            setNeedsStatusBarAppearanceUpdate()
+        }
+    }
+
+    private func finishLaunch(animated: Bool) {
+        if launchCompleted {
+            if !animated {
+                launchHandoff?.layer.removeAllAnimations()
+                launchHandoff?.removeFromSuperview()
+                launchHandoff = nil
+            }
+            return
+        }
+        launchCompleted = true
+        launchTimeout?.cancel()
+        launchTimeout = nil
+        content?.view.accessibilityElementsHidden = false
+        guard let handoff = launchHandoff else { return }
+        handoff.isUserInteractionEnabled = false
+        let remove = { [weak self] in
+            handoff.removeFromSuperview()
+            if self?.launchHandoff === handoff { self?.launchHandoff = nil }
+        }
+        if animated && !UIAccessibility.isReduceMotionEnabled && !UIAccessibility.isVoiceOverRunning {
+            UIView.animate(withDuration: 0.18, delay: 0, options: [.beginFromCurrentState, .curveEaseOut], animations: {
+                handoff.alpha = 0
+            }, completion: { _ in remove() })
+        } else {
+            remove()
+        }
     }
 
     override func viewSafeAreaInsetsDidChange() {
@@ -135,5 +222,8 @@ private final class ComposeHostController: UIViewController {
     deinit {
         IosPlatformKt.updateNavigationRegion(region: nil)
         if let themeObserver { NotificationCenter.default.removeObserver(themeObserver) }
+        if let backgroundObserver { NotificationCenter.default.removeObserver(backgroundObserver) }
+        if let motionObserver { NotificationCenter.default.removeObserver(motionObserver) }
+        launchTimeout?.cancel()
     }
 }

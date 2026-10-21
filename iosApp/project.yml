@@ -40,7 +40,7 @@ targets:
         NSCameraUsageDescription: ScanFace uses the camera to capture your face for on-device analysis.
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
-        UILaunchScreen: {}
+        UILaunchStoryboardName: LaunchScreen
         UIRequiresFullScreen: false
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
