@@ -270,9 +270,15 @@ class AppStore(
                     records = sorted(saved.records),
                     theme = saved.theme,
                     enteredAge = saved.enteredAge,
-                    pending = saved.pending?.copy(
-                        analysisMessage = saved.pending.analysisMessage ?: "Your photo is ready for analysis.",
-                    ),
+                    pending = saved.pending?.let { pending ->
+                        if (pending.status == AnalysisStatus.AWAITING_MODEL && pending.modelId == null) {
+                            pending.copy(
+                                status = AnalysisStatus.FAILED,
+                                analysisMessage = "This scan was interrupted. Your photo is safe. " +
+                                    "Save it without an estimate, or retake the photo.",
+                            )
+                        } else pending
+                    },
                     cleanupPendingCount = cleanupPaths.size,
                 )
             }

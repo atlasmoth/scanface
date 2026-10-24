@@ -44,6 +44,7 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
     val scope = rememberCoroutineScope()
     val store = remember(services, analyzer) { AppStore(services.storage, analyzer, services::deletePhoto, scope) }
     val state by store.state.collectAsState()
+    val restoredPending = remember(store) { state.pending }
     var routeName by rememberSaveable { mutableStateOf(if (state.pending != null) Route.RESULT.name else Route.OVERVIEW.name) }
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     var returnRoute by rememberSaveable { mutableStateOf(Route.OVERVIEW.name) }
@@ -55,6 +56,13 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
     val snackbar = remember { SnackbarHostState() }
     val systemDark = isSystemInDarkTheme()
     val dark = when (state.theme) { ThemeMode.SYSTEM -> systemDark; ThemeMode.LIGHT -> false; ThemeMode.DARK -> true }
+    LaunchedEffect(store) {
+        if (restoredPending != null && routeName == Route.CAPTURE.name) {
+            selectedId = null
+            discardTarget = null
+            routeName = Route.RESULT.name
+        }
+    }
     fun notify(message: String) { scope.launch { snackbar.showSnackbar(message) } }
     fun navigate(target: Route) {
         if (target == route) return
