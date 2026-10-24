@@ -3,10 +3,16 @@
 ScanFace uses Apple Vision with a guarded Core Image eye fallback and a bundled
 Core ML FAHR-FaceAge model to analyze a fresh capture or imported photo entirely
 on the device. The minimum deployment target is iOS 17.0.
-Xcode 27.1, XcodeGen and Java 17 are required; the
+macOS, Xcode 27.1, XcodeGen and Java 17 are required; the
 build phase invokes the repository's Gradle wrapper to embed `ScanFaceKit`.
 
-Prepare the model from the repository root before generating the Xcode project:
+For model tooling, install Conda and follow the
+[Python environment setup](../docs/models.md#python-environment) to create a
+Python 3.12 `dl` environment with pip if one is missing. Skip creation for an
+existing Python 3.12 `dl`; the bootstrap installs pinned requirements into it.
+
+From the repository root, run these commands in order to install the tools,
+prepare the model, and then generate the Xcode project:
 
 ```sh
 bash scripts/models/install_tools.sh
@@ -21,7 +27,7 @@ open ScanFace.xcodeproj
 
 Select the **ScanFace** scheme and an iPhone or iPad simulator. Choose your signing
 team before installing on a physical device. The conversion/parity workflow
-requires macOS and runs all Python commands in the existing `conda dl`
+requires macOS and runs all Python commands in the `conda dl`
 environment. Converter-only packages are isolated in
 `artifacts/models/converter-python`, keeping their older xDSL dependency separate
 from the shared environment.

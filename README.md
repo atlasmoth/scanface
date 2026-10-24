@@ -39,11 +39,23 @@ the app's code license cannot replace the weight license. See
 ## Run
 
 Requirements: JDK 17, Android SDK 37, and (for iOS and Core ML conversion) macOS
-with Xcode 27.1 and XcodeGen. Model preparation uses the existing Conda environment
-named `dl`. The Gradle wrapper and dependency versions are checked in. Android
-supports API 26 and newer; iOS supports 17.0 and newer.
+with Xcode 27.1 and XcodeGen. Model preparation requires Conda with a Python 3.12
+environment named `dl` and pip. The Gradle wrapper and dependency versions are
+checked in. Android supports API 26 and newer; iOS supports 17.0 and newer.
 
-Prepare the model assets before building either app. From the repository root:
+Check `conda env list`. If `dl` does not exist, create it once:
+
+```sh
+conda create -n dl python=3.12 pip
+```
+
+Skip creation if you already have a Python 3.12 `dl` environment. Check with
+`conda run -n dl python --version`; the recorded conversion used Python 3.12.13.
+The bootstrap installs pinned requirements into `dl` and can change its package versions.
+See [Python environment setup](docs/models.md#python-environment) for details.
+
+From the repository root, install the tools and prepare the model assets before
+building either app:
 
 ```sh
 bash scripts/models/install_tools.sh
@@ -70,14 +82,17 @@ environment packages to satisfy the converter. `--validation-portraits` provisio
 These images are not checked into Git or included in the shipping apps. See
 [the model setup details](docs/models.md#prepare-the-mobile-artifacts).
 
+Configure your Android SDK with `ANDROID_HOME` or an untracked `local.properties`
+containing `sdk.dir=/absolute/path/to/Android/sdk`. Start an emulator or connect a
+device before installing:
+
 ```sh
 ./gradlew :androidApp:assembleDebug
 ./gradlew :androidApp:installDebug
 ```
 
-Configure your Android SDK with `ANDROID_HOME` or an untracked `local.properties`
-containing `sdk.dir=/absolute/path/to/Android/sdk`. Open the root project in Android
-Studio to run the `androidApp` configuration.
+Alternatively, open the root project in Android Studio and run `androidApp`.
+For iOS, generate and open the project after preparing its model:
 
 ```sh
 cd iosApp

@@ -6,7 +6,29 @@ The machine-readable source lock is [source-manifest.json](../models/source-mani
 
 ## Prepare the mobile artifacts
 
-Run from the repository root on macOS with the existing Conda environment named `dl`:
+### Python environment
+
+Install Conda and make `conda` available in your terminal. Model tooling uses
+Python 3.12 and pip in an environment named `dl`; the recorded conversion ran on
+Python 3.12.13. Check `conda env list`. Only if `dl` is missing, create it:
+
+```sh
+conda create -n dl python=3.12 pip
+```
+
+Skip creation for an existing Python 3.12 `dl` environment. Check its version:
+
+```sh
+conda run -n dl python --version
+```
+
+The bootstrap installs [pinned requirements](../scripts/models/requirements.txt)
+into `dl`, upgrading or downgrading existing packages as needed to match those versions.
+
+### Convert and install
+
+The full workflow requires macOS. From the repository root, run the following
+commands in order before building either app:
 
 ```sh
 bash scripts/models/install_tools.sh
