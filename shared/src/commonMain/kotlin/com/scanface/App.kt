@@ -42,8 +42,11 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
     val haptics = LocalAppHaptics.current
     val scanEnvironment = rememberScanEnvironment()
     val scope = rememberCoroutineScope()
-    val store = remember(services, analyzer) { AppStore(services.storage, analyzer, services::deletePhoto, scope) }
+    val store = remember(services, analyzer) {
+        AppStore(services.storage, analyzer, services::deletePhoto, scope, services.incomingImages)
+    }
     val state by store.state.collectAsState()
+    val incoming by services.incomingImages.state.collectAsState()
     val restoredPending = remember(store) { state.pending }
     var routeName by rememberSaveable { mutableStateOf(if (state.pending != null) Route.RESULT.name else Route.OVERVIEW.name) }
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -52,6 +55,8 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
     var clearAll by rememberSaveable { mutableStateOf(false) }
     var discardTarget by rememberSaveable { mutableStateOf<String?>(null) }
     var captureSession by rememberSaveable { mutableIntStateOf(0) }
+    var importPreview by remember(store) { mutableStateOf<CapturedPhoto?>(null) }
+    var incomingDialog by rememberSaveable { mutableStateOf(false) }
     val route = Route.valueOf(routeName)
     val snackbar = remember { SnackbarHostState() }
     val systemDark = isSystemInDarkTheme()
@@ -77,6 +82,7 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
     fun scan() {
         if (state.pending != null) routeName = Route.RESULT.name
         else {
+            importPreview = null
             returnRoute = if (route == Route.HISTORY) Route.HISTORY.name else Route.OVERVIEW.name
             captureSession++
             routeName = Route.CAPTURE.name
@@ -116,6 +122,53 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
             store.clearError()
         } else previousError = null
     }
+    LaunchedEffect(incoming.error) {
+        val error = incoming.error ?: return@LaunchedEffect
+        val retry = incoming.canRetry
+        val response = snackbar.showSnackbar(error, actionLabel = if (retry) "Retry" else null,
+            duration = if (retry) SnackbarDuration.Indefinite else SnackbarDuration.Long)
+        if (response == SnackbarResult.ActionPerformed) services.incomingImages.retry()
+        else if (services.incomingImages.state.value.error == error) services.incomingImages.clearError()
+    }
+    LaunchedEffect(incoming.photos.size) {
+        if (incoming.photos.isNotEmpty() && (route == Route.CAPTURE || state.pending != null)) {
+            snackbar.showSnackbar("Photo queued. Finish your current scan to open it.")
+        }
+    }
+    LaunchedEffect(incoming, state.pending?.id, state.records, state.isAnalyzing, state.error,
+        routeName, scanEnvironment.isForeground, deleteId, clearAll, discardTarget, incomingDialog) {
+        val request = incoming.photos.firstOrNull() ?: return@LaunchedEffect
+        val owned = state.pending?.takeIf { it.id == request.id } ?: state.records.firstOrNull { it.id == request.id }
+        if (owned != null) {
+            if (owned.photoPath == request.photo.path) services.incomingImages.acknowledge(request.id)
+            else store.dismissIncoming(request.id, services.incomingImages)
+            return@LaunchedEffect
+        }
+        if (!scanEnvironment.isForeground || state.pending != null || state.isAnalyzing || state.error != null ||
+            incoming.error != null || route !in listOf(Route.OVERVIEW, Route.HISTORY) ||
+            deleteId != null || clearAll || discardTarget != null || incomingDialog) return@LaunchedEffect
+        val analysis = store.captureIncoming(request) ?: return@LaunchedEffect
+        if (store.state.value.pending?.id != request.id) return@LaunchedEffect
+        returnRoute = routeName
+        selectedId = null
+        importPreview = request.photo
+        captureSession++
+        routeName = Route.CAPTURE.name
+        services.incomingImages.acknowledge(request.id)
+        scope.launch {
+            analysis.join()
+            val completed = store.state.value
+            if (completed.pending?.id == request.id && !completed.isAnalyzing && routeName == Route.CAPTURE.name) {
+                routeName = Route.RESULT.name
+                if (completed.error == null && discardTarget == null) {
+                    haptics.perform(if (completed.pending.status == AnalysisStatus.COMPLETE) AppHaptic.Success else AppHaptic.Warning)
+                }
+            }
+        }
+    }
+    val waitingImages = incoming.photos.filterNot { request ->
+        state.pending?.id == request.id || state.records.any { it.id == request.id }
+    }
     ScanFaceTheme(dark) {
         PlatformThemeEffect(dark)
         PlatformBackHandler(route != Route.OVERVIEW, ::back)
@@ -150,7 +203,7 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
                         transitionSpec = {
                             if (initialState != null && targetState == null && scanComplete && discardTarget == null &&
                                 scanEnvironment.isForeground && !scanEnvironment.reduceMotion) {
-                                fadeIn(tween(220)) togetherWith if (cameraFadeHandledNatively) {
+                                fadeIn(tween(220)) togetherWith if (cameraFadeHandledNatively && importPreview == null) {
                                     ExitTransition.KeepUntilTransitionsFinished
                                 } else fadeOut(tween(180))
                             } else EnterTransition.None togetherWith ExitTransition.None
@@ -159,7 +212,10 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
                     ) { cameraSession ->
                     if (cameraSession != null) {
                         Box(Modifier.fillMaxSize()) {
-                        CameraScreen(dark, state.isAnalyzing, scanComplete, discardTarget == null, onCaptured = {
+                        val imported = importPreview
+                        if (imported != null) ImportedScanPreview(imported, state.isAnalyzing, scanComplete,
+                            discardTarget == null, onClose = { if (route == Route.CAPTURE) back() })
+                        else CameraScreen(dark, state.isAnalyzing, scanComplete, discardTarget == null, onCaptured = {
                             selectedId = null
                             val analysis = store.capture(it)
                             val captureId = store.state.value.pending?.takeIf { pending -> pending.photoPath == it.path }?.id
@@ -222,6 +278,9 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
                                             Route.RESULT -> "Scan details"
                                             else -> "ScanFace"
                                         }, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+                                        if (waitingImages.isNotEmpty()) TextButton({ incomingDialog = true }) {
+                                            Text("${waitingImages.size} waiting")
+                                        }
                                         if (route != Route.SETTINGS && !rail && !systemSideNavigation) IconButton(::settings) { Glyph(AppIcon.Settings, description = "Settings") }
                                     }
                                 },
@@ -320,6 +379,7 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
                             haptics.perform(AppHaptic.Success)
                         }
                         if (discardTarget == Route.CAPTURE.name) captureSession++
+                        if (discardTarget == Route.CAPTURE.name) importPreview = null
                         routeName = discardTarget!!
                         discardTarget = null
                     }
@@ -328,6 +388,38 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
                     haptics.perform(AppHaptic.Light)
                     discardTarget = null
                 }) { Text(if (state.isAnalyzing) "Keep scanning" else "Keep editing") } })
+        }
+        if (incomingDialog) {
+            AlertDialog(onDismissRequest = { incomingDialog = false },
+                title = { Text("Incoming photos") },
+                text = { Text("${waitingImages.size} photos will open one at a time after you finish your current scan.") },
+                confirmButton = { TextButton({ incomingDialog = false }) { Text("Keep waiting") } },
+                dismissButton = { TextButton({
+                    for (request in services.incomingImages.state.value.photos) {
+                        val current = store.state.value
+                        if (current.pending?.id != request.id && current.records.none { it.id == request.id }) {
+                            if (!store.dismissIncoming(request.id, services.incomingImages)) break
+                        }
+                    }
+                    incomingDialog = false
+                }) { Text("Remove queued photos", color = MaterialTheme.colorScheme.error) } },
+            )
+        }
+    }
+}
+
+@Composable
+private fun ImportedScanPreview(photo: CapturedPhoto, analyzing: Boolean, complete: Boolean,
+    feedbackEnabled: Boolean, onClose: () -> Unit) {
+    BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        val aspect = photo.width.toFloat() / photo.height
+        val width = minOf(maxWidth, maxHeight * aspect)
+        Box(Modifier.width(width).height(width / aspect)) {
+            PhotoImage(photo.path, Modifier.fillMaxSize(), "Imported photo")
+            CameraScanOverlay(analyzing, complete, feedbackEnabled, Modifier.matchParentSize())
+        }
+        FilledTonalIconButton(onClose, Modifier.align(Alignment.TopStart).padding(16.dp)) {
+            Glyph(AppIcon.Close, description = "Close scan")
         }
     }
 }

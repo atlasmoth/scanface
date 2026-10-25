@@ -24,6 +24,7 @@ class AppStore(
     private val analyzer: FaceAnalyzer,
     private val deletePhoto: (String) -> Unit,
     private val scope: CoroutineScope,
+    private val incomingImages: IncomingImageQueue,
 ) {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private var unreadableSnapshot: String? = null
@@ -39,15 +40,29 @@ class AppStore(
         if (cleanupPaths.isNotEmpty()) retryCleanup()
     }
 
-    fun capture(photo: CapturedPhoto): Job {
+    fun capture(photo: CapturedPhoto): Job = capture(photo,
+        "${photo.capturedAtMillis.toString(16)}-${Random.nextLong().toULong().toString(16)}", false)
+
+    fun captureIncoming(request: IncomingImage): Job? {
+        val current = mutableState.value
+        if (current.pending != null || current.isAnalyzing || current.records.any { it.id == request.id }) return null
+        return capture(request.photo, request.id, true)
+    }
+
+    fun dismissIncoming(id: String, queue: IncomingImageQueue): Boolean {
+        val request = queue.state.value.photos.firstOrNull { it.id == id } ?: return true
+        return if (isOwned(request.photo.path, mutableState.value)) queue.acknowledge(id) else queue.discard(id)
+    }
+
+    private fun capture(photo: CapturedPhoto, id: String, retainOnFailure: Boolean): Job {
         val previous = mutableState.value.pending
         if (photo.path.isBlank() || photo.width <= 0 || photo.height <= 0 || photo.capturedAtMillis < 0) {
             fail("The camera did not return a readable photo. Please try again.")
-            queueUnownedPhoto(photo.path)
+            if (!retainOnFailure) queueUnownedPhoto(photo.path)
             return scope.launch {}
         }
         val pending = ScanRecord(
-            id = "${photo.capturedAtMillis.toString(16)}-${Random.nextLong().toULong().toString(16)}",
+            id = id,
             createdAtMillis = photo.capturedAtMillis,
             photoPath = photo.path,
             enteredAge = mutableState.value.enteredAge,
@@ -61,7 +76,7 @@ class AppStore(
             mutableState.value.copy(pending = pending, isAnalyzing = true, error = null),
             listOfNotNull(previous?.photoPath),
         )) {
-            queueUnownedPhoto(photo.path)
+            if (!retainOnFailure) queueUnownedPhoto(photo.path)
             return scope.launch {}
         }
         // Replace ownership durably before cancelling the previous capture. A failed
@@ -220,8 +235,15 @@ class AppStore(
         }
     }
 
-    private fun commit(next: AppState, cleanupCandidates: List<String> = emptyList()): Boolean =
-        persist(next, (cleanupPaths + cleanupCandidates).filter { it.isNotBlank() && !isOwned(it, next) }.distinct())
+    private fun commit(next: AppState, cleanupCandidates: List<String> = emptyList()): Boolean {
+        val current = mutableState.value
+        val retained = (next.records.map { it.id } + listOfNotNull(next.pending?.id)).toSet()
+        val retiring = (current.records.map { it.id } + listOfNotNull(current.pending?.id)).filterNot { it in retained }
+        // Retire ingress before removing its canonical owner; a failed acknowledgement
+        // must not resurrect a discarded scan or leave a queued pointer to deleted bytes.
+        for (id in retiring) if (!incomingImages.acknowledge(id)) return false
+        return persist(next, (cleanupPaths + cleanupCandidates).filter { it.isNotBlank() && !isOwned(it, next) }.distinct())
+    }
 
     private fun persist(next: AppState, nextCleanupPaths: List<String>): Boolean {
         if (initialReadFailed) {

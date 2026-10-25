@@ -4,9 +4,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.scanface.core.CapturedPhoto
 import com.scanface.core.KeyValueStore
+import com.scanface.core.IncomingImageQueue
 
 interface PlatformServices {
     val storage: KeyValueStore
+    val incomingImages: IncomingImageQueue
     fun nowMillis(): Long
     fun deletePhoto(path: String)
     fun shareText(text: String)

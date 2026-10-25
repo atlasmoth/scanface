@@ -35,6 +35,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.scanface.core.KeyValueStore
+import com.scanface.core.IncomingImageQueue
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -55,6 +56,8 @@ private class AndroidPlatformServices(private val context: Context) : PlatformSe
             check(preferences.edit().putString(key, value).commit()) { "Unable to save local data." }
         }
     }
+
+    override val incomingImages = IncomingImageQueue(storage, ::deletePhoto)
 
     override fun nowMillis(): Long = System.currentTimeMillis()
 

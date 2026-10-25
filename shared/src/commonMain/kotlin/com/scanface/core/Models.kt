@@ -3,6 +3,7 @@ package com.scanface.core
 import kotlinx.serialization.Serializable
 
 /** An upright, privately stored image produced by the platform camera. */
+@Serializable
 data class CapturedPhoto(
     val path: String,
     val width: Int,

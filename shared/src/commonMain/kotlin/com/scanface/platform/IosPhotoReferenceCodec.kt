@@ -36,10 +36,17 @@ internal class IosPhotoReferenceCodec(captureRoot: String) {
             if (value !is JsonObject || "photoPath" !in value) return value
             return JsonObject(value + ("photoPath" to path(value.getValue("photoPath"))))
         }
+        fun incoming(value: JsonElement): JsonElement {
+            if (value !is JsonObject) return value
+            val photo = value["photo"] as? JsonObject ?: return value
+            val locator = photo["path"] ?: return value
+            return JsonObject(value + ("photo" to JsonObject(photo + ("path" to path(locator)))))
+        }
         return JsonObject(document.mapValues { (key, value) ->
             when {
                 key == "records" && value is JsonArray -> JsonArray(value.map(::record))
                 key == "pending" -> record(value)
+                key == "photos" && value is JsonArray -> JsonArray(value.map(::incoming))
                 key == "cleanupPaths" && value is JsonArray -> JsonArray(value.map(::path))
                 else -> value
             }

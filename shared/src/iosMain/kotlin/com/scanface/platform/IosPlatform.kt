@@ -27,6 +27,7 @@ import androidx.compose.ui.window.ComposeUIViewController
 import com.scanface.App
 import com.scanface.core.AppStore
 import com.scanface.core.CapturedPhoto
+import com.scanface.core.IncomingImageQueue
 import com.scanface.core.KeyValueStore
 import com.scanface.ui.rememberScanPresentation
 import kotlinx.cinterop.addressOf
@@ -163,6 +164,13 @@ actual fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit) = Unit
 
 actual fun createPlatformServices(): PlatformServices = IosPlatformServices
 
+fun receiveIncomingImage(id: String, photo: CapturedPhoto): Boolean =
+    IosPlatformServices.incomingImages.receive(id, photo)
+
+fun reportIncomingImageFailure(message: String) {
+    IosPlatformServices.incomingImages.reportFailure(message)
+}
+
 private fun photoReferences(): IosPhotoReferenceCodec {
     val support = NSSearchPathForDirectoriesInDomains(
         NSApplicationSupportDirectory, NSUserDomainMask, true,
@@ -172,6 +180,7 @@ private fun photoReferences(): IosPhotoReferenceCodec {
 
 private object IosPlatformServices : PlatformServices {
     override val storage: KeyValueStore = AtomicIosKeyValueStore()
+    override val incomingImages = IncomingImageQueue(storage, ::deletePhoto)
 
     override fun nowMillis(): Long = (NSDate().timeIntervalSince1970 * 1_000).toLong()
 
@@ -244,7 +253,7 @@ private class AtomicIosKeyValueStore : KeyValueStore {
     override fun put(key: String, value: String) {
         // Transform the whole snapshot before writing. Runtime ownership checks must
         // see one canonical path for saved, pending, and queued references alike.
-        val storedValue = if (key == AppStore.STORAGE_KEY) photoReferences().encode(value) else value
+        val storedValue = if (hasPhotoReferences(key)) photoReferences().encode(value) else value
         val path = path(key)
         check(manager.createDirectoryAtPath(folder, withIntermediateDirectories = true, attributes = null, error = null)) {
             "Couldn't create private storage."
@@ -262,7 +271,10 @@ private class AtomicIosKeyValueStore : KeyValueStore {
     }
 
     private fun decode(key: String, value: String): String =
-        if (key == AppStore.STORAGE_KEY) photoReferences().decode(value) else value
+        if (hasPhotoReferences(key)) photoReferences().decode(value) else value
+
+    private fun hasPhotoReferences(key: String): Boolean =
+        key == AppStore.STORAGE_KEY || key == IncomingImageQueue.STORAGE_KEY
 }
 
 private fun activePresenter(): UIViewController? {
