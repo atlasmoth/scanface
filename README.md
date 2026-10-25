@@ -4,6 +4,17 @@ A Kotlin Multiplatform app for private facial-age exploration. Android and iOS s
 the Compose interface, scan lifecycle, local history and appearance preferences.
 Camera capture stays native: CameraX on Android and AVFoundation on iOS.
 
+## Screenshots
+
+| Overview · dark | Scan result · light | Scan result · dark |
+| --- | --- | --- |
+| <a href="docs/screenshots/ios-overview-dark.png"><img src="docs/screenshots/ios-overview-dark.png" width="240" alt="ScanFace overview in dark mode, showing the latest scan and estimate history"></a> | <a href="docs/screenshots/ios-result-light.png"><img src="docs/screenshots/ios-result-light.png" width="240" alt="ScanFace result in light mode, showing a demo portrait and an estimated facial age of 36.1 years"></a> | <a href="docs/screenshots/ios-result-dark.png"><img src="docs/screenshots/ios-result-dark.png" width="240" alt="ScanFace result in dark mode, showing the same demo portrait and estimate"></a> |
+
+Actual iOS app captures with an AI-generated demo portrait and a real locally
+computed model result. Select an image to view it at full resolution.
+
+## The app
+
 The interface uses open layouts, centered empty states, and full light/dark
 appearance. Phone and tablet cameras fill the available viewfinder height,
 with camera switch, shutter and flash along the bottom and photo import below.
