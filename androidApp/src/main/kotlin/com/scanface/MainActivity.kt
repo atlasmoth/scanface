@@ -4,6 +4,7 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
+import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Bundle
@@ -18,12 +19,16 @@ import androidx.core.splashscreen.SplashScreenViewProvider
 import androidx.core.view.WindowCompat
 import com.scanface.core.FaceAnalyzer
 import com.scanface.platform.PlatformServices
+import com.scanface.platform.AndroidImageReceiver
+import com.scanface.platform.AndroidImageRequest
 import org.koin.android.ext.android.inject
 import org.json.JSONObject
 
 class MainActivity : ComponentActivity() {
     private val services: PlatformServices by inject()
     private val analyzer: FaceAnalyzer by inject()
+    private val imageReceiver: AndroidImageReceiver by inject()
+    private var imageRequest: AndroidImageRequest? = null
     private var splashExit: Animator? = null
     private var releaseSplash: (() -> Unit)? = null
     private var backgrounded = false
@@ -42,6 +47,21 @@ class MainActivity : ComponentActivity() {
         // Native first-draw readiness dismisses the splash. Model loading and
         // decorative animation never hold the first usable screen behind a timer.
         setContent { App(services = services, analyzer = analyzer) }
+        imageRequest = imageReceiver.request(intent, taskId,
+            savedInstanceState?.getBundle("incomingImage")?.let(AndroidImageRequest::restore))
+        imageRequest?.let(imageReceiver::receive)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        imageRequest = imageReceiver.request(intent, taskId)
+        imageRequest?.let(imageReceiver::receive)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        imageRequest?.let { outState.putBundle("incomingImage", it.save()) }
+        super.onSaveInstanceState(outState)
     }
 
     private fun savedAppearanceIsDark(systemDark: Boolean): Boolean = runCatching {
@@ -110,6 +130,7 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         backgrounded = false
         super.onStart()
+        imageReceiver.retryStorage()
     }
 
     override fun onStop() {

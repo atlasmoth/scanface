@@ -35,6 +35,14 @@ and quantization reports are preserved as model provenance; see
 
 ## Device validation
 
+External image opening was checked on 25 October 2026 with temporary sender apps
+outside the repository. Android build/lint and the ARM64 iOS simulator build
+passed. JPEG/PNG opening, queued imports behind unfinished scans and Settings,
+restart recovery, corrupt files and unavailable grants were exercised. Saved
+results and photo bytes remained intact; imports did not request the camera.
+Temporary checks also covered failed queue writes and ownership-safe cleanup.
+No test source or fixtures were added to the repository.
+
 The supported minimums remain Android API 26 and iOS 17. Simulator and emulator
 builds do not establish physical camera quality, lens/LED-flash behavior, haptic
 feel, or on-device inference latency, memory use, and battery cost. These still

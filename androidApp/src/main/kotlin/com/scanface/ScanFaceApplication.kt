@@ -4,6 +4,7 @@ import android.app.Application
 import com.scanface.core.FaceAnalyzer
 import com.scanface.ml.AndroidFaceAnalyzer
 import com.scanface.platform.PlatformServices
+import com.scanface.platform.AndroidImageReceiver
 import com.scanface.platform.createPlatformServices
 import com.scanface.platform.initAndroidPlatform
 import org.koin.android.ext.koin.androidContext
@@ -24,6 +25,7 @@ class ScanFaceApplication : Application() {
 
 internal val scanFaceAndroidModule = module {
     single<PlatformServices> { createPlatformServices() }
+    single { AndroidImageReceiver(androidContext(), get()) }
     single { AndroidFaceAnalyzer(androidContext()) } onClose { it?.close() }
     single<FaceAnalyzer> { get<AndroidFaceAnalyzer>() }
 }

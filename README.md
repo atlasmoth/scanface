@@ -21,6 +21,13 @@ device: LiteRT on Android, Core ML on iOS. Review and save the result, revisit
 history, export a metadata summary, or delete the local capture. Missing models
 and unusable photos produce an explanation, never an invented estimate.
 
+Open an image in ScanFace from Android's **Open with** or **Share** menu, or
+choose **ScanFace** from a file's **Open in** menu on iOS. The app creates a
+private, upright copy and analyzes it locally without opening the camera.
+Incoming photos wait while you finish a scan, review an unsaved result, or edit
+Settings. Queued copies survive app restarts and open one at a time; use the
+waiting-photo count to remove queued photos. Originals remain untouched.
+
 Analysis happens in place in the camera preview: fine mint brackets and a narrow
 moving light accompany soft, spaced haptic pulses while the live view stays
 visible. Imported photos occupy that same preview during analysis. Camera

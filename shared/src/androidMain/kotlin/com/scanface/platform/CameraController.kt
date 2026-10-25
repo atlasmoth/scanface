@@ -603,11 +603,12 @@ private fun CameraFlash.mode(): Int = when (this) {
 }
 
 internal fun normalizePhoto(source: File, destination: File): Pair<Int, Int> {
-    val exif = ExifInterface(source)
-    val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeFile(source.absolutePath, bounds)
-    require(bounds.outWidth > 0 && bounds.outHeight > 0) { "Invalid image" }
+    require(bounds.outWidth > 0 && bounds.outHeight > 0 && bounds.outMimeType?.startsWith("image/") == true) { "Invalid image" }
+    val orientation = runCatching {
+        ExifInterface(source).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+    }.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
     val options = BitmapFactory.Options().apply {
         var sample = 1
         while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 2048) sample *= 2
@@ -630,6 +631,7 @@ internal fun normalizePhoto(source: File, destination: File): Pair<Int, Int> {
         upright = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
         destination.outputStream().use { stream ->
             check(upright.compress(Bitmap.CompressFormat.JPEG, 95, stream)) { "JPEG encoding failed" }
+            stream.fd.sync()
         }
         // Re-encoding removes EXIF, including any location/vendor metadata. Pixels are now upright.
         return upright.width to upright.height

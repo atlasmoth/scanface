@@ -3,7 +3,6 @@ package com.scanface.platform
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -85,7 +84,6 @@ import com.scanface.ui.AppIcon
 import com.scanface.ui.CameraScanOverlay
 import com.scanface.ui.Glyph
 import java.io.File
-import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -494,25 +492,3 @@ private fun CameraPermission(
 
 private fun Context.hasCameraPermission(): Boolean =
     ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-
-private fun importPhoto(context: Context, uri: Uri): CapturedPhoto {
-    val directory = File(context.filesDir, "captures")
-    check(directory.exists() || directory.mkdirs()) { "Photo storage unavailable" }
-    val id = UUID.randomUUID().toString()
-    val raw = File(directory, "$id-import")
-    val destination = File(directory, "$id.jpg")
-    try {
-        requireNotNull(context.contentResolver.openInputStream(uri)).use { input ->
-            raw.outputStream().use { output -> input.copyTo(output) }
-        }
-        val (width, height) = normalizePhoto(raw, destination)
-        return CapturedPhoto(
-            destination.absolutePath, width, height, "Photo library", false, System.currentTimeMillis(),
-        )
-    } catch (error: Throwable) {
-        destination.delete()
-        throw error
-    } finally {
-        raw.delete()
-    }
-}
