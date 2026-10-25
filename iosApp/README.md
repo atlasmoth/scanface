@@ -94,6 +94,13 @@ Core Image and Core ML work; cancellation stops Vision where possible and
 suppresses late results, including after the synchronous Core Image fallback.
 The app does not upload photos or download models at runtime.
 
+Images opened from Files or another app enter the same local analysis flow.
+ScanFace retains security-scoped access while reading the file, coordinates the
+read, and normalizes the image off the main thread. External files are limited
+to 50 MiB and 100 megapixels. A durable queue waits for the current scan or
+unsaved result to finish; opening an image does not request camera permission.
+Queued photo references remain valid if iOS relocates the app container.
+
 ## Model contract and research scope
 
 `CoreMLFaceAnalyzer` supplies upright sRGB pixels in an explicit BGRA buffer to

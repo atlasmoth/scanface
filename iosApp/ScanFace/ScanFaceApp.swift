@@ -8,6 +8,7 @@ struct ScanFaceApp: App {
         WindowGroup {
             SharedApplication()
                 .ignoresSafeArea()
+                .onOpenURL { IncomingImageReceiver.receive($0) }
         }
     }
 }

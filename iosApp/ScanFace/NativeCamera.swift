@@ -1,4 +1,5 @@
 import AVFoundation
+import Darwin
 import PhotosUI
 import SwiftUI
 import UIKit
@@ -702,7 +703,19 @@ enum CapturePhotoStorage {
         values.isExcludedFromBackup = true
         try folder.setResourceValues(values)
         let destination = folder.appendingPathComponent(UUID().uuidString).appendingPathExtension("jpg")
-        try jpeg.write(to: destination, options: [.atomic, .completeFileProtection])
+        do {
+            try jpeg.write(to: destination, options: [.atomic, .completeFileProtection])
+            let handle = try FileHandle(forWritingTo: destination)
+            defer { try? handle.close() }
+            try handle.synchronize()
+            let descriptor = folder.path.withCString { Darwin.open($0, O_RDONLY) }
+            guard descriptor >= 0 else { throw CocoaError(.fileWriteUnknown) }
+            defer { Darwin.close(descriptor) }
+            guard Darwin.fsync(descriptor) == 0 else { throw CocoaError(.fileWriteUnknown) }
+        } catch {
+            try? FileManager.default.removeItem(at: destination)
+            throw error
+        }
         return StoredPhoto(url: destination, width: Int(upright.size.width), height: Int(upright.size.height))
     }
 }

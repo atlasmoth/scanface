@@ -17,6 +17,7 @@
 		88A50441903AAA6CE4E51DC2 /* FAHRFaceAge.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = D6C68DE5B25A56A2E0906108 /* FAHRFaceAge.mlpackage */; };
 		8B849A2FC9A67AAD91336C33 /* FaceImagePreprocessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 307BA3CC49511C954D840E42 /* FaceImagePreprocessor.swift */; };
 		B7EC2DDE9F958CB458F258A9 /* ScanFaceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5C43FC02ABB929004F333B3 /* ScanFaceApp.swift */; };
+		D08323973F4F7B3A7F05673E /* IncomingImages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 952916ED7939C1CADFF4DE6C /* IncomingImages.swift */; };
 		F8AB991DB52D42A9A9B2DA24 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 02CF3144DC38CB2DCBBCD3E8 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
@@ -30,6 +31,7 @@
 		8317201F34AF6B6E628BC77D /* conversion.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = conversion.json; sourceTree = "<group>"; };
 		91F44C35C6CC30EABA41063B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		9217AD02DC87FB897948470D /* licenses */ = {isa = PBXFileReference; lastKnownFileType = folder; name = licenses; path = ../models/licenses; sourceTree = SOURCE_ROOT; };
+		952916ED7939C1CADFF4DE6C /* IncomingImages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncomingImages.swift; sourceTree = "<group>"; };
 		A1B54D81ED119CE3BC890B72 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D6C68DE5B25A56A2E0906108 /* FAHRFaceAge.mlpackage */ = {isa = PBXFileReference; path = FAHRFaceAge.mlpackage; sourceTree = "<group>"; };
 		EF8E5FB8E8649C2C797FD984 /* NativeCamera.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeCamera.swift; sourceTree = "<group>"; };
@@ -69,6 +71,7 @@
 				A1B54D81ED119CE3BC890B72 /* Assets.xcassets */,
 				5BFD7071E93D4BEEC66E0718 /* CoreMLFaceAnalyzer.swift */,
 				307BA3CC49511C954D840E42 /* FaceImagePreprocessor.swift */,
+				952916ED7939C1CADFF4DE6C /* IncomingImages.swift */,
 				91F44C35C6CC30EABA41063B /* Info.plist */,
 				20C111F563413FD7F2E1AFDA /* LaunchHandoff.swift */,
 				2035057BB0C653F981F179C2 /* LaunchScreen.storyboard */,
@@ -181,6 +184,7 @@
 				22720B4E753CE6AFA3AD4837 /* CoreMLFaceAnalyzer.swift in Sources */,
 				88A50441903AAA6CE4E51DC2 /* FAHRFaceAge.mlpackage in Sources */,
 				8B849A2FC9A67AAD91336C33 /* FaceImagePreprocessor.swift in Sources */,
+				D08323973F4F7B3A7F05673E /* IncomingImages.swift in Sources */,
 				7653E090DF97A8475E063C26 /* LaunchHandoff.swift in Sources */,
 				651D10396FE856075293EA0E /* NativeCamera.swift in Sources */,
 				B7EC2DDE9F958CB458F258A9 /* ScanFaceApp.swift in Sources */,

@@ -39,6 +39,13 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CADisableMinimumFrameDurationOnPhone: true
         NSCameraUsageDescription: ScanFace uses the camera to capture your face for on-device analysis.
+        LSSupportsOpeningDocumentsInPlace: true
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Image
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Alternate
+            LSItemContentTypes:
+              - public.image
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         UILaunchStoryboardName: LaunchScreen
