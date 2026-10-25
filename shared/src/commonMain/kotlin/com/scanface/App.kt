@@ -57,7 +57,10 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
     var captureSession by rememberSaveable { mutableIntStateOf(0) }
     var importPreview by remember(store) { mutableStateOf<CapturedPhoto?>(null) }
     var incomingDialog by rememberSaveable { mutableStateOf(false) }
-    val route = Route.valueOf(routeName)
+    var restoringRoute by remember(store) { mutableStateOf(true) }
+    val route = if (restoringRoute && restoredPending != null && routeName == Route.CAPTURE.name) {
+        Route.RESULT
+    } else Route.valueOf(routeName)
     val snackbar = remember { SnackbarHostState() }
     val systemDark = isSystemInDarkTheme()
     val dark = when (state.theme) { ThemeMode.SYSTEM -> systemDark; ThemeMode.LIGHT -> false; ThemeMode.DARK -> true }
@@ -67,6 +70,7 @@ private fun AppContent(services: PlatformServices, analyzer: FaceAnalyzer) {
             discardTarget = null
             routeName = Route.RESULT.name
         }
+        restoringRoute = false
     }
     fun notify(message: String) { scope.launch { snackbar.showSnackbar(message) } }
     fun navigate(target: Route) {
